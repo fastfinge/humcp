@@ -7,7 +7,10 @@ do we fall back to WinForms before writing real code? (ROADMAP §10.)
 probe, three by ear), all fixed; each one is a rule Phase 3 now inherits. §5 lists the additions
 proposed to the ROADMAP's §7 contract.
 
-Code: [`spike/`](../spike/README.md). Throwaway; delete once this is signed off.
+Code: the spike lived in `spike/` and was deleted at sign-off, as intended. It is preserved in git
+history — `git show 337f5ec` is the commit that introduced it, and `git checkout 337f5ec -- spike`
+brings it back if a later phase wants to re-run it. The parts worth keeping are reproduced in §7 of
+this document, so nothing here depends on that.
 
 Environment: .NET SDK 10.0.400, `net10.0-windows`, Windows 11 (10.0.26340), NVDA running,
 `Prismatoid` 0.4.0, `FlaUI.UIA3` 5.0.0.
@@ -52,7 +55,7 @@ List  "Tool parameters"
 A screen reader user would hear "list, 8 items" and then the name of a C# class on every field.
 The form is not a list, and the view-model type name is not information.
 
-Fix, in [`spike/Humcp.Spike/FormItemsControl.cs`](../spike/Humcp.Spike/FormItemsControl.cs): a
+Fix (full source in §7.1): a
 custom `ItemsControlAutomationPeer` reporting `Group`, plus an `ItemAutomationPeer` reporting
 `Group` with an empty name, so the only named things are the actual controls:
 
@@ -108,8 +111,7 @@ The comparison in item 7 is settled: **the official `DatePicker` wins**, and Pha
 and *nothing announces that*: not the framework, not the screen reader. A user who does not already
 know the keystroke has no way to discover it.
 
-So the renderer appends the hint to the field's help text
-([`AppendHintConverter`](../spike/Humcp.Spike/AppendHintConverter.cs)):
+So the renderer appends the hint to the field's help text (`AppendHintConverter`, §7.2):
 
 ```
 Updated since → help="Only pull requests updated on or after this date.
@@ -134,7 +136,7 @@ directions, and the tab order is 16 clean stops.
 
 ## 3. What already works with no special effort
 
-Verified mechanically by the probe (`spike/Humcp.Spike.UiaProbe`, all checks green):
+Verified mechanically by the probe, all nine checks green (§7.3 lists them):
 
 - `AutomationProperties.Name`, `HelpText`, `IsRequiredForForm`, `ItemStatus` and `LabeledBy` all
   survive `DataTemplate` boundaries, including `ElementName` bindings to a `Label` inside the same
@@ -154,7 +156,7 @@ in Phase 3 should whitelist it explicitly rather than pretend it is not there.
 
 ## 4. prism (`Prismatoid` 0.4.0) smoke test
 
-Works. `spike/Humcp.Spike.PrismSmoke`:
+Works:
 
 - Loads and initialises in ~0 ms; native `prism.dll` resolves from the package's `runtimes/win-x64`.
 - **Detects the running screen reader.** NVDA was picked as the best backend (priority 103, ahead
@@ -180,9 +182,10 @@ Rough edges worth writing down (none blocking, all consistent with pitfall 7's "
   `BACKEND_NOT_AVAILABLE`. Narrator detection should be treated as unproven until tested with
   Narrator actually running.
 
-The `IAnnouncer` wrapper and its `NullAnnouncer` fallback are in
-[`spike/Humcp.Spike/Announcer.cs`](../spike/Humcp.Spike/Announcer.cs); every call is guarded, and
-initialisation failure downgrades the app rather than breaking it.
+The spike's `IAnnouncer` wrapper proved out the shape `Humcp.Speech` should ship: every prism call
+guarded, initialisation failure returning a `NullAnnouncer` rather than throwing, sanitisation of
+anything heading for the synthesiser, and a rate-limited channel for progress chatter (pitfall 9).
+Worth re-reading from history before writing the real one.
 
 ## 5. Proposed additions to the accessibility contract (§7)
 
@@ -271,7 +274,7 @@ WinUI 3 — is sound. WinForms stays on the shelf.
 ## 7. Appendix — the code worth keeping
 
 The spike is throwaway, but three pieces of it are answers rather than scaffolding. They are
-reproduced here so this document stands on its own after `spike/` is deleted.
+reproduced here so this document stands on its own now that `spike/` is gone.
 
 ### 7.1 The generated-form automation peer (findings 2.1, 2.2)
 
