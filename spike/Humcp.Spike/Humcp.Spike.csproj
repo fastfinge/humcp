@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>Humcp.Spike</RootNamespace>
+    <AssemblyName>Humcp.Spike</AssemblyName>
+    <!-- Phase 0 throwaway. Not shipped, not referenced by src/. -->
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Prismatoid" Version="0.4.0" />
+  </ItemGroup>
+
+</Project>

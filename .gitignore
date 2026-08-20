@@ -1,0 +1,19 @@
+## .NET build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+
+## IDE
+.vs/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+## Test and probe output
+*.trx
+uia-probe-report.txt
+TestResults/
