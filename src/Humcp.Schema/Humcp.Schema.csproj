@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- Deliberately not net10.0-windows. This project is the core IP and is pure logic: a
+         JsonElement in, a FieldModel out (ROADMAP §6.1, hedge 1). It references neither the MCP
+         SDK nor WPF, and nothing here needs Windows. -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Humcp.Schema</RootNamespace>
+  </PropertyGroup>
+
+</Project>

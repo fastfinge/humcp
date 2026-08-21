@@ -1,0 +1,123 @@
+<Window x:Class="Humcp.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Humcp.App"
+        Title="humcp"
+        Height="700" Width="1040"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.InputBindings>
+        <KeyBinding Key="F6" Command="{x:Static local:MainWindow.NextPaneCommand}" />
+        <KeyBinding Key="F6" Modifiers="Shift" Command="{x:Static local:MainWindow.PreviousPaneCommand}" />
+        <KeyBinding Key="F1" Command="{x:Static local:MainWindow.DetailsCommand}" />
+        <KeyBinding Key="F5" Command="{x:Static local:MainWindow.ReconnectCommand}" />
+    </Window.InputBindings>
+
+    <DockPanel>
+
+        <!-- A Win32 menu bar is not in the tab order: Alt reaches it and left/right arrow move
+             between menus. WPF tab-stops every top-level MenuItem unless told otherwise (§7.14). -->
+        <Menu DockPanel.Dock="Top" AutomationProperties.Name="Main menu"
+              Focusable="False" IsTabStop="False"
+              KeyboardNavigation.TabNavigation="None">
+            <MenuItem Header="_File">
+                <MenuItem Header="_Reconnect server" InputGestureText="F5" Click="OnReconnect" />
+                <Separator />
+                <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Tool">
+                <MenuItem x:Name="RunMenuItem" Header="_Run" InputGestureText="Enter" Click="OnRun" />
+                <MenuItem Header="_Details" InputGestureText="F1" Click="OnDetails" />
+            </MenuItem>
+            <MenuItem Header="_Help">
+                <MenuItem Header="_Speech diagnostics…" Click="OnSpeechDiagnostics" />
+                <MenuItem Header="_Connection diagnostics…" Click="OnConnectionDiagnostics" />
+            </MenuItem>
+        </Menu>
+
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <!-- A polite live region. Phase 0 left open whether WPF live regions alone are
+                     enough or whether prism has to carry every completion (checklist item 11), so
+                     both paths are wired and the manual pass decides.
+
+                     Deliberately no AutomationProperties.Name: a TextBlock's name *is* its text,
+                     and naming it "Status" would make every live-region announcement say the word
+                     "Status" instead of the message. The x:Name is the automation id, which is how
+                     tests find it. -->
+                <TextBlock x:Name="LiveStatus"
+                           AutomationProperties.LiveSetting="Polite"
+                           Text="Starting." />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="420" MinWidth="260" />
+                <ColumnDefinition Width="6" />
+                <ColumnDefinition Width="*" MinWidth="320" />
+            </Grid.ColumnDefinitions>
+
+            <!-- ================================================== pane 1: servers and tools -->
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Text="Servers and tools" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+
+                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button x:Name="RunButton" Content="R_un tool" Click="OnRun"
+                            Padding="12,4" Margin="0,0,8,0" IsEnabled="False"
+                            AutomationProperties.HelpText="Runs the selected tool. Enter does the same from the tree." />
+                    <Button Content="Re_connect" Click="OnReconnect" Padding="12,4"
+                            AutomationProperties.HelpText="Restarts the server process and lists its tools again. F5." />
+                </StackPanel>
+
+                <TreeView x:Name="Tree"
+                          AutomationProperties.Name="Servers and tools"
+                          AutomationProperties.HelpText="Arrow to a tool and press Enter to run it. F1 describes it in full."
+                          VirtualizingStackPanel.IsVirtualizing="False"
+                          SelectedItemChanged="OnTreeSelectionChanged"
+                          KeyDown="OnTreeKeyDown">
+                    <TreeView.ItemContainerStyle>
+                        <Style TargetType="TreeViewItem">
+                            <Setter Property="IsExpanded" Value="True" />
+                            <!-- The whole status is in the name, so it is heard on arrow-through
+                                 rather than hidden in a pane the user has to go and find (§8). -->
+                            <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+                            <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+                        </Style>
+                    </TreeView.ItemContainerStyle>
+                    <TreeView.ItemTemplate>
+                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                            <TextBlock Text="{Binding AccessibleName}" />
+                        </HierarchicalDataTemplate>
+                    </TreeView.ItemTemplate>
+                </TreeView>
+            </DockPanel>
+
+            <!-- IsTabStop, not Focusable: the splitter stays programmatically focusable so a
+                 Phase 6 "resize this pane" command can hand it the arrow keys, but Tab walks past
+                 it (§7.14, and phase0-findings 2.4). -->
+            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          IsTabStop="False"
+                          AutomationProperties.Name="Resize servers pane" />
+
+            <!-- ================================================== pane 2: the result -->
+            <DockPanel Grid.Column="2">
+                <TextBlock x:Name="ResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+
+                <!-- §7.9: a read-only multiline TextBox, never a TextBlock. The caret is the point —
+                     it is what lets the output be reviewed line by line and selected in pieces. -->
+                <TextBox x:Name="ResultBox"
+                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                         AcceptsReturn="True" TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"
+                         AutomationProperties.Name="Result"
+                         AutomationProperties.HelpText="Read-only. Arrow keys review the text line by line."
+                         Text="No tool has been run yet." />
+            </DockPanel>
+
+        </Grid>
+    </DockPanel>
+</Window>

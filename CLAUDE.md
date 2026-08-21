@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phase 0 done, no production code yet
+## Project status: Phases 0 and 1 complete, Phase 2 next
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -13,8 +13,18 @@ fallback. The six defects it found are recorded in **`docs/phase0-findings.md`**
 folded into §7.12–15 and §9; that document also holds the manual screen-reader checklist, which is
 the script to re-run at each later phase exit.
 
-The next unit of work is **Phase 1** (§10): the solution structure, one hard-coded stdio server,
-`tools/list` into a real tree, and a zero-argument tool call rendered into a read-only `TextBox`.
+**Phase 1 is complete**: the walking skeleton connects to a hard-coded stdio server, lists its
+tools into a four-level tree, runs a zero-argument tool from the keyboard, and renders the text
+result into a read-only `TextBox`. 81 tests including a FlaUI suite over the live UIA tree, and a
+manual NVDA pass green across nineteen checks — which is what closed it, and which found a defect
+no assertion could (everything was spoken twice). Record in **`docs/phase1-notes.md`**; its four
+new contract rules are now §7.16–19 and its fifth rewrote §7's core rule. Layout decisions taken
+there — solution format, target frameworks, project references — are §6.0.
+
+Still outstanding from Phase 0 and non-blocking: the JAWS and Narrator passes.
+
+The next unit of work is **Phase 2** (§10): `Humcp.Schema` in full — all three tiers, `$ref`
+resolution with cycle detection, validation, and the harvested corpus with golden tests. No UI work.
 
 ## What humcp is
 
@@ -48,7 +58,12 @@ Also note: `completion/complete` supports only `ref/prompt` and `ref/resource`. 
 exists (§4, pitfall 3).
 
 Never hand-roll the protocol. `ModelContextProtocol.Core` 2.2.0 implements this revision and
-negotiates back to older servers.
+negotiates back to older servers — confirmed in Phase 1: 2026-07-28 against our fixture,
+2025-11-25 against `@modelcontextprotocol/server-everything`, same code either way.
+
+**A zero-argument call still sends `"arguments": {}`.** Omitting the member is a different wire
+shape, and real servers reject it ("expected object, received undefined"). `ServerConnection`
+passes an empty dictionary on purpose; do not tidy it away.
 
 ## Confirmed decisions — do not silently reverse
 
@@ -70,12 +85,20 @@ without saying so is not.
 ## Architecture
 
 ```
-src/Humcp.Schema/   JSON Schema -> FieldModel. Pure. No MCP SDK, no WPF.
-src/Humcp.Core/     Server registry, connections, tool catalogue, MRTR, MRU history. No UI.
-src/Humcp.Speech/   IAnnouncer over prismatoid, plus a no-op implementation.
-src/Humcp.App/      WPF: views, templates, view-models, window manager.
-tests/              Schema.Tests (golden), Core.Tests (fake server), App.UiTests (FlaUI)
+src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel. Pure. No MCP SDK, no WPF.
+src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU. No UI.
+src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
+src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager.
+tests/              TestServer (a real stdio fixture server), Schema.Tests (golden),
+                    Core.Tests (the round trip over a real pipe), App.UiTests (FlaUI)
 ```
+
+The two pure libraries target `net10.0` deliberately — neither needs Windows, and the TFM is what
+makes "pure" checkable rather than merely intended. `Humcp.Speech` references `Humcp.Schema` for
+`TextSanitizer` alone: text heading for a synthesiser needs the same hygiene as text heading for
+UIA, and one implementation beats two. **`Humcp.App` does not reference the MCP SDK at all** —
+everything crossing out of `Humcp.Core` is a neutral model (`ToolInfo`, `CatalogueNode`,
+`ToolCallOutcome`, `OperationSafety`).
 
 **Dependency rule: `App` → `Core` → `Schema`, never backwards.** `Humcp.Schema` takes a
 `JsonElement` and returns a `FieldModel`; it must not reference the MCP SDK or WPF. This one rule
@@ -104,9 +127,14 @@ authority; an over-strict client makes working tools unusable.
 
 These are the rules generated WPF code most often violates. Full contract in §7.
 
-- **UIA does the nouns, prism does the verbs.** The screen reader reads controls via normal UI
-  Automation. prism announces only what UIA cannot know — completion, connection loss, error
-  counts. Speaking control contents through prism makes users hear everything twice.
+- **prism is only for text with no on-screen representation at all** (§7's core rule, rewritten
+  after Phase 1). Anything that can be shown somewhere goes there — a polite live region carries
+  completions, error counts and connection state, and NVDA reads it unaided. Measured by ear
+  (phase1-notes 2.7): speaking the status line through prism *as well* announced every tool run
+  twice. Today nothing in the app speaks through prism; the seam exists for what Phase 6 finds
+  genuinely off-screen, such as an event arriving while humcp is in the background.
+- **A live region must not carry a static `AutomationProperties.Name`** — a `TextBlock`'s name *is*
+  its text, so naming it makes every announcement say the label instead of the message.
 - **Text results go in a read-only multiline `TextBox`, never a `TextBlock`.** A `TextBox` gives
   caret navigation, so output can be reviewed line by line.
 - **Disable UI virtualization on generated forms** (`VirtualizingStackPanel.IsVirtualizing=False`).
@@ -151,17 +179,29 @@ only, even though the document lists `localhost` forms for compatibility.
 
 ## Commands
 
-No solution exists yet. Once `Humcp.sln` is created, the standard .NET toolchain applies:
+The solution is `Humcp.slnx` (the new format — the .NET 10 toolchain reads it natively).
 
 ```bash
 dotnet build
-dotnet test
+dotnet test                                               # all three suites
 dotnet test tests/Humcp.Schema.Tests                      # one project
-dotnet test --filter "FullyQualifiedName~EnumRendering"   # one test or fixture
+dotnet test --filter "FullyQualifiedName~TabOrder"        # one test or fixture
 dotnet run --project src/Humcp.App
 ```
 
-Add project-specific commands here as they appear.
+**`dotnet test` takes over the desktop.** `tests/Humcp.App.UiTests` launches the real app, takes
+the foreground and sends real keystrokes to it. That is deliberate (§9), and the suite refuses to
+type unless the app owns the foreground — but do not run it while the user is working, and never
+add a test that types without calling `Input.EnsureForeground` first.
+
+Phase 1's server is hard-coded to the in-repo fixture. To point the app at a real server instead,
+without a code edit:
+
+```bash
+set HUMCP_STDIO_COMMAND=npx.cmd
+set HUMCP_STDIO_ARGS=-y @modelcontextprotocol/server-everything
+dotnet run --project src/Humcp.App
+```
 
 ## Testing notes
 

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- prism is a native Windows library. -->
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <RootNamespace>Humcp.Speech</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Prismatoid" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- For TextSanitizer only. Humcp.Schema is a pure leaf library, and anything heading for a
+         speech synthesiser has to go through the same hygiene as anything heading for UIA
+         (ROADMAP §4, pitfall 5) — one implementation, not two. -->
+    <ProjectReference Include="..\Humcp.Schema\Humcp.Schema.csproj" />
+  </ItemGroup>
+
+</Project>

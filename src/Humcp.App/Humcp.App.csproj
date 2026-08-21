@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <RootNamespace>Humcp.App</RootNamespace>
+    <AssemblyName>Humcp.App</AssemblyName>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Humcp.Core\Humcp.Core.csproj" />
+    <ProjectReference Include="..\Humcp.Speech\Humcp.Speech.csproj" />
+
+    <!-- Build order only: Phase 1's hard-coded server is the in-repo test server, and
+         `dotnet run project src/Humcp.App` has to have built it. No assembly reference: the App
+         never sees the MCP SDK, let alone a test project. Deleted in Phase 6, when servers come
+         from configuration instead of a constant. -->
+    <ProjectReference Include="..\..\tests\Humcp.TestServer\Humcp.TestServer.csproj"
+                      ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+</Project>

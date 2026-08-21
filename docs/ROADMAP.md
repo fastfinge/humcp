@@ -2,8 +2,9 @@
 
 **Generate real, native-feeling, screen-reader-first Windows UI automatically from any MCP server's published metadata.**
 
-Status: Phase 0 complete — WPF confirmed. Phase 1 is next; no production code written yet.
-Findings: [`phase0-findings.md`](phase0-findings.md).
+Status: Phase 1 complete — end-to-end round trip, 81 automated tests, manual NVDA pass green.
+Phase 2 (the schema engine) is next.
+Findings: [`phase0-findings.md`](phase0-findings.md), [`phase1-notes.md`](phase1-notes.md).
 
 ---
 
@@ -32,7 +33,7 @@ two goals conflict, accessibility wins.
 |---|---|---|
 | Language / runtime | C# on .NET 10 (`net10.0-windows`) | Matches both dependencies; current LTS-track runtime |
 | UI framework | **WPF** | Mature UIA implementation, ~20 years of screen-reader hardening; strong dynamic-UI story via `DataTemplateSelector`. See §2.1. **Confirmed by the Phase 0 spike** |
-| Speech | **prism** via the `prismatoid` NuGet package | Supplemental announcements only — see the UIA/prism split in §7 |
+| Speech | **prism** via the `prismatoid` NuGet package | Announcements with nowhere on screen to live — a narrower job than it first looked, see §7. Phase 1 measured a live region covering everything visible, leaving prism idle for now |
 | Transports (v1) | stdio + **unauthenticated** Streamable HTTP | OAuth deferred; keeps v1 shippable |
 | LLM | **None in v1**, seam preserved | Human is the intelligence; `IResultSummarizer` / `IToolSuggester` interfaces ship as null implementations |
 | Protocol SDK | `ModelContextProtocol.Core` 2.2.0 | Implements spec 2026-07-28, negotiates back to older servers |
@@ -112,8 +113,9 @@ out-of-band interrupt, which is far easier to present coherently to a screen rea
 | 5 | **All server text is untrusted.** The spec says so explicitly for annotations. Descriptions, titles, and enum values are third-party strings heading for a speech synthesiser. | Strip control characters, normalise newlines, hard-cap lengths before anything reaches UIA or prism. Never treat `destructiveHint: false` as proof of safety. |
 | 6 | **Images have no alt text.** `ImageContent` has only `data` and `mimeType`. A tool returning a chart gives the user nothing. | Announce as an object — "Image, PNG, 45 KB" — with Save and Open-in-default-app actions. Always prefer `structuredContent` when present. Optional v2: LLM-generated alt text via the `IResultSummarizer` seam. |
 | 7 | **`prismatoid` is brand new.** v0.4.0, published 2026-08-12, 82 downloads. | Pin the exact version. Wrap behind our own `IAnnouncer`. Ship a no-op implementation so the app is fully functional if prism fails to load. **Phase 0:** loads, detects a running NVDA and prefers it (priority 103), `Speak()` is asynchronous so it is UI-thread-safe, braille accepted. Three rough edges — a screen reader backend exposes **no voices** (`CurrentVoice` is null, so the settings UI must not assume a voice list), native code writes to stderr past `PrismLog`, and `PrismBackendId.Uia` fails to acquire with `INVALID_PARAM` so Narrator detection is unproven. Availability callbacks arrive on a background thread and must be marshalled before touching UI |
-| 8 | **Protocol churn.** 2026-07-28 is the largest revision since launch: no `initialize` handshake, no sessions, MRTR replaces server-initiated requests, Roots/Sampling/Logging deprecated. Many deployed servers still speak 2025-06-18 or 2025-11-25. | Never hand-roll the protocol. Let SDK 2.2.0 negotiate. Surface the negotiated version per server in the UI so failures are diagnosable. |
-| 9 | **Long-running tools.** Tasks moved to an extension; progress arrives as `notifications/progress` on the request's own response stream. | Non-modal execution with a cancel action. Progress announced via prism on a rate limit (no more than one utterance per ~2s). Never block the UI thread. |
+| 8 | **Protocol churn.** 2026-07-28 is the largest revision since launch: no `initialize` handshake, no sessions, MRTR replaces server-initiated requests, Roots/Sampling/Logging deprecated. Many deployed servers still speak 2025-06-18 or 2025-11-25. | Never hand-roll the protocol. Let SDK 2.2.0 negotiate. Surface the negotiated version per server in the UI so failures are diagnosable. **Confirmed in Phase 1:** 2026-07-28 against our fixture, 2025-11-25 against `@modelcontextprotocol/server-everything`, identical client code, and the negotiated version now reads out on the server's tree node. |
+| 9 | **Long-running tools.** Tasks moved to an extension; progress arrives as `notifications/progress` on the request's own response stream. | Non-modal execution with a cancel action. Progress into the status live region on a rate limit (no more than one update per ~2s). Never block the UI thread. |
+| 10 | **A zero-argument call is not an argument-less request.** Omitting the `arguments` member sends a different wire shape from sending an empty object, and servers validating their input reject it: `@modelcontextprotocol/server-everything` answers "expected object, received undefined". | Always send `"arguments": {}`. Found in Phase 1 only by pointing the client at a real third-party server, which is the argument for keeping that path easy to take (§10). |
 
 ---
 
@@ -165,7 +167,7 @@ working tool unusable. Warn, list errors, let the user override.
 ## 6. Architecture
 
 ```
-Humcp.sln
+Humcp.slnx
 ├── src/
 │   ├── Humcp.Schema/      JSON Schema -> FieldModel. Pure. No UI, no MCP types.
 │   ├── Humcp.Core/        Server registry, connection lifecycle, tool catalogue,
@@ -173,8 +175,9 @@ Humcp.sln
 │   ├── Humcp.Speech/      IAnnouncer over prismatoid; no-op fallback.
 │   └── Humcp.App/         WPF. Views, templates, view-models, window manager.
 └── tests/
+    ├── Humcp.TestServer/     Fake MCP server, spoken to over a real stdio pipe
     ├── Humcp.Schema.Tests/   Golden tests over a real-world schema corpus
-    ├── Humcp.Core.Tests/     Fake in-process MCP server
+    ├── Humcp.Core.Tests/     The catalogue and the round trip, against the fixture
     └── Humcp.App.UiTests/    FlaUI UIA-tree assertions (§9)
 ```
 
@@ -188,6 +191,28 @@ restructuring:
 
 - `IResultSummarizer` — summarise a large result; generate image alt text
 - `IToolSuggester` — natural-language "what do you want to do?" → ranked tool list
+
+### 6.0 Layout decisions taken in Phase 1
+
+Small, and annoying to reverse later, so they are written down rather than left in the build files.
+
+- **The solution is `Humcp.slnx`**, the new format. The .NET 10 toolchain reads it natively and the
+  Phase 0 spike already used it.
+- **`Humcp.Schema` and `Humcp.Core` target `net10.0`**, not `net10.0-windows`. Neither needs
+  Windows, and the target framework is what makes "pure" checkable rather than merely intended.
+  `Humcp.Speech` and `Humcp.App` are `net10.0-windows`.
+- **`Humcp.Speech` references `Humcp.Schema`** for `TextSanitizer` alone. Text heading for a
+  synthesiser needs the same hygiene as text heading for UIA, and one implementation beats two. The
+  rule that matters is intact: nothing points back at `Core` or `App`, and `Schema` stays pure.
+- **`Humcp.App` references neither the MCP SDK nor anything below `Humcp.Core`.** Everything
+  crossing that boundary is a neutral model, so the §6.1 hedges are structural rather than
+  aspirational.
+- **The fake server is a real process.** `tests/Humcp.TestServer` is a stdio MCP server the test
+  suites talk to over a real pipe. A fake sharing our own serialiser would prove much less — see
+  pitfall 10 for what only a real one catches.
+- **Phase 1's hard-coded server is overridable from the environment**
+  (`HUMCP_STDIO_COMMAND` / `_ARGS` / `_NAME`) until configuration arrives in Phase 6, so pointing
+  the app at a real server never requires a code edit.
 
 ### 6.1 Portability hedges for v4 (OpenAPI)
 
@@ -214,12 +239,24 @@ should not be invented until there is a second implementation to validate it aga
 Non-negotiable invariants. Every generated control must satisfy all of these; the UI test suite
 (§9) enforces the mechanical ones.
 
-**The core rule: UIA does the nouns, prism does the verbs.**
+**The core rule: prism is only for text with no on-screen representation at all.**
 
-The screen reader reads controls through normal UI Automation. prism is used *only* for events the
-screen reader cannot know about — "Tool call complete, 3 results", "Connection to github lost",
-"5 validation errors". Speaking control contents manually is the classic failure mode with a
-library like prism: every user hears everything twice.
+The screen reader reads controls through normal UI Automation, and that includes a polite live
+region — which is how completions, error counts and connection states reach the user. Anything that
+can be shown somewhere goes there, and the screen reader announces it. prism is the channel of last
+resort, for the case where there is genuinely nowhere to put the text.
+
+This is narrower than it first looked. The original rule read "UIA does the nouns, prism does the
+verbs", with "Tool call complete, 3 results" and "5 validation errors" as prism's work — and Phase
+1's manual pass found the consequence by ear: NVDA reads the live region *and* prism speaks it, so
+every tool run is announced twice (phase1-notes 2.7). A live region is UI Automation, and it
+carries verbs perfectly well. Speaking anything visible — a control's contents, a status message,
+the name of the pane focus just moved to — is the classic failure mode with a library like prism:
+every user hears everything twice.
+
+As of Phase 1 nothing in the app speaks through prism. The seam stays because pitfall 7 wants it
+and the diagnostics view proves it loads; the open candidate for it is an event arriving while
+humcp is not the foreground window, where no live region will be read (§13).
 
 ### Per-control requirements
 
@@ -277,6 +314,29 @@ this document stay valid.
     announce "+" at all. Generated UI cannot assume a user recognises a widget by sight and
     remembers how it opens.
 
+### Added by Phase 1
+
+Four more, from [`phase1-notes.md`](phase1-notes.md). The first two are WPF defaults doing the
+wrong thing again; the second two are about what the app says rather than how it is built.
+
+16. **A live region must not carry a static `AutomationProperties.Name`** (phase1-notes 2.2). A
+    `TextBlock`'s accessible name *is* its text, so naming the element "Status" makes every
+    announcement say the word "Status" and never the message. Use `x:Name` — which becomes the
+    automation id — when something needs to find the element.
+17. **A window holding a single content control needs an explicit
+    `AutomationProperties.Name`** (phase1-notes 2.3). A WPF `Window` is a `ContentControl` and its
+    automation peer falls back to the plain text of its content: a details window announced ten
+    thousand characters of tool description as its title.
+18. **Declining an action says why, and how far away the ability is.** Pressing <kbd>Enter</kbd> on
+    a tool whose form does not exist yet answers "Echo needs 1 parameter. Generated forms arrive in
+    Phase 3." A UI generated from other people's metadata will always have edges it cannot handle;
+    at an edge, silence is indistinguishable from a bug, and a bare refusal is worse than either.
+19. **Text for review and text for speech are sanitised differently** (phase1-notes 2.4).
+    Collapsing runs of whitespace is right for a name or a help string and wrong for a result:
+    results arrive as JSON, tables and aligned columns, and §7.9's read-only `TextBox` is only
+    worth having if what goes into it still has its shape. Two operations, not one — both strip
+    control and formatting characters, only the spoken one collapses the layout.
+
 ### Keyboard map
 
 | Key | Action |
@@ -311,7 +371,11 @@ this document stay valid.
 ```
 
 - Category nodes appear only when non-empty.
-- Auto-grouping when a server exposes many tools sharing `.`/`_` name prefixes.
+- Auto-grouping when a server exposes many tools sharing `.`/`_`/`-` name prefixes. Implemented in
+  Phase 1, deliberately conservative: at least 8 tools, at least 2 prefixes, at least 2 tools each,
+  or the list stays flat — a user arrowing through six tools should not spend two presses on group
+  headers. A tool whose prefix does not earn a group sits beside the groups rather than in a
+  "Miscellaneous" bucket nobody asked for. Still a guess; §13 keeps it open against the corpus.
 - Server node status is part of its accessible name, so it is heard on arrow-through.
 - A filter box above the tree does type-ahead over tool names, titles, and descriptions.
 
@@ -359,6 +423,24 @@ assertions have to be written:
 Never send synthetic keystrokes unless the app under test genuinely owns the foreground — check
 the focused element's process first, or the test types into whatever the developer is doing.
 
+Phase 1 built this suite and added three more mechanical details, each of which produces a *flaky*
+test rather than a failing one when got wrong:
+
+- **A `TreeView` is not focusable once it has items.** `SetFocus` on the tree itself throws; focus
+  belongs to the selected `TreeViewItem`. Focus an item.
+- **Disabled controls leave the tab order**, so a tab-order test must first put the window in a
+  state where everything it expects to reach is enabled. Ours starts by focusing a runnable tool.
+- **Taking the foreground is retried, not attempted.** Windows refuses `SetForegroundWindow` when
+  the calling process is not already in front, which is the normal case while other test projects
+  run alongside. Keep the refusal — never type without the foreground — but spend some seconds
+  trying for it first.
+- **The fake server is a separate process**, spoken to over a real pipe (§6.0). Pitfall 10 is the
+  standing argument for that: a fake sharing our own serialiser agreed with us, and a real server
+  did not.
+
+The suite runs as part of `dotnet test` rather than behind a flag. It takes the foreground and
+sends real keystrokes, which is the point of it.
+
 **Manual matrix.** NVDA 2026.1, JAWS, and Narrator against the walking skeleton at each phase exit.
 Automated checks prove names exist; only a human proves the app is *pleasant*.
 
@@ -383,11 +465,22 @@ which is the script to re-run at each later phase exit, in
 
 Outstanding, neither blocking: the JAWS and Narrator passes, and a braille display test (§13).
 
-### Phase 1 — Walking skeleton (~3–5 days)
+### Phase 1 — Walking skeleton ✅ done
 Solution structure. Connect to one hard-coded stdio server. `tools/list` into a real tree. Call a
 zero-argument tool. Show the text result in a read-only `TextBox`.
 
-**Exit:** end-to-end round trip, driven entirely by keyboard, usable with a screen reader.
+**Exit met.** The round trip works, is driven entirely from the keyboard, and the manual NVDA pass
+is green across all nineteen checks. 81 automated tests, including a FlaUI suite that walks the
+live UIA tree, tabs in both directions, and runs a tool with real keystrokes.
+
+The hard-coded server is an in-repo stdio fixture (`tests/Humcp.TestServer`), overridable from the
+environment (§6.0) — which is how Phase 1 also connected to
+`@modelcontextprotocol/server-everything`, negotiated **2025-11-25** against it, and found pitfall
+10. Four defects found and fixed, four rules added to the contract (§7.16–19) and one rewritten
+(§7's core rule, after the manual pass caught every announcement being spoken twice). Full record
+in [`phase1-notes.md`](phase1-notes.md).
+
+Outstanding, neither blocking: the JAWS and Narrator passes, still carried forward from Phase 0.
 
 ### Phase 2 — Schema engine (~1 week)
 `Humcp.Schema` in full: all three tiers, `$ref` resolution with cycle detection, validation,
@@ -416,8 +509,21 @@ JSON-RPC id. Decline sampling requests cleanly (deprecated, and no LLM in v1).
 
 ### Phase 6 — The shell (~1 week)
 Menu bar, window manager, settings, server add/remove/reconnect UI, config persistence,
-`notifications/tools/list_changed` handling via `subscriptions/listen`, prism announcement policy
-with rate limiting.
+`notifications/tools/list_changed` handling via `subscriptions/listen`, announcement policy with
+rate limiting.
+
+Three items carried in from earlier phases:
+
+- **A keyboard route to resizing a pane.** `GridSplitter`s were taken out of the tab order in Phase
+  0 (phase0-findings 2.4) and nothing replaced the route. Either a View-menu command that hands a
+  splitter the arrow keys, or pane sizes become a setting and splitters stop being focusable.
+  Silently having no route is the one option that is not allowed (§7.14).
+- **Decide whether prism has a job.** As of Phase 1 nothing speaks through it, because everything
+  the app says has somewhere on screen to live (§7). The candidate is an event arriving while
+  humcp is not the foreground window, where no live region is read to the user — a policy question,
+  and the first real one for this seam.
+- **Replace the hard-coded server and the environment override** (§6.0) with real configuration,
+  and drop `Humcp.App`'s build-order reference to the test fixture.
 
 **Exit:** the app is configurable and usable without editing files by hand.
 
@@ -768,8 +874,17 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   question is a judgement about presentation, not capability, and wants a session with a display
   connected. Cheap to defer: the `IAnnouncer` seam already separates `Speak`, `Braille` and
   `Output`, so answering it later changes a policy, not a structure.
-- Tool grouping heuristics: prefix-splitting is a guess. Revisit against the harvested corpus —
-  it may turn out most servers don't namespace consistently enough for it to help.
+- Tool grouping heuristics: prefix-splitting is a guess. Phase 1 implemented a conservative version
+  (§8) and it reads well on a ten-tool server, which proves nothing about a forty-tool one. Revisit
+  against the harvested corpus — it may turn out most servers don't namespace consistently enough
+  for it to help, and the thresholds are three constants in one method precisely so that answer is
+  cheap to act on.
+- **Does prism have a job at all?** Phase 1 answered the narrow question — a live region reaches
+  NVDA unaided, and speaking on top of it announces everything twice (§7) — which leaves the seam
+  loaded and idle. The remaining case is an event arriving while humcp is in the background, where
+  no live region will be read: a slow call finishing, a connection dropping. Whether speaking from
+  a window the user is not looking at is welcome or intrusive is a judgement, not a capability, and
+  it wants a session with a screen reader rather than an argument (Phase 6).
 - Should Tier 3's raw JSON editor offer schema-driven completion? Valuable, but it is a text-editor
   feature and text editors are a deep well. Probably v2.
 - ~~Where does the Client ID Metadata Document live?~~ **Resolved:** a subdomain of `interfree.ca`

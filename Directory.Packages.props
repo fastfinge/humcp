@@ -1,0 +1,22 @@
+<Project>
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <!-- Pinned deliberately. ModelContextProtocol.Core implements spec revision 2026-07-28 and
+       negotiates back to older servers; prismatoid is very new (ROADMAP §4, pitfall 7) and is
+       wrapped behind IAnnouncer with a working no-op fallback. -->
+  <ItemGroup>
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
+    <PackageVersion Include="Prismatoid" Version="0.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+
+</Project>

@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- No UI, so no Windows target. Core is where the MCP SDK lives; everything it hands to the
+         App is a neutral model (ROADMAP §6.1). -->
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Humcp.Core</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Humcp.Schema\Humcp.Schema.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Humcp.Core.Tests" />
+  </ItemGroup>
+
+</Project>
