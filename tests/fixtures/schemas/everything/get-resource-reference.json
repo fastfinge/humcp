@@ -1,0 +1,34 @@
+{
+  "server": "everything",
+  "package": "@modelcontextprotocol/server-everything",
+  "name": "get-resource-reference",
+  "title": "Get Resource Reference Tool",
+  "description": "Returns a resource reference that can be used by MCP clients",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "default": "Text",
+        "type": "string",
+        "enum": [
+          "Text",
+          "Blob"
+        ]
+      },
+      "resourceId": {
+        "default": 1,
+        "description": "ID of the text resource to fetch",
+        "type": "number"
+      }
+    }
+  },
+  "outputSchema": null
+}

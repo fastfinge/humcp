@@ -1,0 +1,34 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_resize",
+  "title": "Resize browser window",
+  "description": "Resize the browser window",
+  "annotations": {
+    "title": "Resize browser window",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "width": {
+        "type": "number",
+        "description": "Width of the browser window"
+      },
+      "height": {
+        "type": "number",
+        "description": "Height of the browser window"
+      }
+    },
+    "required": [
+      "width",
+      "height"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

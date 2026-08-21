@@ -1,0 +1,52 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_monitor_check",
+  "title": "Get monitor check",
+  "description": "\nRetrieve one monitor check and its page-level results, optionally filtered by page status. Pages report `same`, `new`, `changed`, `removed`, or `error`; configured goal judging can add a meaningful-change decision.\n\nMarkdown tracking returns a unified text diff, JSON tracking returns field paths with previous/current values and a current snapshot, and mixed tracking returns both. Returns one page of results plus a `next` URL when more pages exist.\n",
+  "annotations": {
+    "title": "Get monitor check",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      },
+      "checkId": {
+        "type": "string"
+      },
+      "limit": {
+        "type": "integer",
+        "exclusiveMinimum": 0,
+        "maximum": 9007199254740991
+      },
+      "skip": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 9007199254740991
+      },
+      "pageStatus": {
+        "type": "string",
+        "enum": [
+          "same",
+          "new",
+          "changed",
+          "removed",
+          "error"
+        ]
+      }
+    },
+    "required": [
+      "id",
+      "checkId"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

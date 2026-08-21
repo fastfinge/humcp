@@ -1,0 +1,33 @@
+{
+  "server": "everything",
+  "package": "@modelcontextprotocol/server-everything",
+  "name": "simulate-research-query",
+  "title": "Simulate Research Query",
+  "description": "Simulates a deep research operation that gathers, analyzes, and synthesizes information. Demonstrates MCP task-based operations with progress through multiple stages. If 'ambiguous' is true and client supports elicitation, sends an elicitation request for clarification.",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "topic": {
+        "type": "string",
+        "description": "The research topic to investigate"
+      },
+      "ambiguous": {
+        "default": false,
+        "description": "Simulate an ambiguous query that requires clarification (triggers input_required status)",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "topic"
+    ]
+  },
+  "outputSchema": null
+}

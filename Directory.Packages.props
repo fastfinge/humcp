@@ -12,6 +12,15 @@
     <PackageVersion Include="Prismatoid" Version="0.4.0" />
   </ItemGroup>
 
+  <!-- The only dependency Humcp.Schema takes, and the one deliberate exception to that project
+       having none. JSON Schema 2020-12 assertion semantics are a conformance surface, not a
+       feature; a hand-rolled subset would quietly disagree with the server about what is valid,
+       and the server is the authority (ROADMAP §5). We still write every message ourselves —
+       these are spoken, and a library's wording is not. -->
+  <ItemGroup>
+    <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

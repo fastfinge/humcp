@@ -1,0 +1,50 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_extract",
+  "title": "Deprecated: use Scrape JSON",
+  "description": "\nDeprecated compatibility entry point. Use firecrawl_scrape once per known URL with formats: [\"json\"] and jsonOptions containing the prompt and schema. Use firecrawl_search or firecrawl_agent before Scrape when URLs are not known.\n",
+  "annotations": {
+    "title": "Deprecated: use Scrape JSON",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "urls": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "prompt": {
+        "type": "string"
+      },
+      "schema": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": false
+      },
+      "allowExternalLinks": {
+        "type": "boolean"
+      },
+      "enableWebSearch": {
+        "type": "boolean"
+      },
+      "includeSubdomains": {
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "urls"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

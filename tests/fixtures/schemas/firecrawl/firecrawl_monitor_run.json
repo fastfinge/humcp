@@ -1,0 +1,28 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_monitor_run",
+  "title": "Run monitor now",
+  "description": "\nQueue an immediate check for a monitor outside its normal schedule. This starts network work for the monitor's configured targets and returns the queued check.\n",
+  "annotations": {
+    "title": "Run monitor now",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

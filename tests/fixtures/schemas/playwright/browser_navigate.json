@@ -1,0 +1,29 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_navigate",
+  "title": "Navigate to a URL",
+  "description": "Navigate to a URL",
+  "annotations": {
+    "title": "Navigate to a URL",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "url": {
+        "type": "string",
+        "description": "The URL to navigate to"
+      }
+    },
+    "required": [
+      "url"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

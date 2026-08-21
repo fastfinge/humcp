@@ -1,0 +1,23 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_list_channels",
+  "title": null,
+  "description": "List public or pre-defined channels in the workspace with pagination",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "limit": {
+        "type": "number",
+        "description": "Maximum number of channels to return (default 100, max 200)",
+        "default": 100
+      },
+      "cursor": {
+        "type": "string",
+        "description": "Pagination cursor for next page of results"
+      }
+    }
+  },
+  "outputSchema": null
+}

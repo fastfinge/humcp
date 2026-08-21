@@ -1,0 +1,36 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_directions",
+  "title": null,
+  "description": "Get directions between two points",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "origin": {
+        "type": "string",
+        "description": "Starting point address or coordinates"
+      },
+      "destination": {
+        "type": "string",
+        "description": "Ending point address or coordinates"
+      },
+      "mode": {
+        "type": "string",
+        "description": "Travel mode (driving, walking, bicycling, transit)",
+        "enum": [
+          "driving",
+          "walking",
+          "bicycling",
+          "transit"
+        ]
+      }
+    },
+    "required": [
+      "origin",
+      "destination"
+    ]
+  },
+  "outputSchema": null
+}

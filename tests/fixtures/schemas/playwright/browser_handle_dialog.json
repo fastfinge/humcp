@@ -1,0 +1,33 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_handle_dialog",
+  "title": "Handle a dialog",
+  "description": "Handle a dialog",
+  "annotations": {
+    "title": "Handle a dialog",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "accept": {
+        "type": "boolean",
+        "description": "Whether to accept the dialog."
+      },
+      "promptText": {
+        "description": "The text of the prompt in case of a prompt dialog.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "accept"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

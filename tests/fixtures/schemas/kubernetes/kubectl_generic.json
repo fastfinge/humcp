@@ -1,0 +1,77 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_generic",
+  "title": null,
+  "description": "Execute any kubectl command with the provided arguments and flags",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "command": {
+        "type": "string",
+        "description": "The kubectl command to execute (e.g. patch, rollout, top)"
+      },
+      "subCommand": {
+        "type": "string",
+        "description": "Subcommand if applicable (e.g. 'history' for rollout)"
+      },
+      "resourceType": {
+        "type": "string",
+        "description": "Resource type (e.g. pod, deployment)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Resource name"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "allNamespaces": {
+        "type": "boolean",
+        "description": "If true, run the command across all namespaces",
+        "default": false
+      },
+      "outputFormat": {
+        "type": "string",
+        "description": "Output format (e.g. json, yaml, wide)",
+        "enum": [
+          "json",
+          "yaml",
+          "wide",
+          "name",
+          "custom"
+        ]
+      },
+      "flags": {
+        "type": "object",
+        "description": "Command flags as key-value pairs",
+        "additionalProperties": true
+      },
+      "args": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Additional command arguments"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": [
+      "command"
+    ]
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,63 @@
+{
+  "server": "memory",
+  "package": "@modelcontextprotocol/server-memory",
+  "name": "delete_observations",
+  "title": "Delete Observations",
+  "description": "Delete specific observations from entities in the knowledge graph",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "deletions": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "entityName": {
+              "type": "string",
+              "description": "The name of the entity containing the observations"
+            },
+            "observations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "An array of observations to delete"
+            }
+          },
+          "required": [
+            "entityName",
+            "observations"
+          ]
+        }
+      }
+    },
+    "required": [
+      "deletions"
+    ]
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "success": {
+        "type": "boolean"
+      },
+      "message": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "success",
+      "message"
+    ],
+    "additionalProperties": false
+  }
+}

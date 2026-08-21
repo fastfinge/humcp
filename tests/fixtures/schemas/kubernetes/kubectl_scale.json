@@ -1,0 +1,47 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_scale",
+  "title": null,
+  "description": "Scale a Kubernetes deployment",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the deployment to scale"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "replicas": {
+        "type": "number",
+        "description": "Number of replicas to scale to"
+      },
+      "resourceType": {
+        "type": "string",
+        "description": "Resource type to scale (deployment, replicaset, statefulset)",
+        "default": "deployment"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": [
+      "name",
+      "replicas"
+    ]
+  },
+  "outputSchema": null
+}

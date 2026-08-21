@@ -1,0 +1,55 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "upgrade_helm_chart",
+  "title": null,
+  "description": "Upgrade an existing Helm chart release",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Name of the Helm release to upgrade"
+      },
+      "chart": {
+        "type": "string",
+        "description": "Chart name or path to chart directory"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      },
+      "repo": {
+        "type": "string",
+        "description": "Helm repository URL (optional if using local chart path)"
+      },
+      "values": {
+        "type": "object",
+        "description": "Custom values to override chart defaults"
+      },
+      "valuesFile": {
+        "type": "string",
+        "description": "Path to values file (alternative to values object). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'values' to pass the values inline instead."
+      }
+    },
+    "required": [
+      "name",
+      "chart",
+      "namespace"
+    ]
+  },
+  "outputSchema": null
+}

@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0 and 1 complete, Phase 2 next
+## Project status: Phases 0, 1 and 2 complete, Phase 3 next
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -21,10 +21,19 @@ no assertion could (everything was spoken twice). Record in **`docs/phase1-notes
 new contract rules are now §7.16–19 and its fifth rewrote §7's core rule. Layout decisions taken
 there — solution format, target frameworks, project references — are §6.0.
 
+**Phase 2 is complete**: `Humcp.Schema` in full — three tiers, `$ref` with per-branch cycle
+detection, validation over `JsonSchema.Net` with every message written here, and the corpus.
+**95.0% of the corpus's 785 real top-level parameters render at Tier 1 or 2, 91.2% at Tier 1**, and
+every one of the 213 schemas produces a form. 813 tests. Record in **`docs/phase2-notes.md`**;
+its findings are now §5 (two new rules), §6.2, §9's corpus provenance, §11's Phase 7 entry, and
+three answers in §13.
+
 Still outstanding from Phase 0 and non-blocking: the JAWS and Narrator passes.
 
-The next unit of work is **Phase 2** (§10): `Humcp.Schema` in full — all three tiers, `$ref`
-resolution with cycle detection, validation, and the harvested corpus with golden tests. No UI work.
+The next unit of work is **Phase 3** (§10): `DataTemplateSelector` over `FieldModel`, the full
+accessibility contract (§7), the required/optional toggle, the enum-first wizard heuristic, MRU
+history, and validation surfacing. `FieldKind` is named for the shape of the data rather than for a
+WPF type precisely so Phase 3 owns that mapping.
 
 ## What humcp is
 
@@ -79,8 +88,14 @@ without saying so is not.
 - **v1 transports: stdio + *unauthenticated* Streamable HTTP.** OAuth is v3 (§11).
 - **Do not build `ICapabilityProvider` before v4** (§12). Two implementations before an
   abstraction; extracting an interface from one implementation is guessing at the joints.
+- **`JsonSchema.Net` for assertion semantics, our own words for every message.** The one package
+  `Humcp.Schema` references. A hand-rolled subset would disagree with the server about what is
+  valid; a library's error strings are not sentences to say to someone who cannot see the red box.
+- **`oneOf` stays at Tier 3, and the `discriminator` promotion is not worth building yet** —
+  measured against the corpus, not assumed: zero of the 18 real union parameters are
+  constant-discriminated (phase2-notes 3.3). Re-measure at v4 by re-running the harvester.
 - Target `net10.0-windows`. Pinned: `ModelContextProtocol.Core` 2.2.0, `prismatoid` 0.4.0
-  (very new — wrap it, and keep the no-op fallback working).
+  (very new — wrap it, and keep the no-op fallback working), `JsonSchema.Net` 9.4.0.
 
 ## Architecture
 
@@ -89,8 +104,10 @@ src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel. Pure. No MCP SDK
 src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU. No UI.
 src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
 src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager.
+tools/Humcp.Harvester/               Starts real MCP servers, writes their schemas into the corpus.
 tests/              TestServer (a real stdio fixture server), Schema.Tests (golden),
-                    Core.Tests (the round trip over a real pipe), App.UiTests (FlaUI)
+                    Core.Tests (the round trip over a real pipe), App.UiTests (FlaUI),
+                    fixtures/schemas (the corpus), fixtures/golden (transcripts + coverage.txt)
 ```
 
 The two pure libraries target `net10.0` deliberately — neither needs Windows, and the TFM is what
@@ -118,10 +135,24 @@ Three tiers (§5), degrading rather than failing:
 2. **Composite** — objects → `GroupBox`; arrays of objects → sub-forms; `$ref` resolved with cycle
    detection (a cycle demotes to Tier 3).
 3. **Raw** — `oneOf`/`anyOf`/`allOf`/`if`-`then`-`else`/unknown → multiline JSON editor with live
-   validation.
+   validation. **Every Tier 3 field carries a user-facing reason** ("a choice between 2 different
+   shapes") — §7.18, and it is also §5's telemetry.
+
+**A nullable value is one field, not a union.** `type: ["string","null"]` and
+`anyOf: [X, {"type":"null"}]` both stay Tier 1 with `AllowsNull` set. The C# SDK marks *every*
+optional parameter the second way, so treating it as a union would send every optional parameter of
+every C# MCP server to a JSON editor. Do not "fix" this by reading the Tier 3 list literally.
 
 **Validate client-side, but never block submission on client validation alone.** The server is the
-authority; an over-strict client makes working tools unusable.
+authority; an over-strict client makes working tools unusable. Two rules make that safe:
+
+- **Validation runs against the original schema, never `FormBuilder`'s simplified node.** The
+  builder merges `allOf`, unwraps nullable unions and infers missing types — all approximations for
+  choosing a control. Keeping them away from the validator means a rendering convenience can never
+  change what counts as a valid call.
+- **Evaluation never reaches the network.** The validator uses its own `SchemaRegistry` with `Fetch`
+  pinned shut, and `SchemaResolver` refuses non-local `$ref`s. A schema is a third-party document;
+  opening a form must not become an outbound request to an address a server chose.
 
 ## Accessibility invariants
 
@@ -187,7 +218,15 @@ dotnet test                                               # all three suites
 dotnet test tests/Humcp.Schema.Tests                      # one project
 dotnet test --filter "FullyQualifiedName~TabOrder"        # one test or fixture
 dotnet run --project src/Humcp.App
+
+HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests   # rewrite goldens, then read the diff
+dotnet run --project tools/Humcp.Harvester                   # re-harvest the whole corpus
+dotnet run --project tools/Humcp.Harvester -- playwright     # or just some of it
 ```
+
+**The harvester downloads and runs ~26 third-party MCP servers over `npx` and `uvx`.** It takes a
+few minutes cold and rewrites `tests/fixtures/schemas/`. Do not run it casually, and re-run the
+golden tests afterwards — the corpus changing is the point, but it changes the metric too.
 
 **`dotnet test` takes over the desktop.** `tests/Humcp.App.UiTests` launches the real app, takes
 the foreground and sends real keystrokes to it. That is deliberate (§9), and the suite refuses to
@@ -205,11 +244,15 @@ dotnet run --project src/Humcp.App
 
 ## Testing notes
 
-- **The schema corpus is the highest-value test asset** (§9): real `inputSchema` documents
-  harvested from ~20 widely used MCP servers, checked into `tests/fixtures/schemas/`, with golden
-  tests over the resulting `FieldModel`. It grounds tier coverage in what servers actually ship
-  rather than what the spec permits. Target metric: percentage of real-world parameters rendering
-  at Tier 1.
+- **The schema corpus is the highest-value test asset** (§9): 213 real `inputSchema` documents from
+  22 published MCP servers in `tests/fixtures/schemas/`, with golden tests over the resulting
+  `FieldModel`. Its whole value is that nobody here chose what is in it — never hand-write a fixture
+  into it. Regenerate with `dotnet run --project tools/Humcp.Harvester` (optionally naming server
+  ids); `manifest.json` records the servers that refused and why, on purpose.
+- **Golden files are readable transcripts, one per server.** Regenerate with
+  `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
+  fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
+  headline metric and is regenerated with them.
 - The fake in-process MCP server should exercise hostile input deliberately — 10,000-character
   descriptions, control characters, deeply nested schemas — since all of it is untrusted.
 - Automated UIA assertions prove names exist; only manual NVDA/JAWS/Narrator testing proves the app

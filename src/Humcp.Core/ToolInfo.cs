@@ -10,8 +10,9 @@ namespace Humcp.Core;
 /// </summary>
 /// <remarks>
 /// No MCP vocabulary, per ROADMAP §6.1 hedge 2 — this record has to read correctly for a non-MCP
-/// capability source. <see cref="InputSchema"/> is a bare <see cref="JsonElement"/> for the same
-/// reason: it is what Phase 2's schema engine consumes.
+/// capability source. Since Phase 2 the arguments are a <see cref="Schema.FormModel"/> rather than a
+/// raw <see cref="JsonElement"/>: the schema engine has already taken the schema apart, and every
+/// question the app asks about a tool's parameters is answered from that one model.
 /// </remarks>
 public sealed record ToolInfo(
     string Name,
@@ -19,13 +20,20 @@ public sealed record ToolInfo(
     string Summary,
     string FullDescription,
     OperationSafety Safety,
-    int ParameterCount,
-    int RequiredParameterCount,
-    JsonElement InputSchema)
+    FormModel Form)
 {
+    /// <summary>The schema exactly as the server sent it, for Copy Schema and for validation.</summary>
+    public JsonElement InputSchema => Form.Schema;
+
+    /// <summary>Top-level parameters. Nested fields are inside <see cref="Form"/>.</summary>
+    public int ParameterCount => Form.Fields.Count;
+
+    public int RequiredParameterCount => Form.RequiredCount;
+
     /// <summary>
     /// True when the tool can be invoked with no arguments at all — which is the whole of Phase 1's
-    /// call surface, until form generation lands in Phase 3.
+    /// call surface, until form generation lands in Phase 3. Optional parameters do not stop a tool
+    /// being runnable this way; a required one does.
     /// </summary>
     public bool RunsWithoutArguments => RequiredParameterCount == 0;
 

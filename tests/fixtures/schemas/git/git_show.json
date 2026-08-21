@@ -1,0 +1,33 @@
+{
+  "server": "git",
+  "package": "mcp-server-git",
+  "name": "git_show",
+  "title": null,
+  "description": "Shows the contents of a commit",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "properties": {
+      "repo_path": {
+        "title": "Repo Path",
+        "type": "string"
+      },
+      "revision": {
+        "title": "Revision",
+        "type": "string"
+      }
+    },
+    "required": [
+      "repo_path",
+      "revision"
+    ],
+    "title": "GitShow",
+    "type": "object"
+  },
+  "outputSchema": null
+}

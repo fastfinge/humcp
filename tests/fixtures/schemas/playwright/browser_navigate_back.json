@@ -1,0 +1,21 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_navigate_back",
+  "title": "Go back",
+  "description": "Go back to the previous page in the history",
+  "annotations": {
+    "title": "Go back",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {},
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

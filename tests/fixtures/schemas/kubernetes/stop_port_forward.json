@@ -1,0 +1,26 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "stop_port_forward",
+  "title": "Stop Port Forward",
+  "description": "Stop a port-forward process",
+  "annotations": {
+    "title": "Stop Port Forward",
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ]
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,33 @@
+{
+  "server": "everything",
+  "package": "@modelcontextprotocol/server-everything",
+  "name": "get-sum",
+  "title": "Get Sum Tool",
+  "description": "Returns the sum of two numbers",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "a": {
+        "type": "number",
+        "description": "First number"
+      },
+      "b": {
+        "type": "number",
+        "description": "Second number"
+      }
+    },
+    "required": [
+      "a",
+      "b"
+    ]
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,28 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_monitor_get",
+  "title": "Get monitor",
+  "description": "\nRetrieve one monitor by ID, including its configuration and current state. This does not run or modify the monitor.\n",
+  "annotations": {
+    "title": "Get monitor",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "id": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "id"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

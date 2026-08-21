@@ -1,0 +1,20 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_reconnect",
+  "title": null,
+  "description": "Reconnect to the Kubernetes API server by recreating all API clients. Use this after cluster upgrades (e.g., EKS control plane upgrades that rotate ENIs/IPs) to force fresh DNS resolution and new TCP connections.",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "outputSchema": null
+}

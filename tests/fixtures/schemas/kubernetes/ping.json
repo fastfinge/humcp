@@ -1,0 +1,20 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "ping",
+  "title": null,
+  "description": "Verify that the counterpart is still responsive and the connection is alive.",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "required": []
+  },
+  "outputSchema": null
+}

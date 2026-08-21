@@ -1,0 +1,21 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_geocode",
+  "title": null,
+  "description": "Convert an address into geographic coordinates",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "address": {
+        "type": "string",
+        "description": "The address to geocode"
+      }
+    },
+    "required": [
+      "address"
+    ]
+  },
+  "outputSchema": null
+}

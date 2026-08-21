@@ -1,0 +1,49 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_apply",
+  "title": null,
+  "description": "Apply a Kubernetes YAML manifest from a string or file",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "manifest": {
+        "type": "string",
+        "description": "YAML manifest to apply"
+      },
+      "filename": {
+        "type": "string",
+        "description": "Path to a YAML file to apply (optional - use either manifest or filename). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'manifest' to pass the file's contents instead."
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "dryRun": {
+        "type": "boolean",
+        "description": "If true, only validate the resource, don't actually execute the operation",
+        "default": false
+      },
+      "force": {
+        "type": "boolean",
+        "description": "If true, immediately remove resources from API and bypass graceful deletion",
+        "default": false
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": []
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,21 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_place_details",
+  "title": null,
+  "description": "Get detailed information about a specific place",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "place_id": {
+        "type": "string",
+        "description": "The place ID to get details for"
+      }
+    },
+    "required": [
+      "place_id"
+    ]
+  },
+  "outputSchema": null
+}

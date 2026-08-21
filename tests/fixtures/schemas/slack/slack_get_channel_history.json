@@ -1,0 +1,26 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_get_channel_history",
+  "title": null,
+  "description": "Get recent messages from a channel",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "The ID of the channel"
+      },
+      "limit": {
+        "type": "number",
+        "description": "Number of messages to retrieve (default 10)",
+        "default": 10
+      }
+    },
+    "required": [
+      "channel_id"
+    ]
+  },
+  "outputSchema": null
+}

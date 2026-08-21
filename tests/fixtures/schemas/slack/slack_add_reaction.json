@@ -1,0 +1,31 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_add_reaction",
+  "title": null,
+  "description": "Add a reaction emoji to a message",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "The ID of the channel containing the message"
+      },
+      "timestamp": {
+        "type": "string",
+        "description": "The timestamp of the message to react to"
+      },
+      "reaction": {
+        "type": "string",
+        "description": "The name of the emoji reaction (without ::)"
+      }
+    },
+    "required": [
+      "channel_id",
+      "timestamp",
+      "reaction"
+    ]
+  },
+  "outputSchema": null
+}

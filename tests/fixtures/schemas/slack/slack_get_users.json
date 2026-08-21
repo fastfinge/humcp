@@ -1,0 +1,23 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_get_users",
+  "title": null,
+  "description": "Get a list of all users in the workspace with their basic profile information",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "cursor": {
+        "type": "string",
+        "description": "Pagination cursor for next page of results"
+      },
+      "limit": {
+        "type": "number",
+        "description": "Maximum number of users to return (default 100, max 200)",
+        "default": 100
+      }
+    }
+  },
+  "outputSchema": null
+}

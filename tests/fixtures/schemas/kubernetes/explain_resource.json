@@ -1,0 +1,50 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "explain_resource",
+  "title": null,
+  "description": "Get documentation for a Kubernetes resource or field",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resource": {
+        "type": "string",
+        "description": "Resource name or field path (e.g. 'pods' or 'pods.spec.containers')"
+      },
+      "apiVersion": {
+        "type": "string",
+        "description": "API version to use (e.g. 'apps/v1')"
+      },
+      "recursive": {
+        "type": "boolean",
+        "description": "Print the fields of fields recursively",
+        "default": false
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      },
+      "output": {
+        "type": "string",
+        "description": "Output format (plaintext or plaintext-openapiv2)",
+        "enum": [
+          "plaintext",
+          "plaintext-openapiv2"
+        ],
+        "default": "plaintext"
+      }
+    },
+    "required": [
+      "resource"
+    ]
+  },
+  "outputSchema": null
+}

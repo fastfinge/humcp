@@ -1,0 +1,50 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "list_api_resources",
+  "title": null,
+  "description": "List the API resources available in the cluster",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "apiGroup": {
+        "type": "string",
+        "description": "API group to filter by"
+      },
+      "namespaced": {
+        "type": "boolean",
+        "description": "If true, only show namespaced resources"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      },
+      "verbs": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "List of verbs to filter by"
+      },
+      "output": {
+        "type": "string",
+        "description": "Output format (wide, name, or no-headers)",
+        "enum": [
+          "wide",
+          "name",
+          "no-headers"
+        ],
+        "default": "wide"
+      }
+    }
+  },
+  "outputSchema": null
+}

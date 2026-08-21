@@ -1,0 +1,17 @@
+{
+  "server": "postgres",
+  "package": "@modelcontextprotocol/server-postgres",
+  "name": "query",
+  "title": null,
+  "description": "Run a read-only SQL query",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "sql": {
+        "type": "string"
+      }
+    }
+  },
+  "outputSchema": null
+}

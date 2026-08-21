@@ -34,10 +34,12 @@ internal static class TestTools
         yield return Fail();
         yield return DeleteEverything();
         yield return TinyImage();
+        yield return Report();
+        yield return Tree();
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 10;
+    public const int Count = 12;
 
     // ------------------------------------------------------------------ info_
 
@@ -214,6 +216,60 @@ internal static class TestTools
             Description = "Returns a one-pixel PNG with no alt text at all, because the protocol has nowhere to put any.",
             ReadOnly = true,
             Idempotent = true,
+        });
+
+    // ------------------------------------------------------------------ schemas worth rendering
+
+    /// <summary>Which way round a report is sorted. An enum, so the schema carries one.</summary>
+    public enum Ordering
+    {
+        Ascending,
+        Descending,
+    }
+
+    /// <summary>
+    /// A nested object, which the SDK publishes as a <c>$ref</c> into <c>$defs</c> — the Tier 2
+    /// case, in the exact shape a C# MCP server really emits rather than one we wrote by hand.
+    /// </summary>
+    public sealed record ReportFilter(
+        [Description("Only include rows containing this text.")] string? Contains = null,
+        [Description("Largest number of rows to return.")] int Limit = 20);
+
+    /// <summary>
+    /// A type that contains itself. The SDK publishes a <c>$ref</c> cycle for it, which is exactly
+    /// what ROADMAP §5 says demotes a node to Tier 3 — and the only way to prove that path works on
+    /// something the wire really produced.
+    /// </summary>
+    public sealed record Branch(
+        [Description("What this branch is called.")] string Name,
+        [Description("A branch below this one, if there is one.")] Branch? Child = null);
+
+    private static McpServerTool Report() => McpServerTool.Create(
+        ([Description("What to call the report.")] string title,
+         [Description("Which way to sort the rows.")] Ordering order = Ordering.Ascending,
+         [Description("Which columns to include.")] string[]? columns = null,
+         [Description("Narrows what goes in the report.")] ReportFilter? filter = null) =>
+            $"Report \"{title}\", sorted {order}, {columns?.Length ?? 0} column(s), " +
+            $"filter {(filter is null ? "none" : $"contains={filter.Contains} limit={filter.Limit}")}.",
+        new McpServerToolCreateOptions
+        {
+            Name = "demo_report",
+            Title = "Build a report",
+            Description = "Takes a string, an enum, a list of strings and a nested object, so the schema " +
+                          "engine's Tier 1 and Tier 2 paths are exercised over a real pipe.",
+            ReadOnly = true,
+        });
+
+    private static McpServerTool Tree() => McpServerTool.Create(
+        ([Description("A branch, which may contain another branch.")] Branch tree) =>
+            $"Top branch is \"{tree.Name}\"; it {(tree.Child is null ? "has no child" : "has a child")}.",
+        new McpServerToolCreateOptions
+        {
+            Name = "demo_tree",
+            Title = "Walk a tree",
+            Description = "Takes a recursive type. A form cannot have infinite depth, so the recursive " +
+                          "part has to degrade to a JSON editor rather than expand forever.",
+            ReadOnly = true,
         });
 
     private static McpServerTool DeleteEverything() => McpServerTool.Create(

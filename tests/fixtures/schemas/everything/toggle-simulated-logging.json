@@ -1,0 +1,20 @@
+{
+  "server": "everything",
+  "package": "@modelcontextprotocol/server-everything",
+  "name": "toggle-simulated-logging",
+  "title": "Toggle Simulated Logging",
+  "description": "Toggles simulated, random-leveled logging on or off.",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {}
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,42 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_distance_matrix",
+  "title": null,
+  "description": "Calculate travel distance and time for multiple origins and destinations",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "origins": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of origin addresses or coordinates"
+      },
+      "destinations": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "Array of destination addresses or coordinates"
+      },
+      "mode": {
+        "type": "string",
+        "description": "Travel mode (driving, walking, bicycling, transit)",
+        "enum": [
+          "driving",
+          "walking",
+          "bicycling",
+          "transit"
+        ]
+      }
+    },
+    "required": [
+      "origins",
+      "destinations"
+    ]
+  },
+  "outputSchema": null
+}

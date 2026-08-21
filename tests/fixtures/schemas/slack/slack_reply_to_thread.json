@@ -1,0 +1,31 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_reply_to_thread",
+  "title": null,
+  "description": "Reply to a specific message thread in Slack",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "The ID of the channel containing the thread"
+      },
+      "thread_ts": {
+        "type": "string",
+        "description": "The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it."
+      },
+      "text": {
+        "type": "string",
+        "description": "The reply text"
+      }
+    },
+    "required": [
+      "channel_id",
+      "thread_ts",
+      "text"
+    ]
+  },
+  "outputSchema": null
+}

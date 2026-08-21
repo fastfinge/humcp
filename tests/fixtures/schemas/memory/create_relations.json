@@ -1,0 +1,84 @@
+{
+  "server": "memory",
+  "package": "@modelcontextprotocol/server-memory",
+  "name": "create_relations",
+  "title": "Create Relations",
+  "description": "Create multiple new relations between entities in the knowledge graph. Relations should be in active voice",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "relations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "The name of the entity where the relation starts"
+            },
+            "to": {
+              "type": "string",
+              "description": "The name of the entity where the relation ends"
+            },
+            "relationType": {
+              "type": "string",
+              "description": "The type of the relation"
+            }
+          },
+          "required": [
+            "from",
+            "to",
+            "relationType"
+          ]
+        }
+      }
+    },
+    "required": [
+      "relations"
+    ]
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "relations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "The name of the entity where the relation starts"
+            },
+            "to": {
+              "type": "string",
+              "description": "The name of the entity where the relation ends"
+            },
+            "relationType": {
+              "type": "string",
+              "description": "The type of the relation"
+            }
+          },
+          "required": [
+            "from",
+            "to",
+            "relationType"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "relations"
+    ],
+    "additionalProperties": false
+  }
+}

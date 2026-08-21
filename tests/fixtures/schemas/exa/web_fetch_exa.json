@@ -1,0 +1,37 @@
+{
+  "server": "exa",
+  "package": "exa-mcp-server",
+  "name": "web_fetch_exa",
+  "title": null,
+  "description": "Read a webpage's full content as clean markdown. Use after web_search_exa when highlights are insufficient or to read any URL.\n\nBest for: Extracting full content from known URLs. Batch multiple URLs in one call.\nReturns: Clean text content and metadata from the page(s).",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "urls": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "URLs to read. Batch multiple URLs in one call."
+      },
+      "maxCharacters": {
+        "type": "number",
+        "minimum": 1,
+        "description": "Maximum characters to extract per page (default: 3000)"
+      }
+    },
+    "required": [
+      "urls"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "outputSchema": null
+}

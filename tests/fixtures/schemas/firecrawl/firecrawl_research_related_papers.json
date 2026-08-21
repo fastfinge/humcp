@@ -1,0 +1,55 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_research_related_papers",
+  "title": "Find related papers via citation graph",
+  "description": "\nFind citation-graph candidates from one to ten `seed_ids`; the first ID is the primary seed and later IDs are anchors. `mode` defaults to `similar` (co-citation/bibliographic coupling); `citers` returns papers citing a seed and `references` papers cited by a seed. `intent` ranks candidates.\n\nReturns ranked candidates and the evaluated pool size.\n",
+  "annotations": {
+    "title": "Find related papers via citation graph",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "seed_ids": {
+        "minItems": 1,
+        "maxItems": 10,
+        "type": "array",
+        "items": {
+          "type": "string"
+        }
+      },
+      "intent": {
+        "type": "string",
+        "minLength": 1
+      },
+      "mode": {
+        "type": "string",
+        "enum": [
+          "similar",
+          "citers",
+          "references"
+        ]
+      },
+      "k": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 500
+      },
+      "rerank": {
+        "description": "Apply an additional rerank over the fused candidates.",
+        "type": "boolean"
+      }
+    },
+    "required": [
+      "seed_ids",
+      "intent"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,65 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_patch",
+  "title": null,
+  "description": "Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "type": "string",
+        "description": "Type of resource to patch (e.g., pods, deployments, services)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the resource to patch"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "patchType": {
+        "type": "string",
+        "description": "Type of patch to apply",
+        "enum": [
+          "strategic",
+          "merge",
+          "json"
+        ],
+        "default": "strategic"
+      },
+      "patchData": {
+        "type": "object",
+        "description": "Patch data as a JSON object"
+      },
+      "patchFile": {
+        "type": "string",
+        "description": "Path to a file containing the patch data (alternative to patchData). The path is read on the machine running the MCP server, so it is rejected when the server runs over a remote (SSE/Streamable HTTP) transport; use 'patchData' to pass the patch contents instead."
+      },
+      "dryRun": {
+        "type": "boolean",
+        "description": "If true, only validate the resource, don't actually execute the operation",
+        "default": false
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": [
+      "resourceType",
+      "name"
+    ]
+  },
+  "outputSchema": null
+}

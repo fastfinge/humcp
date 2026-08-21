@@ -1,0 +1,70 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_get",
+  "title": null,
+  "description": "Get or list Kubernetes resources by resource type, name, and optionally namespace",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "type": "string",
+        "description": "Type of resource to get (e.g., pods, deployments, services, configmaps, events, etc.)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the resource (optional - if not provided, lists all resources of the specified type)"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "output": {
+        "type": "string",
+        "enum": [
+          "json",
+          "yaml",
+          "wide",
+          "name",
+          "custom"
+        ],
+        "description": "Output format",
+        "default": "json"
+      },
+      "allNamespaces": {
+        "type": "boolean",
+        "description": "If true, list resources across all namespaces",
+        "default": false
+      },
+      "labelSelector": {
+        "type": "string",
+        "description": "Filter resources by label selector (e.g. 'app=nginx')"
+      },
+      "fieldSelector": {
+        "type": "string",
+        "description": "Filter resources by field selector (e.g. 'metadata.name=my-pod')"
+      },
+      "sortBy": {
+        "type": "string",
+        "description": "Sort events by a field (default: lastTimestamp). Only applicable for events."
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": [
+      "resourceType"
+    ]
+  },
+  "outputSchema": null
+}

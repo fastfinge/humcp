@@ -1,0 +1,58 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_context",
+  "title": null,
+  "description": "Manage Kubernetes contexts - list, get, or set the current context",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "operation": {
+        "type": "string",
+        "enum": [
+          "list",
+          "get",
+          "set"
+        ],
+        "description": "Operation to perform: list contexts, get current context, or set current context",
+        "default": "list"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the context to set as current (required for set operation)"
+      },
+      "showCurrent": {
+        "type": "boolean",
+        "description": "When listing contexts, highlight which one is currently active",
+        "default": true
+      },
+      "detailed": {
+        "type": "boolean",
+        "description": "Include detailed information about the context",
+        "default": false
+      },
+      "output": {
+        "type": "string",
+        "enum": [
+          "json",
+          "yaml",
+          "name",
+          "custom"
+        ],
+        "description": "Output format",
+        "default": "json"
+      }
+    },
+    "required": [
+      "operation"
+    ]
+  },
+  "outputSchema": null
+}

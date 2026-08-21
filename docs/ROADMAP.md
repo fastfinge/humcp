@@ -2,9 +2,10 @@
 
 **Generate real, native-feeling, screen-reader-first Windows UI automatically from any MCP server's published metadata.**
 
-Status: Phase 1 complete — end-to-end round trip, 81 automated tests, manual NVDA pass green.
-Phase 2 (the schema engine) is next.
-Findings: [`phase0-findings.md`](phase0-findings.md), [`phase1-notes.md`](phase1-notes.md).
+Status: Phase 2 complete — the schema engine renders 95% of real-world parameters natively, against
+a corpus harvested from 22 published MCP servers. 813 automated tests. Phase 3 (form generation) is
+next. Findings: [`phase0-findings.md`](phase0-findings.md), [`phase1-notes.md`](phase1-notes.md),
+[`phase2-notes.md`](phase2-notes.md).
 
 ---
 
@@ -37,6 +38,7 @@ two goals conflict, accessibility wins.
 | Transports (v1) | stdio + **unauthenticated** Streamable HTTP | OAuth deferred; keeps v1 shippable |
 | LLM | **None in v1**, seam preserved | Human is the intelligence; `IResultSummarizer` / `IToolSuggester` interfaces ship as null implementations |
 | Protocol SDK | `ModelContextProtocol.Core` 2.2.0 | Implements spec 2026-07-28, negotiates back to older servers |
+| JSON Schema validation | `JsonSchema.Net` 9.4.0 | The one package `Humcp.Schema` references. Assertion semantics are a conformance surface and a hand-rolled subset would disagree with the server about what is valid; the *messages* are all ours, because they are spoken. See phase2-notes 3.6 |
 
 ### 2.1 Why not WinUI 3
 
@@ -143,6 +145,13 @@ fields, labels, help text, constraints, and validation rules. WPF then binds tem
 
 Tier 1 is a strict superset of the elicitation subset, so elicitation forms always render natively.
 
+**A nullable value is one field, not a union.** `type: ["string", "null"]` and
+`anyOf: [{…X}, {"type": "null"}]` are both how a generator spells "X, or nothing" — the C# SDK marks
+*every* optional parameter the second way. Both stay Tier 1, with the field flagged as accepting
+null, and an empty box means null rather than an empty string. Written down because a reader coming
+to the Tier 3 list below would otherwise correctly conclude that `anyOf` degrades, and undo it
+(phase2-notes 3.2).
+
 **Tier 2 — Composite.** Recursive but still fully typed.
 
 - `object` → `GroupBox` (a real UIA group) containing nested fields, collapsible
@@ -160,7 +169,21 @@ is telemetry for what to promote to Tier 2 later.
 
 Validate client-side against the schema before sending, but **never block submission on a
 validation failure alone** — servers are the authority, and an over-strict client renders a
-working tool unusable. Warn, list errors, let the user override.
+working tool unusable. Warn, list errors, let the user override. A schema the validator cannot even
+load is reported as *unchecked*, which is a different fact from *valid* and must not be flattened
+into the same green.
+
+**Validation runs against the original schema document, never the builder's simplified one.**
+`FormBuilder` merges `allOf`, unwraps nullable unions and infers a missing `type` from neighbouring
+keywords, all of them approximations made to decide which control to draw. Keeping them out of the
+validator is what makes them safe: the worst case becomes a box that looks more permissive than it
+is and a server that says no, rather than a rendering convenience quietly changing what counts as a
+valid call (phase2-notes 3.5).
+
+**Evaluation never reaches the network.** A schema is a third-party document (§4, pitfall 5), so a
+`$ref` to an attacker-chosen URL must not turn opening a form into an outbound request. The
+validator's schema registry has its fetch hook pinned shut, and `$ref` resolution refuses anything
+that is not local to the document (phase2-notes 3.7).
 
 ---
 
@@ -174,11 +197,16 @@ Humcp.slnx
 │   │                      MRTR orchestration, MRU history. No UI.
 │   ├── Humcp.Speech/      IAnnouncer over prismatoid; no-op fallback.
 │   └── Humcp.App/         WPF. Views, templates, view-models, window manager.
+├── tools/
+│   └── Humcp.Harvester/   Starts real MCP servers and writes down what they publish (§9)
 └── tests/
     ├── Humcp.TestServer/     Fake MCP server, spoken to over a real stdio pipe
     ├── Humcp.Schema.Tests/   Golden tests over a real-world schema corpus
     ├── Humcp.Core.Tests/     The catalogue and the round trip, against the fixture
-    └── Humcp.App.UiTests/    FlaUI UIA-tree assertions (§9)
+    ├── Humcp.App.UiTests/    FlaUI UIA-tree assertions (§9)
+    └── fixtures/
+        ├── schemas/          The corpus, harvested. Plus a manifest naming what refused
+        └── golden/           One readable transcript per server, plus coverage.txt
 ```
 
 Dependency rule: `Humcp.App` → `Humcp.Core` → `Humcp.Schema`. Nothing points back. `Humcp.Schema`
@@ -213,6 +241,20 @@ Small, and annoying to reverse later, so they are written down rather than left 
 - **Phase 1's hard-coded server is overridable from the environment**
   (`HUMCP_STDIO_COMMAND` / `_ARGS` / `_NAME`) until configuration arrives in Phase 6, so pointing
   the app at a real server never requires a code edit.
+
+### 6.2 Layout decisions taken in Phase 2
+
+- **`tools/` is a third top-level directory**, for things that are neither shipped nor tests.
+  `Humcp.Harvester` is in the solution so it builds with everything else and cannot rot, and it
+  talks to the MCP SDK directly rather than through `Humcp.Core` — the corpus wants schemas exactly
+  as servers emit them, and `Humcp.Core` sanitises everything it touches.
+- **`ToolInfo` carries a `FormModel`, not a `JsonElement`.** The form is built once, when the tool
+  list arrives. That detaches the schema from the document the SDK owns — so a `ToolInfo` outlives
+  the listing it came from — and it means a hostile schema is defused at the edge rather than on
+  whatever thread later opens a window.
+- **`Humcp.Schema` has one package reference**, `JsonSchema.Net`, and `Humcp.Speech` and
+  `Humcp.App` acquire it transitively. The rule that matters is unchanged: neither the MCP SDK nor
+  WPF appears below `Humcp.Core`, and `Humcp.App` still references no protocol type at all.
 
 ### 6.1 Portability hedges for v4 (OpenAPI)
 
@@ -396,6 +438,25 @@ them into `tests/fixtures/schemas/`. Golden tests assert the `FieldModel` each p
 grounds tier coverage in what servers actually ship rather than what the spec permits, and gives a
 concrete metric: *percentage of real-world parameters rendered at Tier 1*.
 
+**Built in Phase 2**, and four things about how it is built are load-bearing:
+
+- **It is harvested by a tool, not curated by hand.** `tools/Humcp.Harvester` starts each server in
+  its checked-in `servers.json` over a real stdio pipe and writes down what `tools/list` answers.
+  The corpus's whole value is that nobody here chose what is in it; tier coverage measured against
+  schemas we invented would measure our imagination.
+- **Credentials in the harvest list are deliberately fake.** `tools/list` is metadata, and nearly
+  every server publishes its catalogue before authenticating anything.
+- **`manifest.json` records the servers that refused, and why.** A corpus listing only its successes
+  is not evidence — and the single most useful finding of Phase 2 came out of a failure line
+  (phase2-notes 3.1).
+- **Golden files are readable transcripts, one per server, not serialised object graphs.** A diff
+  has to be judgeable by eye. `HUMCP_UPDATE_GOLDEN=1` regenerates them and still fails the test, so
+  a regeneration can never pass unreviewed. `coverage.txt` is regenerated alongside them, so the
+  headline metric moving is a line in a diff rather than something someone has to remember to check.
+
+**Result: 213 tools from 22 servers, 785 top-level parameters. 91.2% render at Tier 1, 95.0% at
+Tier 1 or 2, and all 213 schemas can be validated against.**
+
 **Fake MCP server.** An in-process server exercising every content type, `isError`, MRTR
 round-trips, progress notifications, and deliberately hostile input (10,000-character
 descriptions, control characters, deeply nested schemas).
@@ -482,11 +543,22 @@ in [`phase1-notes.md`](phase1-notes.md).
 
 Outstanding, neither blocking: the JAWS and Narrator passes, still carried forward from Phase 0.
 
-### Phase 2 — Schema engine (~1 week)
+### Phase 2 — Schema engine ✅ done
 `Humcp.Schema` in full: all three tiers, `$ref` resolution with cycle detection, validation,
 description sanitisation. Harvest the corpus and build golden tests. No UI work.
 
-**Exit:** ≥90% of corpus parameters render at Tier 1 or 2; every schema produces *something*.
+**Exit met, with room.** 95.0% of the corpus's 785 top-level parameters render at Tier 1 or 2 — and
+91.2% at Tier 1 alone, which is the stricter §9 metric. Every one of the 213 harvested schemas
+produces a form, and there is no input for which `FormBuilder.Build` throws. 813 automated tests.
+
+The corpus is the phase's real product: 22 published servers, none of whom have heard of this
+project, and no per-server code anywhere in the repository. Three measurements settled arguments
+that would otherwise have been settled by taste — the discriminated-union promotion recovers nothing
+(§13), `format: date` never appears (§13), and treating `anyOf: [X, null]` as a union would have
+sent every optional parameter of every C# MCP server to a JSON editor (§5). Full record in
+[`phase2-notes.md`](phase2-notes.md).
+
+Outstanding, neither blocking: the JAWS and Narrator passes, still carried forward from Phase 0.
 
 ### Phase 3 — Form generation (~1 week)
 `DataTemplateSelector` over `FieldModel`. The full accessibility contract (§7). Required/optional
@@ -531,6 +603,15 @@ Three items carried in from earlier phases:
 Streamable HTTP transport (unauthenticated). Robust error and disconnect handling. Cancellation.
 Untrusted-input hardening. Packaging and a signed installer. User documentation written for
 screen reader users.
+
+One item carried in from Phase 2:
+
+- **One malformed tool schema must not cost the user every other tool on that server.**
+  `ModelContextProtocol.Core` 2.2.0 requires each `inputSchema` to be an object schema and throws
+  while deserialising the whole `tools/list` response when one is not — which is how nine perfectly
+  usable GitLab tools became a failed server (phase2-notes 3.1). Either list through a lower-level
+  call and map tools ourselves, or get the SDK to report per-tool. The schema engine cannot help:
+  the listing never reaches it.
 
 **Exit:** v1.0.
 
@@ -875,10 +956,25 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   connected. Cheap to defer: the `IAnnouncer` seam already separates `Speak`, `Braille` and
   `Output`, so answering it later changes a policy, not a structure.
 - Tool grouping heuristics: prefix-splitting is a guess. Phase 1 implemented a conservative version
-  (§8) and it reads well on a ten-tool server, which proves nothing about a forty-tool one. Revisit
-  against the harvested corpus — it may turn out most servers don't namespace consistently enough
-  for it to help, and the thresholds are three constants in one method precisely so that answer is
-  cheap to act on.
+  (§8) and it reads well on a ten-tool server, which proves nothing about a forty-tool one. **The
+  corpus can now answer this** — 22 servers, several of them past 20 tools — and Phase 2 did not
+  ask it, because the question is about how a tree *sounds* and the answer wants a screen reader
+  rather than a count. The thresholds are three constants in one method precisely so that acting on
+  the answer is cheap. Due at the Phase 3 exit, alongside the manual pass.
+- ~~Does `discriminator`-style promotion of `oneOf` to Tier 2 pay for MCP servers?~~ **Answered: no,
+  for now.** Of the 18 top-level parameters that reached Tier 3 through a union, zero are a union of
+  object branches pinned by a constant discriminator; almost all are `anyOf: [object, string]`,
+  where rendering the object branch would hide the string shorthand (phase2-notes 3.3). §12's
+  argument that the benefit flows backwards from OpenAPI is not wrong, but it is currently worth
+  nothing on MCP, so §5's placement of `oneOf` at Tier 3 stands. Re-measure at v4 planning; the
+  harvester makes that a re-run rather than a study. The same pass killed the typed-map dictionary
+  editor: 11 of 12 free-form-object parameters accept any key at all.
+- **Where should Phase 3's effort go?** The corpus says `format: date` appears in *none* of the 785
+  real parameters — the formats that do are `uri`, `uuid`, `int32` and `json` (phase2-notes 3.4).
+  This reverses nothing: elicitation blesses `date` explicitly (§3), so Phase 5 needs a `DatePicker`
+  and Phase 0 already accepted one. It does mean the `DatePicker` and its §7.15 keystroke hint sit
+  on a path no server in the corpus takes, while the plain text box sits on a path 91% of parameters
+  take. Spend the polish accordingly.
 - **Does prism have a job at all?** Phase 1 answered the narrow question — a live region reaches
   NVDA unaided, and speaking on top of it announces everything twice (§7) — which leaves the seam
   loaded and idle. The remaining case is an event arriving while humcp is in the background, where

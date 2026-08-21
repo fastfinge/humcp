@@ -1,0 +1,78 @@
+{
+  "server": "memory",
+  "package": "@modelcontextprotocol/server-memory",
+  "name": "add_observations",
+  "title": "Add Observations",
+  "description": "Add new observations to existing entities in the knowledge graph",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "observations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "entityName": {
+              "type": "string",
+              "description": "The name of the entity to add the observations to"
+            },
+            "contents": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "An array of observation contents to add"
+            }
+          },
+          "required": [
+            "entityName",
+            "contents"
+          ]
+        }
+      }
+    },
+    "required": [
+      "observations"
+    ]
+  },
+  "outputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "results": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "entityName": {
+              "type": "string"
+            },
+            "addedObservations": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "entityName",
+            "addedObservations"
+          ],
+          "additionalProperties": false
+        }
+      }
+    },
+    "required": [
+      "results"
+    ],
+    "additionalProperties": false
+  }
+}

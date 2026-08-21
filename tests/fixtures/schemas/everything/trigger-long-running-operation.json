@@ -1,0 +1,31 @@
+{
+  "server": "everything",
+  "package": "@modelcontextprotocol/server-everything",
+  "name": "trigger-long-running-operation",
+  "title": "Trigger Long Running Operation Tool",
+  "description": "Demonstrates a long running operation with progress updates.",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "duration": {
+        "default": 10,
+        "description": "Duration of the operation in seconds",
+        "type": "number"
+      },
+      "steps": {
+        "default": 5,
+        "description": "Number of steps in the operation",
+        "type": "number"
+      }
+    }
+  },
+  "outputSchema": null
+}

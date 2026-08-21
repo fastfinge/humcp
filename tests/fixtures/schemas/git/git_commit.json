@@ -1,0 +1,33 @@
+{
+  "server": "git",
+  "package": "mcp-server-git",
+  "name": "git_commit",
+  "title": null,
+  "description": "Records changes to the repository",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "properties": {
+      "repo_path": {
+        "title": "Repo Path",
+        "type": "string"
+      },
+      "message": {
+        "title": "Message",
+        "type": "string"
+      }
+    },
+    "required": [
+      "repo_path",
+      "message"
+    ],
+    "title": "GitCommit",
+    "type": "object"
+  },
+  "outputSchema": null
+}

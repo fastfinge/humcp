@@ -1,0 +1,37 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_search_places",
+  "title": null,
+  "description": "Search for places using Google Places API",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Search query"
+      },
+      "location": {
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "type": "number"
+          },
+          "longitude": {
+            "type": "number"
+          }
+        },
+        "description": "Optional center point for the search"
+      },
+      "radius": {
+        "type": "number",
+        "description": "Search radius in meters (max 50000)"
+      }
+    },
+    "required": [
+      "query"
+    ]
+  },
+  "outputSchema": null
+}

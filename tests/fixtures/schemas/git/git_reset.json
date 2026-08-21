@@ -1,0 +1,28 @@
+{
+  "server": "git",
+  "package": "mcp-server-git",
+  "name": "git_reset",
+  "title": null,
+  "description": "Unstages all staged changes",
+  "annotations": {
+    "title": null,
+    "destructiveHint": true,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "properties": {
+      "repo_path": {
+        "title": "Repo Path",
+        "type": "string"
+      }
+    },
+    "required": [
+      "repo_path"
+    ],
+    "title": "GitReset",
+    "type": "object"
+  },
+  "outputSchema": null
+}

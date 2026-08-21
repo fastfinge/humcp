@@ -146,10 +146,19 @@ public class ToolTreeBuilderTests
             Summary: "",
             FullDescription: "",
             Safety: safety ?? OperationSafety.Unstated,
-            ParameterCount: parameters,
-            RequiredParameterCount: required,
-            InputSchema: EmptySchema);
+            Form: FormBuilder.Build(Schema(parameters, required)));
 
-    private static readonly JsonElement EmptySchema =
-        JsonDocument.Parse("""{"type":"object"}""").RootElement.Clone();
+    /// <summary>
+    /// A real schema with the shape asked for, rather than a hand-set count. Since Phase 2 the
+    /// counts are derived from the built form, so a fixture that states them directly would be
+    /// asserting against itself.
+    /// </summary>
+    private static JsonElement Schema(int parameters, int required)
+    {
+        var properties = string.Join(",", Enumerable.Range(0, parameters).Select(i => $"\"p{i}\":{{\"type\":\"string\"}}"));
+        var names = string.Join(",", Enumerable.Range(0, required).Select(i => $"\"p{i}\""));
+
+        return JsonDocument.Parse(
+            $$"""{"type":"object","properties":{ {{properties}} },"required":[ {{names}} ]}""").RootElement;
+    }
 }

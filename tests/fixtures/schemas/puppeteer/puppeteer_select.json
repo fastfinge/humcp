@@ -1,0 +1,26 @@
+{
+  "server": "puppeteer",
+  "package": "@modelcontextprotocol/server-puppeteer",
+  "name": "puppeteer_select",
+  "title": null,
+  "description": "Select an element on the page with Select tag",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "selector": {
+        "type": "string",
+        "description": "CSS selector for element to select"
+      },
+      "value": {
+        "type": "string",
+        "description": "Value to select"
+      }
+    },
+    "required": [
+      "selector",
+      "value"
+    ]
+  },
+  "outputSchema": null
+}

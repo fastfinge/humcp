@@ -218,45 +218,24 @@ public sealed class ServerConnection : IAsyncDisposable
 
     private static ToolInfo Map(McpClientTool tool)
     {
-        var schema = tool.JsonSchema;
-        var (parameters, required) = CountParameters(schema);
-
         return new ToolInfo(
             Name: TextSanitizer.Clean(tool.Name, TextSanitizer.NameLength),
             DisplayName: NameHumanizer.DisplayName(tool.Title, tool.Name),
             Summary: TextSanitizer.FirstSentence(tool.Description),
             FullDescription: TextSanitizer.CleanMultiline(tool.Description),
             Safety: Map(tool.ProtocolTool.Annotations),
-            ParameterCount: parameters,
-            RequiredParameterCount: required,
-            InputSchema: schema);
+
+            // Built here rather than when a form is opened, for two reasons. It detaches the schema
+            // from the document the SDK owns, so a ToolInfo outlives the listing it came from; and
+            // it means a hostile schema is defused once, at the edge, rather than on whatever thread
+            // happens to open a window later.
+            Form: FormBuilder.Build(tool.JsonSchema));
     }
 
     private static OperationSafety Map(ToolAnnotations? annotations)
         => annotations is null
             ? OperationSafety.Unstated
             : new OperationSafety(annotations.ReadOnlyHint, annotations.DestructiveHint, annotations.IdempotentHint);
-
-    /// <summary>
-    /// Counts the top-level parameters. Phase 2's schema engine will do this properly; Phase 1 only
-    /// needs to know whether a tool can be called with no arguments at all.
-    /// </summary>
-    private static (int Parameters, int Required) CountParameters(JsonElement schema)
-    {
-        if (schema.ValueKind != JsonValueKind.Object) return (0, 0);
-
-        var parameters = schema.TryGetProperty("properties", out var properties)
-                         && properties.ValueKind == JsonValueKind.Object
-            ? properties.EnumerateObject().Count()
-            : 0;
-
-        var required = schema.TryGetProperty("required", out var requiredNames)
-                       && requiredNames.ValueKind == JsonValueKind.Array
-            ? requiredNames.EnumerateArray().Count(e => e.ValueKind == JsonValueKind.String)
-            : 0;
-
-        return (parameters, required);
-    }
 
     private static ToolCallOutcome MapResult(CallToolResult result)
     {

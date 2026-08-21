@@ -1,0 +1,28 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_interact_stop",
+  "title": "Stop interact session",
+  "description": "\nStop the live interact session associated with a `scrapeId` and release its resources. Returns a success confirmation.\n",
+  "annotations": {
+    "title": "Stop interact session",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": false,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "scrapeId": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "scrapeId"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,34 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_wait_for",
+  "title": "Wait for",
+  "description": "Wait for text to appear or disappear or a specified time to pass",
+  "annotations": {
+    "title": "Wait for",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "time": {
+        "description": "The time to wait in seconds",
+        "type": "number"
+      },
+      "text": {
+        "description": "The text to wait for",
+        "type": "string"
+      },
+      "textGone": {
+        "description": "The text to wait for to disappear",
+        "type": "string"
+      }
+    },
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

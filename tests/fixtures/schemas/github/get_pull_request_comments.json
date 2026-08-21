@@ -1,0 +1,33 @@
+{
+  "server": "github",
+  "package": "@modelcontextprotocol/server-github",
+  "name": "get_pull_request_comments",
+  "title": null,
+  "description": "Get the review comments on a pull request",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "owner": {
+        "type": "string",
+        "description": "Repository owner (username or organization)"
+      },
+      "repo": {
+        "type": "string",
+        "description": "Repository name"
+      },
+      "pull_number": {
+        "type": "number",
+        "description": "Pull request number"
+      }
+    },
+    "required": [
+      "owner",
+      "repo",
+      "pull_number"
+    ],
+    "additionalProperties": false,
+    "$schema": "http://json-schema.org/draft-07/schema#"
+  },
+  "outputSchema": null
+}

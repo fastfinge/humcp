@@ -1,0 +1,37 @@
+{
+  "server": "time",
+  "package": "mcp-server-time",
+  "name": "convert_time",
+  "title": null,
+  "description": "Convert time between timezones",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "source_timezone": {
+        "type": "string",
+        "description": "Source IANA timezone name (e.g., 'America/New_York', 'Europe/London'). Use 'America/New_York' as local timezone if no source timezone provided by the user."
+      },
+      "time": {
+        "type": "string",
+        "description": "Time to convert in 24-hour format (HH:MM)"
+      },
+      "target_timezone": {
+        "type": "string",
+        "description": "Target IANA timezone name (e.g., 'Asia/Tokyo', 'America/San_Francisco'). Use 'America/New_York' as local timezone if no target timezone provided by the user."
+      }
+    },
+    "required": [
+      "source_timezone",
+      "time",
+      "target_timezone"
+    ]
+  },
+  "outputSchema": null
+}

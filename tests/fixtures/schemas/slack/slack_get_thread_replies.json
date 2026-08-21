@@ -1,0 +1,26 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_get_thread_replies",
+  "title": null,
+  "description": "Get all replies in a message thread",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "channel_id": {
+        "type": "string",
+        "description": "The ID of the channel containing the thread"
+      },
+      "thread_ts": {
+        "type": "string",
+        "description": "The timestamp of the parent message in the format '1234567890.123456'. Timestamps in the format without the period can be converted by adding the period such that 6 numbers come after it."
+      }
+    },
+    "required": [
+      "channel_id",
+      "thread_ts"
+    ]
+  },
+  "outputSchema": null
+}

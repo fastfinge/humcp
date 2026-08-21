@@ -1,0 +1,21 @@
+{
+  "server": "puppeteer",
+  "package": "@modelcontextprotocol/server-puppeteer",
+  "name": "puppeteer_evaluate",
+  "title": null,
+  "description": "Execute JavaScript in the browser console",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "script": {
+        "type": "string",
+        "description": "JavaScript code to execute"
+      }
+    },
+    "required": [
+      "script"
+    ]
+  },
+  "outputSchema": null
+}

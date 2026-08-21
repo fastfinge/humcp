@@ -1,0 +1,21 @@
+{
+  "server": "puppeteer",
+  "package": "@modelcontextprotocol/server-puppeteer",
+  "name": "puppeteer_click",
+  "title": null,
+  "description": "Click an element on the page",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "selector": {
+        "type": "string",
+        "description": "CSS selector for element to click"
+      }
+    },
+    "required": [
+      "selector"
+    ]
+  },
+  "outputSchema": null
+}

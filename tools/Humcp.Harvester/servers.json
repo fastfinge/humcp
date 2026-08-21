@@ -1,0 +1,205 @@
+{
+  "$comment": [
+    "The corpus's provenance (ROADMAP §9). Every entry is a real, published MCP server that a user",
+    "could plausibly point humcp at. Nothing here is written by us.",
+    "",
+    "Credentials are deliberately fake. tools/list is metadata, not data: almost every server",
+    "publishes its catalogue before it authenticates anything, and the ones that refuse to start",
+    "without a real key are recorded as failures in the manifest rather than quietly dropped —",
+    "a corpus that hides what it could not reach is not evidence.",
+    "",
+    "Order is roughly: official reference servers, then widely used third-party ones, then the",
+    "Python reference servers over uvx."
+  ],
+
+  "servers": [
+    {
+      "id": "everything",
+      "package": "@modelcontextprotocol/server-everything",
+      "note": "The reference server. Exercises every content type on purpose.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-everything"]
+    },
+    {
+      "id": "filesystem",
+      "package": "@modelcontextprotocol/server-filesystem",
+      "note": "Takes an allowed directory as an argument; '.' is the scratch directory, never the repo.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-filesystem", "."]
+    },
+    {
+      "id": "memory",
+      "package": "@modelcontextprotocol/server-memory",
+      "note": "Knowledge graph. Arrays of objects, which is the Tier 2 case.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-memory"]
+    },
+    {
+      "id": "sequential-thinking",
+      "package": "@modelcontextprotocol/server-sequential-thinking",
+      "note": "One tool, many parameters, all of them optional-looking prose.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-sequential-thinking"]
+    },
+    {
+      "id": "github",
+      "package": "@modelcontextprotocol/server-github",
+      "note": "ROADMAP §4 pitfall 4 names this server's dispatch-style tools by name.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-github"],
+      "environment": { "GITHUB_PERSONAL_ACCESS_TOKEN": "harvest-placeholder" }
+    },
+    {
+      "id": "gitlab",
+      "package": "@modelcontextprotocol/server-gitlab",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-gitlab"],
+      "environment": {
+        "GITLAB_PERSONAL_ACCESS_TOKEN": "harvest-placeholder",
+        "GITLAB_API_URL": "https://gitlab.com/api/v4"
+      }
+    },
+    {
+      "id": "slack",
+      "package": "@modelcontextprotocol/server-slack",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-slack"],
+      "environment": {
+        "SLACK_BOT_TOKEN": "xoxb-harvest-placeholder",
+        "SLACK_TEAM_ID": "T00000000"
+      }
+    },
+    {
+      "id": "postgres",
+      "package": "@modelcontextprotocol/server-postgres",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-postgres", "postgresql://localhost/postgres"]
+    },
+    {
+      "id": "puppeteer",
+      "package": "@modelcontextprotocol/server-puppeteer",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-puppeteer"]
+    },
+    {
+      "id": "brave-search",
+      "package": "@modelcontextprotocol/server-brave-search",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-brave-search"],
+      "environment": { "BRAVE_API_KEY": "harvest-placeholder" }
+    },
+    {
+      "id": "google-maps",
+      "package": "@modelcontextprotocol/server-google-maps",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-google-maps"],
+      "environment": { "GOOGLE_MAPS_API_KEY": "harvest-placeholder" }
+    },
+    {
+      "id": "everart",
+      "package": "@modelcontextprotocol/server-everart",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-everart"],
+      "environment": { "EVERART_API_KEY": "harvest-placeholder" }
+    },
+    {
+      "id": "aws-kb-retrieval",
+      "package": "@modelcontextprotocol/server-aws-kb-retrieval-server",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@modelcontextprotocol/server-aws-kb-retrieval-server"],
+      "environment": {
+        "AWS_ACCESS_KEY_ID": "AKIAHARVESTPLACEHOLDER",
+        "AWS_SECRET_ACCESS_KEY": "harvest-placeholder",
+        "AWS_REGION": "us-east-1"
+      }
+    },
+    {
+      "id": "playwright",
+      "package": "@playwright/mcp",
+      "note": "Microsoft's. Large tool set, rich schemas, very widely deployed.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@playwright/mcp@latest"]
+    },
+    {
+      "id": "context7",
+      "package": "@upstash/context7-mcp",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@upstash/context7-mcp"]
+    },
+    {
+      "id": "firecrawl",
+      "package": "firecrawl-mcp",
+      "note": "Deep nested objects — the Tier 2 recursion case, from a server nobody wrote for us.",
+      "command": "npx.cmd",
+      "arguments": ["-y", "firecrawl-mcp"],
+      "environment": { "FIRECRAWL_API_KEY": "fc-harvest-placeholder" }
+    },
+    {
+      "id": "notion",
+      "package": "@notionhq/notion-mcp-server",
+      "command": "npx.cmd",
+      "arguments": ["-y", "@notionhq/notion-mcp-server"],
+      "environment": {
+        "NOTION_TOKEN": "harvest-placeholder",
+        "OPENAPI_MCP_HEADERS": "{\"Authorization\":\"Bearer harvest-placeholder\",\"Notion-Version\":\"2022-06-28\"}"
+      }
+    },
+    {
+      "id": "exa",
+      "package": "exa-mcp-server",
+      "command": "npx.cmd",
+      "arguments": ["-y", "exa-mcp-server"],
+      "environment": { "EXA_API_KEY": "harvest-placeholder" }
+    },
+    {
+      "id": "tavily",
+      "package": "tavily-mcp",
+      "command": "npx.cmd",
+      "arguments": ["-y", "tavily-mcp"],
+      "environment": { "TAVILY_API_KEY": "tvly-harvest-placeholder" }
+    },
+    {
+      "id": "kubernetes",
+      "package": "mcp-server-kubernetes",
+      "command": "npx.cmd",
+      "arguments": ["-y", "mcp-server-kubernetes"]
+    },
+    {
+      "id": "figma",
+      "package": "figma-developer-mcp",
+      "command": "npx.cmd",
+      "arguments": ["-y", "figma-developer-mcp", "--figma-api-key=harvest-placeholder", "--stdio"]
+    },
+    {
+      "id": "fetch",
+      "package": "mcp-server-fetch",
+      "note": "Python reference server, run through uvx.",
+      "command": "uvx.exe",
+      "arguments": ["mcp-server-fetch"]
+    },
+    {
+      "id": "git",
+      "package": "mcp-server-git",
+      "command": "uvx.exe",
+      "arguments": ["mcp-server-git"]
+    },
+    {
+      "id": "time",
+      "package": "mcp-server-time",
+      "command": "uvx.exe",
+      "arguments": ["mcp-server-time"]
+    },
+    {
+      "id": "sqlite",
+      "package": "mcp-server-sqlite",
+      "command": "uvx.exe",
+      "arguments": ["mcp-server-sqlite", "--db-path", "harvest-placeholder.db"]
+    },
+    {
+      "id": "sentry",
+      "package": "mcp-server-sentry",
+      "command": "uvx.exe",
+      "arguments": ["mcp-server-sentry", "--auth-token", "harvest-placeholder"]
+    }
+  ]
+}

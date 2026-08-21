@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- A developer tool, not a shipped assembly and not a test. It exists so the corpus in
+         tests/fixtures/schemas has provenance: the list of servers is checked in, and re-running
+         this regenerates the whole thing (ROADMAP §9). -->
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>Humcp.Harvester</RootNamespace>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Deliberately talks to the SDK directly rather than through Humcp.Core: the corpus wants the
+         schemas exactly as the servers emit them, and Humcp.Core sanitises everything it touches. -->
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="servers.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

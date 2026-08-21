@@ -1,0 +1,47 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_describe",
+  "title": null,
+  "description": "Describe Kubernetes resources by resource type, name, and optionally namespace",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "type": "string",
+        "description": "Type of resource to describe (e.g., pods, deployments, services, etc.)"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the resource to describe"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      },
+      "allNamespaces": {
+        "type": "boolean",
+        "description": "If true, describe resources across all namespaces",
+        "default": false
+      }
+    },
+    "required": [
+      "resourceType",
+      "name"
+    ]
+  },
+  "outputSchema": null
+}

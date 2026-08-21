@@ -1,0 +1,21 @@
+{
+  "server": "puppeteer",
+  "package": "@modelcontextprotocol/server-puppeteer",
+  "name": "puppeteer_hover",
+  "title": null,
+  "description": "Hover an element on the page",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "selector": {
+        "type": "string",
+        "description": "CSS selector for element to hover"
+      }
+    },
+    "required": [
+      "selector"
+    ]
+  },
+  "outputSchema": null
+}

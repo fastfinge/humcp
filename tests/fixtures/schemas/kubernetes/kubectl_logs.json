@@ -1,0 +1,84 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "kubectl_logs",
+  "title": null,
+  "description": "Get logs from Kubernetes resources like pods, deployments, or jobs",
+  "annotations": {
+    "title": null,
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "type": "string",
+        "enum": [
+          "pod",
+          "deployment",
+          "job",
+          "cronjob"
+        ],
+        "description": "Type of resource to get logs from"
+      },
+      "name": {
+        "type": "string",
+        "description": "Name of the resource"
+      },
+      "namespace": {
+        "type": "string",
+        "description": "Kubernetes namespace",
+        "default": "default"
+      },
+      "container": {
+        "type": "string",
+        "description": "Container name (required when pod has multiple containers)"
+      },
+      "tail": {
+        "type": "number",
+        "description": "Number of lines to show from end of logs"
+      },
+      "since": {
+        "type": "string",
+        "description": "Show logs since relative time (e.g. '5s', '2m', '3h')"
+      },
+      "sinceTime": {
+        "type": "string",
+        "description": "Show logs since absolute time (RFC3339)"
+      },
+      "timestamps": {
+        "type": "boolean",
+        "description": "Include timestamps in logs",
+        "default": false
+      },
+      "previous": {
+        "type": "boolean",
+        "description": "Include logs from previously terminated containers",
+        "default": false
+      },
+      "follow": {
+        "type": "boolean",
+        "description": "Follow logs output (not recommended, may cause timeouts)",
+        "default": false
+      },
+      "labelSelector": {
+        "type": "string",
+        "description": "Filter resources by label selector"
+      },
+      "context": {
+        "type": "string",
+        "description": "Kubeconfig Context to use for the command (optional - defaults to null)",
+        "default": ""
+      }
+    },
+    "required": [
+      "resourceType",
+      "name",
+      "namespace"
+    ]
+  },
+  "outputSchema": null
+}

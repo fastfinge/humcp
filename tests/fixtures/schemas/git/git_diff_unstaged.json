@@ -1,0 +1,33 @@
+{
+  "server": "git",
+  "package": "mcp-server-git",
+  "name": "git_diff_unstaged",
+  "title": null,
+  "description": "Shows changes in the working directory that are not yet staged",
+  "annotations": {
+    "title": null,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "properties": {
+      "repo_path": {
+        "title": "Repo Path",
+        "type": "string"
+      },
+      "context_lines": {
+        "default": 3,
+        "title": "Context Lines",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "repo_path"
+    ],
+    "title": "GitDiffUnstaged",
+    "type": "object"
+  },
+  "outputSchema": null
+}

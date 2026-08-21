@@ -1,0 +1,26 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_reverse_geocode",
+  "title": null,
+  "description": "Convert coordinates into an address",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "latitude": {
+        "type": "number",
+        "description": "Latitude coordinate"
+      },
+      "longitude": {
+        "type": "number",
+        "description": "Longitude coordinate"
+      }
+    },
+    "required": [
+      "latitude",
+      "longitude"
+    ]
+  },
+  "outputSchema": null
+}

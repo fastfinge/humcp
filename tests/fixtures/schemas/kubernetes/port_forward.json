@@ -1,0 +1,41 @@
+{
+  "server": "kubernetes",
+  "package": "mcp-server-kubernetes",
+  "name": "port_forward",
+  "title": "Port Forward",
+  "description": "Forward a local port to a port on a Kubernetes resource",
+  "annotations": {
+    "title": "Port Forward",
+    "destructiveHint": null,
+    "idempotentHint": null,
+    "openWorldHint": null,
+    "readOnlyHint": null
+  },
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "resourceType": {
+        "type": "string"
+      },
+      "resourceName": {
+        "type": "string"
+      },
+      "localPort": {
+        "type": "number"
+      },
+      "targetPort": {
+        "type": "number"
+      },
+      "namespace": {
+        "type": "string"
+      }
+    },
+    "required": [
+      "resourceType",
+      "resourceName",
+      "localPort",
+      "targetPort"
+    ]
+  },
+  "outputSchema": null
+}

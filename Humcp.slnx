@@ -5,6 +5,9 @@
     <Project Path="src/Humcp.Speech/Humcp.Speech.csproj" />
     <Project Path="src/Humcp.App/Humcp.App.csproj" />
   </Folder>
+  <Folder Name="/tools/">
+    <Project Path="tools/Humcp.Harvester/Humcp.Harvester.csproj" />
+  </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Humcp.TestServer/Humcp.TestServer.csproj" />
     <Project Path="tests/Humcp.Schema.Tests/Humcp.Schema.Tests.csproj" />

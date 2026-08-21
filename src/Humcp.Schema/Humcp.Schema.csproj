@@ -8,4 +8,14 @@
     <RootNamespace>Humcp.Schema</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <!-- Assertion semantics only. See the note in Directory.Packages.props: it is neither an MCP
+         dependency nor a UI one, so hedge 1 is intact. -->
+    <PackageReference Include="JsonSchema.Net" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Humcp.Schema.Tests" />
+  </ItemGroup>
+
 </Project>

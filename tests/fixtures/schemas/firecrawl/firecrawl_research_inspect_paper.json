@@ -1,0 +1,30 @@
+{
+  "server": "firecrawl",
+  "package": "firecrawl-mcp",
+  "name": "firecrawl_research_inspect_paper",
+  "title": "Inspect a paper",
+  "description": "\nRetrieve canonical metadata for one paper ID, such as an arXiv, PMC, PMID, or DOI identifier. Returns the title, abstract, authors, categories, source IDs, and dates as markdown.\n",
+  "annotations": {
+    "title": "Inspect a paper",
+    "destructiveHint": false,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": true
+  },
+  "inputSchema": {
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "type": "object",
+    "properties": {
+      "paperId": {
+        "type": "string",
+        "minLength": 1,
+        "description": "Canonical paperId or primaryId such as `arxiv:1706.03762`, `pmcid:PMC12530322`, `pmid:40953549`, or `doi:10.1016/j.neunet.2025.108095`."
+      }
+    },
+    "required": [
+      "paperId"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

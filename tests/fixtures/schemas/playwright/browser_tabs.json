@@ -1,0 +1,43 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_tabs",
+  "title": "Manage tabs",
+  "description": "List, create, close, or select a browser tab.",
+  "annotations": {
+    "title": "Manage tabs",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": [
+          "list",
+          "new",
+          "close",
+          "select"
+        ],
+        "description": "Operation to perform"
+      },
+      "index": {
+        "description": "Tab index, used for close/select. If omitted for close, current tab is closed.",
+        "type": "number"
+      },
+      "url": {
+        "description": "URL to navigate to in the new tab, used for new.",
+        "type": "string"
+      }
+    },
+    "required": [
+      "action"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

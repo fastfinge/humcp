@@ -1,0 +1,29 @@
+{
+  "server": "playwright",
+  "package": "@playwright/mcp",
+  "name": "browser_press_key",
+  "title": "Press a key",
+  "description": "Press a key on the keyboard",
+  "annotations": {
+    "title": "Press a key",
+    "destructiveHint": true,
+    "idempotentHint": null,
+    "openWorldHint": true,
+    "readOnlyHint": false
+  },
+  "inputSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "key": {
+        "type": "string",
+        "description": "Name of the key to press or a character to generate, such as `ArrowLeft` or `a`"
+      }
+    },
+    "required": [
+      "key"
+    ],
+    "additionalProperties": false
+  },
+  "outputSchema": null
+}

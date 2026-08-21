@@ -1,0 +1,21 @@
+{
+  "server": "slack",
+  "package": "@modelcontextprotocol/server-slack",
+  "name": "slack_get_user_profile",
+  "title": null,
+  "description": "Get detailed profile information for a specific user",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "user_id": {
+        "type": "string",
+        "description": "The ID of the user"
+      }
+    },
+    "required": [
+      "user_id"
+    ]
+  },
+  "outputSchema": null
+}

@@ -1,0 +1,36 @@
+{
+  "server": "google-maps",
+  "package": "@modelcontextprotocol/server-google-maps",
+  "name": "maps_elevation",
+  "title": null,
+  "description": "Get elevation data for locations on the earth",
+  "annotations": null,
+  "inputSchema": {
+    "type": "object",
+    "properties": {
+      "locations": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "latitude": {
+              "type": "number"
+            },
+            "longitude": {
+              "type": "number"
+            }
+          },
+          "required": [
+            "latitude",
+            "longitude"
+          ]
+        },
+        "description": "Array of locations to get elevation for"
+      }
+    },
+    "required": [
+      "locations"
+    ]
+  },
+  "outputSchema": null
+}
