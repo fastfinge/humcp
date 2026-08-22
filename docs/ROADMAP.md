@@ -111,7 +111,7 @@ out-of-band interrupt, which is far easier to present coherently to a screen rea
 | 1 | **Descriptions are written for LLMs.** Multi-paragraph, embedded JSON, few-shot examples, "IMPORTANT: always call X first." Unusable as an accessible description. | First sentence → `HelpText`. Full text on demand via <kbd>F1</kbd> in a Details pane. Collapse whitespace, cap at a configured length. |
 | 2 | **Schema keyword sprawl.** 2026-07-28 *loosened* `inputSchema` to permit any JSON Schema 2020-12 keyword — `$ref`, `oneOf`/`anyOf`/`allOf`, `if`/`then`/`else`. Cannot be fully generalised. | Tiered renderer that degrades rather than fails (§5). **Invariant: never fail to render a tool.** |
 | 3 | **No argument autocomplete for tools.** `completion/complete` supports only `ref/prompt` and `ref/resource`. There is no `ref/tool`. | Per-`(server, tool, parameter)` MRU history persisted locally, surfaced as a combo box drop-down. Offer `resources/list` URIs as suggestions where a parameter looks URI-shaped. |
-| 4 | **The "method dispatch" tool pattern.** Real servers ship tools like GitHub's `pull_request_read` — a `method` enum of 9 values where which *other* parameters matter depends on the choice, stated only in prose. A naive form shows 15 fields, 12 irrelevant. Sighted users skim past; screen reader users arrow through every one. | Heuristic: if a required enum parameter exists, present it first in a wizard step. Plus a global "hide optional fields" toggle, default on. |
+| 4 | **The "method dispatch" tool pattern.** Real servers ship tools like GitHub's `pull_request_read` — a `method` enum of 9 values where which *other* parameters matter depends on the choice, stated only in prose. A naive form shows 15 fields, 12 irrelevant. Sighted users skim past; screen reader users arrow through every one. | A global "hide optional fields" toggle, default on — which is where the whole of the measured benefit turned out to be: 491 of the corpus's 785 top-level parameters are optional, and its two largest forms are 23 fields with one required and 23 with none. Plus focus starting on the first required field, which on a dispatch tool *is* the enum. **The original "present the required enum first in a wizard step" was measured and dropped** (phase3-notes 3.1): 13 of 213 tools have a required top-level enum and 9 of those already declare it first, so reordering would move a field on four tools while costing §7.7. |
 | 5 | **All server text is untrusted.** The spec says so explicitly for annotations. Descriptions, titles, and enum values are third-party strings heading for a speech synthesiser. | Strip control characters, normalise newlines, hard-cap lengths before anything reaches UIA or prism. Never treat `destructiveHint: false` as proof of safety. |
 | 6 | **Images have no alt text.** `ImageContent` has only `data` and `mimeType`. A tool returning a chart gives the user nothing. | Announce as an object — "Image, PNG, 45 KB" — with Save and Open-in-default-app actions. Always prefer `structuredContent` when present. Optional v2: LLM-generated alt text via the `IResultSummarizer` seam. |
 | 7 | **`prismatoid` is brand new.** v0.4.0, published 2026-08-12, 82 downloads. | Pin the exact version. Wrap behind our own `IAnnouncer`. Ship a no-op implementation so the app is fully functional if prism fails to load. **Phase 0:** loads, detects a running NVDA and prefers it (priority 103), `Speak()` is asynchronous so it is UI-thread-safe, braille accepted. Three rough edges — a screen reader backend exposes **no voices** (`CurrentVoice` is null, so the settings UI must not assume a voice list), native code writes to stderr past `PrismLog`, and `PrismBackendId.Uia` fails to acquire with `INVALID_PARAM` so Narrator detection is unproven. Availability callbacks arrive on a background thread and must be marshalled before touching UI |
@@ -154,9 +154,16 @@ to the Tier 3 list below would otherwise correctly conclude that `anyOf` degrade
 
 **Tier 2 — Composite.** Recursive but still fully typed.
 
-- `object` → `GroupBox` (a real UIA group) containing nested fields, collapsible
+- `object` → `GroupBox` (a real UIA group) containing nested fields. Not collapsible in the end: an
+  expander is another tab stop and another state to announce, and the optional-field toggle already
+  solves the length problem (phase3-notes §4)
 - `array` of `object` → item list where each row opens a nested sub-form window
 - `$ref` → resolved against `$defs` with cycle detection; a cycle demotes the node to Tier 3
+
+A list of primitives is **Add and Remove, with no Edit** (phase3-notes 3.8). Editing an entry
+through the box the next one is typed into is a mode, and a mode whose state is not announced is
+the thing this application exists to avoid. If Edit is wanted later it opens a window, the way a
+row of an object list already does.
 
 **Tier 3 — Raw.** Anything not representable: `oneOf`, `anyOf`, `allOf`, `if`/`then`/`else`,
 `$ref` cycles, unrecognised constructs.
@@ -184,6 +191,25 @@ valid call (phase2-notes 3.5).
 `$ref` to an attacker-chosen URL must not turn opening a form into an outbound request. The
 validator's schema registry has its fetch hook pinned shut, and `$ref` resolution refuses anything
 that is not local to the document (phase2-notes 3.7).
+
+**There is one refusal, and it is not a validation failure.** "Never block" is a rule about
+disagreement — we suspect the server will decline this. Text in a Tier 3 editor that is not JSON is
+a different thing: there is no argument object to send. That one case refuses, says so, and moves
+the caret to the box (§7.18). Everything else warns once and sends on the second press
+(phase3-notes 3.6).
+
+### What a filled-in form means
+
+**A value the user did not choose is not sent** (phase3-notes 3.2). A box still holding what the
+schema's `default` put there says nothing; a required field is the exception, because the call has
+to state it. The rule is one expression — `IsRequired || value != initial` — and the case that looks
+like an exception is not: a check box that started ticked because the schema said so, and has been
+unticked, differs from its default and so sends `false` out loud, since otherwise a stated default
+could not be turned off.
+
+Repeating a default back pins a value the server may have changed since it wrote its schema, and
+turns "I did not express an opinion" into an opinion. Found on five real servers at once by a corpus
+test, not by reasoning.
 
 ---
 
@@ -255,6 +281,23 @@ Small, and annoying to reverse later, so they are written down rather than left 
 - **`Humcp.Schema` has one package reference**, `JsonSchema.Net`, and `Humcp.Speech` and
   `Humcp.App` acquire it transitively. The rule that matters is unchanged: neither the MCP SDK nor
   WPF appears below `Humcp.Core`, and `Humcp.App` still references no protocol type at all.
+
+### 6.3 Layout decisions taken in Phase 3
+
+- **The editable form state lives in `Humcp.Schema`**, not in `Humcp.App` — a deliberate departure
+  from the line above that puts view-models in the App, and the reason is what is in them.
+  `FieldState` and `FormState` hold rules the schema implies: what an empty box means, when a
+  default is worth repeating back, how typed text becomes the JSON type asked for, which field the
+  caret goes to after a failed submit. None of that is a pixel, and rules that can only be exercised
+  by launching a desktop application get exercised once. In `Humcp.Schema` they run against all 213
+  harvested schemas on every build, which is how phase3-notes 3.2 was found. WPF binds to these
+  objects directly; the App keeps everything that knows what a control is.
+- **`FieldKind` → control lives in exactly one file**, `FieldTemplateSelector.cs`. That is what
+  `FieldKind` being named for the shape of the data rather than for a WPF type buys (§6.1, hedge 2).
+- **Automation ids are unique across the process, not across a window** — see §9, where the same
+  fact is a testing rule.
+- **`HUMCP_HISTORY` overrides where MRU history is written**, so the UI suite can run real tools from
+  real forms without writing into the profile of whoever ran it.
 
 ### 6.1 Portability hedges for v4 (OpenAPI)
 
@@ -379,13 +422,80 @@ wrong thing again; the second two are about what the app says rather than how it
     worth having if what goes into it still has its shape. Two operations, not one — both strip
     control and formatting characters, only the spoken one collapses the layout.
 
+### Added by Phase 3
+
+Three more, from [`phase3-notes.md`](phase3-notes.md). The first is about low vision rather than no
+vision, and is the one most likely to be lost to a designer with good intentions.
+
+20. **Nothing is signalled by colour alone.** A validation problem is set on the field as
+    `ItemStatus`, written in words underneath the control, listed in the error summary, and marked
+    visually with weight rather than hue. Half of this application's audience has some sight and is
+    using it; a red border tells them there is a problem but not what, and tells a screen reader
+    nothing at all. The same rule rules out red-means-required and grey-means-optional.
+21. **An access key is unique or it is absent.** Windows cycles focus between controls sharing one,
+    so on a generated form of twenty-three fields a duplicated key means <kbd>Alt</kbd>+<kbd>S</kbd>
+    visiting four unrelated boxes in an order nobody can predict — worse than no shortcut. Assign
+    over the whole form at once, prefer word-initial letters, and give up rather than duplicate.
+    Assign over hidden fields too, so a key does not move when the optional toggle does.
+22. **The caret goes to the first invalid field *in tab order*** — a refinement of §7.8.
+    `ValidationReport` sorts shallowest-first and then alphabetically, which is right for reading a
+    list of problems out loud and wrong for deciding where to put the caret: with `owner`, `repo`
+    and `count` all missing it nominates Count, because C comes before O. Two orders, two jobs
+    (phase3-notes 3.3).
+23. **Anything bound into an items control needs a `ToString` worth hearing, or an explicit item
+    name.** This is §7.12 again with a combo box instead of an `ItemsControl`, and it was found the
+    same way — by ear, in all three screen readers at once. An item's accessible name is the plain
+    text of its content, so a drop-down of `ChoiceOption` records announced
+    *"ChoiceOption { Label = Titles, Value = …"* on every option, while looking perfectly correct on
+    screen because `DisplayMemberPath` was set. `DisplayMemberPath` is a display concern and says
+    nothing to UI Automation. Fix it in the object *and* in the item container style
+    (phase3-notes 4.1).
+
+24. **A message the reader does not speak has not been delivered.** §7.5 asks for a validation
+    message on the field and in a summary, and `AutomationProperties.ItemStatus` is the obvious
+    place for the first — but **NVDA does not speak `ItemStatus` on focus**, so the field's copy was
+    set, correct and silent for a whole phase while a test asserted it was there. The message goes
+    into the spoken help text as well, and first, because it is the news (phase3-notes 4.9). The
+    general rule is the one that costs time to relearn: *a property being set is not the same fact
+    as a property being announced*, and only listening tells them apart.
+25. **The caret must survive whatever the keyboard does to the form.** Rebuilding the field list to
+    reveal the optional parameters destroys the control the user is standing in, and WPF drops focus
+    to the window — where a screen reader says the title and stops, with no clue what happened
+    (phase3-notes 4.4). Anything that rebuilds part of a window puts the caret back. The same rule
+    covers a target that has no control of its own: focusing a field that turned out to be a group
+    means focusing the group's first member, never giving up quietly (4.5).
+26. **Everything the platform gives a control of that shape, this one has too.** Typing a letter to
+    jump to the next matching item is part of what Windows assumes of any list-shaped control, and
+    WPF's `TreeView` is the one that does not implement it — so the application's primary navigation
+    silently lacked it (phase3-notes 4.10). A generated UI is judged against the platform's
+    expectations, not against its toolkit's defaults.
+
+Also added to the keyboard map below: <kbd>Escape</kbd> and <kbd>Ctrl</kbd>+<kbd>W</kbd> close a
+window. **`Button.IsCancel` is not how** — it sets `DialogResult` on a window shown with
+`ShowDialog` and does nothing at all on one shown with `Show`, which is every window humcp opens
+(phase3-notes 4.2). And a window-level shortcut that a focused control also handles has to be taken
+in a preview: a WPF `Button` swallows <kbd>Ctrl</kbd>+<kbd>Enter</kbd> as a plain Enter and presses
+itself (4.7).
+
+**Three smaller ones from the same pass, each a rule about a specific control:**
+
+- **A reserved-letter list goes stale.** Access keys are assigned around the letters the window's own
+  chrome uses (§7.21), and the menu bar was added without extending that list — so
+  <kbd>Alt</kbd>+<kbd>T</kbd> opened the Tool menu instead of the Tags field, which a menu mnemonic
+  always wins (phase3-notes 4.6).
+- **A list selects what it focuses**, or every command that acts on "the selected entry" is dead on
+  arrival — including the <kbd>Delete</kbd> its own help text promises (4.8).
+- **A menu item's check mark is not a state** unless `IsCheckable` is set: WPF draws the tick and
+  exposes no toggle state, so the window you are in is the one nobody is told about (4.2).
+
 ### Keyboard map
 
 | Key | Action |
 |---|---|
 | <kbd>Alt</kbd> | Menu bar |
 | <kbd>F6</kbd> / <kbd>Shift+F6</kbd> | Cycle panes within a window |
-| <kbd>Ctrl+1</kbd>…<kbd>9</kbd> | Switch to nth open window |
+| <kbd>Ctrl+1</kbd>…<kbd>9</kbd> | Switch to nth open window (built in Phase 3, §8) |
+| <kbd>Ctrl+W</kbd> | Close the current window |
 | <kbd>Ctrl+F</kbd> | Focus tree filter box |
 | <kbd>Enter</kbd> (on a tool) | Open its form window |
 | <kbd>F1</kbd> | Full details for the focused tool or field |
@@ -421,8 +531,28 @@ wrong thing again; the second two are about what the app says rather than how it
 - Server node status is part of its accessible name, so it is heard on arrow-through.
 - A filter box above the tree does type-ahead over tool names, titles, and descriptions.
 
-Windows are **non-modal** — several tool forms and results can be open at once, navigable via the
-Window menu. Menu bar: File (add/remove/reconnect server, settings, exit), Edit (standard clipboard
+### The window model
+
+Windows are **non-modal** — several tool forms and results can be open at once. Built in Phase 3
+after the first manual pass reported that the form windows "read like dialogs rather than windows"
+(phase3-notes 4.3), and modelled on the multi-document applications that solved this before, mIRC
+among them:
+
+- **Every window has its own menu bar**, carrying a `Window` menu that lists every window humcp has
+  open, numbered, with the current one checked. Reached with <kbd>Alt</kbd>, never in the tab order
+  (§7.14).
+- **<kbd>Ctrl</kbd>+<kbd>1</kbd>…<kbd>9</kbd> switches** to the nth window from anywhere;
+  <kbd>Escape</kbd> or <kbd>Ctrl</kbd>+<kbd>W</kbd> closes the current one.
+- **Only the main window appears in <kbd>Alt</kbd>+<kbd>Tab</kbd>** (`ShowInTaskbar = false` on
+  everything else). A session across several servers can have a great many windows open, and putting
+  all of them in the system switcher buries every other application on the machine. Inside humcp the
+  same list is numbered, named and checked, which is more use to a screen reader than a strip of
+  icons.
+
+Every window humcp opens is tracked this way, including the sub-form window for a row of an object
+list and the <kbd>F1</kbd> details and diagnostics windows.
+
+Menu bar contents: File (add/remove/reconnect server, settings, exit), Edit (standard clipboard
 + Copy Schema / Copy Result as JSON), View (hide optional fields, verbosity), Window, Help.
 
 Server configuration is stored as JSON, deliberately compatible in shape with the familiar
@@ -499,8 +629,42 @@ test rather than a failing one when got wrong:
   standing argument for that: a fake sharing our own serialiser agreed with us, and a real server
   did not.
 
+Phase 3 added three more, all three learned by chasing a failure that was not where it looked:
+
+- **An owned window is a *child* of its owner in the automation tree.** A generated form opens
+  non-modally over the main window, and UI Automation reports it underneath it — so
+  `FindFirstDescendant` from the main window reaches into every form that is open. **Automation ids
+  therefore have to be unique across the process, not across a window.** The form's Run button and
+  the main window's Run button were both `RunButton`; a test meaning to press one pressed the other,
+  ran the wrong tool with no arguments, and reported a server error three tests later.
+- **`GetAllTopLevelWindows` does not return owned windows**, though each has its own top-level
+  handle. Look for a form among the owner's descendants, or conclude it never opened while it is
+  open and announcing itself.
+- **A label and its control share a name by design** (§7.1 and §7.3 both), and the label comes first
+  in the tree. A lookup by name has to filter to keyboard-focusable elements or it gets the label,
+  which has no `ItemStatus` and no value pattern, and then asserts something false about it.
+- **A window's title bar carries a `MenuBar` of its own** — the system menu — so "find the menu bar"
+  finds that one. Name your own and look it up by name. And **a WPF `Menu` reports as
+  `ControlType.Menu`, not `MenuBar`**; only the system menu is a `MenuBar`.
+- **Setting a text box's value through the value pattern is not typing.** It does not raise
+  `CommandManager.RequerySuggested`, so a button whose availability follows that text stays disabled
+  for ever — which reads exactly like a defect in the application. Where the thing under test is a
+  command's availability, send real keystrokes.
+
+Three more rules about writing these tests, from the same phase. **Wait for a state, never for a
+duration**: for the automation tree to stop changing after fields are revealed, for a window to
+have closed, for a button to have become enabled after a selection. All three were intermittent
+failures here, and all three fail only when somebody else is using the machine — which is the worst
+possible time to be told your test suite is unreliable. **Drive setup through UI Automation
+patterns rather than keystrokes** — `Invoke`, `Select`, `Toggle` need no foreground, and getting a
+form open is setup for almost every assertion, so doing it by typing takes the whole file down
+whenever somebody is using the machine. Reserve keystrokes for the claims that are *about* the
+keyboard.
+
 The suite runs as part of `dotnet test` rather than behind a flag. It takes the foreground and
-sends real keystrokes, which is the point of it.
+sends real keystrokes, which is the point of it. It also runs real tools from real forms, so MRU
+history goes to a temporary directory via `HUMCP_HISTORY` — a test run must never leave anything in
+the profile of whoever ran it.
 
 **Manual matrix.** NVDA 2026.1, JAWS, and Narrator against the walking skeleton at each phase exit.
 Automated checks prove names exist; only a human proves the app is *pleasant*.
@@ -560,11 +724,35 @@ sent every optional parameter of every C# MCP server to a JSON editor (§5). Ful
 
 Outstanding, neither blocking: the JAWS and Narrator passes, still carried forward from Phase 0.
 
-### Phase 3 — Form generation (~1 week)
+### Phase 3 — Form generation ✅ done
 `DataTemplateSelector` over `FieldModel`. The full accessibility contract (§7). Required/optional
 toggle, the enum-first wizard heuristic, MRU history for parameter values, validation surfacing.
 
-**Exit:** FlaUI suite green; a GitHub tool with 15 parameters is comfortable to fill in by ear.
+**Exit:** FlaUI suite green; a tool with 15 parameters is comfortable to fill in by ear.
+
+**Exit met.** 902 automated tests green, 36 of them walking the live UIA tree, and the manual pass
+walked end to end under NVDA 2026.1. Eleven templates cover the whole control vocabulary, and no
+line of the application knows anything about any particular tool.
+
+**The manual pass found nine defects, and the automated suite had found none of them** — that is the
+number worth remembering from this phase. A combo box announcing `ChoiceOption { Label = …` on every
+option. A Close button that closed nothing, and <kbd>Escape</kbd> likewise. Windows that read like
+dialogs. The optional-fields shortcut throwing the caret out of the form. A form that opens on an
+object leaving it nowhere. <kbd>Alt</kbd>+<kbd>T</kbd> opening a menu instead of a field.
+<kbd>Ctrl</kbd>+<kbd>Enter</kbd> pressing whatever button the caret was on.
+<kbd>Delete</kbd> doing nothing in a list that says <kbd>Delete</kbd> removes things. And a
+validation message the reader never spoke. All nine are fixed, each has a test, and each fix was
+re-checked by ear. Full record in [`phase3-notes.md`](phase3-notes.md) §4.
+
+Three parts of the brief came back changed. The enum-first wizard heuristic is now a focus rule and
+not a reordering one (§4, pitfall 4) and the form gained a rule nobody asked for about not sending
+things (§5) — both after asking the corpus rather than arguing. The window model of §8 moved forward
+from Phase 6, because it is what the user meets first. Seven additions to the contract (§7.20–26),
+six to the testing notes (§9), one layout decision (§6.3), and §13's tool-grouping question
+answered: the prefix groups help and they stay.
+
+Outstanding, neither blocking: JAWS and Narrator have not seen the nine fixes, and item 25 of the
+checklist — the application with no screen reader running at all — wants a sighted pass.
 
 ### Phase 4 — Result rendering (~4–5 days)
 `structuredContent` + `outputSchema` → `DataGrid` or property tree. Multi-part `content` arrays.
@@ -580,9 +768,12 @@ JSON-RPC id. Decline sampling requests cleanly (deprecated, and no LLM in v1).
 **Exit:** a multi-step server tool completes through the GUI.
 
 ### Phase 6 — The shell (~1 week)
-Menu bar, window manager, settings, server add/remove/reconnect UI, config persistence,
+Settings, server add/remove/reconnect UI, config persistence,
 `notifications/tools/list_changed` handling via `subscriptions/listen`, announcement policy with
 rate limiting.
+
+The window manager and per-window menu bars were built in Phase 3 instead (§8), so what is left here
+is the menus' *contents* — File, Edit, View and Help — and the settings behind them.
 
 Three items carried in from earlier phases:
 
@@ -596,6 +787,9 @@ Three items carried in from earlier phases:
   and the first real one for this seam.
 - **Replace the hard-coded server and the environment override** (§6.0) with real configuration,
   and drop `Humcp.App`'s build-order reference to the test fixture.
+- **A way to turn MRU history off and empty it.** It is a plain-text file of things people typed,
+  and although a parameter whose name reads like a credential is never recorded (phase3-notes 3.10),
+  that is a heuristic and the user should have the final say. `MruHistory.Forget()` already exists.
 
 **Exit:** the app is configurable and usable without editing files by hand.
 
@@ -955,12 +1149,14 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   question is a judgement about presentation, not capability, and wants a session with a display
   connected. Cheap to defer: the `IAnnouncer` seam already separates `Speak`, `Braille` and
   `Output`, so answering it later changes a policy, not a structure.
-- Tool grouping heuristics: prefix-splitting is a guess. Phase 1 implemented a conservative version
-  (§8) and it reads well on a ten-tool server, which proves nothing about a forty-tool one. **The
-  corpus can now answer this** — 22 servers, several of them past 20 tools — and Phase 2 did not
-  ask it, because the question is about how a tree *sounds* and the answer wants a screen reader
-  rather than a count. The thresholds are three constants in one method precisely so that acting on
-  the answer is cheap. Due at the Phase 3 exit, alongside the manual pass.
+- ~~Tool grouping heuristics: prefix-splitting is a guess.~~ **Answered at the Phase 3 manual pass:
+  the prefix groups help, and they stay as they are** (phase3-notes 4.5). The thresholds are
+  unchanged and remain three constants in one method, so a forty-tool server can reopen the question
+  cheaply.
+  <br>What it was asking: Phase 1's version (§8) reads well on a ten-tool server, which proves
+  nothing about a forty-tool one, and Phase 2 deliberately did not ask the corpus because the
+  question is about how a tree *sounds* rather than what is in it. It wanted a screen reader, and
+  now it has had one. Worth re-asking against a server past twenty tools.
 - ~~Does `discriminator`-style promotion of `oneOf` to Tier 2 pay for MCP servers?~~ **Answered: no,
   for now.** Of the 18 top-level parameters that reached Tier 3 through a union, zero are a union of
   object branches pinned by a constant discriminator; almost all are `anyOf: [object, string]`,
@@ -981,6 +1177,11 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   no live region will be read: a slow call finishing, a connection dropping. Whether speaking from
   a window the user is not looking at is welcome or intrusive is a judgement, not a capability, and
   it wants a session with a screen reader rather than an argument (Phase 6).
+- **Does a list of primitives want an Edit as well as Add and Remove?** Phase 3 built Add and Remove
+  only, because editing through the entry box is a mode and a mode nobody can see the state of is
+  the thing this application exists to avoid (phase3-notes 3.8). If the manual pass finds re-adding
+  a mistyped entry annoying, the version to build is an Edit that opens a window — a window has a
+  name, and names are announced.
 - Should Tier 3's raw JSON editor offer schema-driven completion? Valuable, but it is a text-editor
   feature and text editors are a deep well. Probably v2.
 - ~~Where does the Client ID Metadata Document live?~~ **Resolved:** a subdomain of `interfree.ca`

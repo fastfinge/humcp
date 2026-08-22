@@ -50,7 +50,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
     [Fact]
     public void Lists_every_published_tool()
     {
-        Assert.Equal(12, Connection.Tools.Count);
+        Assert.Equal(14, Connection.Tools.Count);
     }
 
     [Fact]
@@ -144,6 +144,119 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         Assert.DoesNotContain(text, c => char.IsControl(c) && c is not '\r' and not '\n');
     }
 
+    // ------------------------------------------------------------------ arguments (Phase 3)
+
+    [Fact]
+    public async Task A_form_the_user_filled_in_reaches_the_server_as_the_values_they_chose()
+    {
+        // The whole of Phase 3 in one assertion, over a real pipe: a schema became a form, a form
+        // became an argument object, and the server on the other end got what was typed. The
+        // fixture reports its arguments back, so nothing here has to trust our own serialiser.
+        var search = Tool("demo_search");
+        var state = FormState.Create(search.Form);
+
+        ((TextFieldState)state.Find("query")!).Text = "aubergine";
+
+        var scope = (ChoiceFieldState)state.Find("scope")!;
+        scope.Selected = scope.Options.Single(o => o.ValueText == "Titles");
+
+        ((TextFieldState)state.Find("limit")!).Text = "3";
+        ((BooleanFieldState)state.Find("caseSensitive")!).Value = true;
+
+        var tags = (ListFieldState)state.Find("tags")!;
+        ((TextFieldState)tags.Draft).Text = "urgent";
+        tags.AddDraft();
+
+        var filter = (GroupFieldState)state.Find("filter")!;
+        ((TextFieldState)filter.Fields.Single(f => f.Field.Name == "contains")).Text = "needle";
+
+        var submission = state.Prepare();
+        Assert.True(submission.CanSend);
+        Assert.True(submission.Report.IsValid, submission.Report.Summary);
+
+        var outcome = await Connection.CallAsync(search, submission.Arguments,
+            TestContext.Current.CancellationToken);
+
+        Assert.False(outcome.IsError);
+        var text = Assert.IsType<TextResultBlock>(Assert.Single(outcome.Blocks)).Text;
+
+        Assert.Contains("query:           aubergine", text);
+        Assert.Contains("scope:           Titles", text);
+        Assert.Contains("limit:           3", text);
+        Assert.Contains("caseSensitive:   True", text);
+        Assert.Contains("tags:            urgent", text);
+        Assert.Contains("contains=needle", text);
+
+        // The untouched half of the form, still carrying the server's own defaults because nothing
+        // was sent for them.
+        Assert.Contains("offset:          0", text);
+        Assert.Contains("includeArchived: True", text);
+        Assert.Contains("apiToken:        (none)", text);
+    }
+
+    [Fact]
+    public async Task A_default_the_user_turned_off_is_sent_as_false()
+    {
+        var search = Tool("demo_search");
+        var state = FormState.Create(search.Form);
+
+        ((TextFieldState)state.Find("query")!).Text = "x";
+        var scope = (ChoiceFieldState)state.Find("scope")!;
+        scope.Selected = scope.Options.Single(o => o.ValueText == "Everything");
+
+        ((BooleanFieldState)state.Find("includeArchived")!).Value = false;
+
+        var outcome = await Connection.CallAsync(search, state.Build().Arguments,
+            TestContext.Current.CancellationToken);
+
+        Assert.Contains("includeArchived: False",
+            Assert.IsType<TextResultBlock>(Assert.Single(outcome.Blocks)).Text);
+    }
+
+    [Fact]
+    public async Task An_argument_the_server_rejects_comes_back_as_an_error_rather_than_a_crash()
+    {
+        // Client-side validation is advice and never a veto (§5), so a call the client suspects is
+        // wrong still goes out. What comes back has to be survivable.
+        var search = Tool("demo_search");
+        var arguments = new JsonObject { ["query"] = "x", ["scope"] = "NotAScope" };
+
+        var outcome = await Connection.CallAsync(search, arguments, TestContext.Current.CancellationToken);
+
+        Assert.True(outcome.IsError);
+        Assert.NotEmpty(outcome.Blocks);
+    }
+
+    [Fact]
+    public void The_fifteen_parameter_tool_renders_every_control_the_form_knows()
+    {
+        // The Phase 3 exit criterion's stand-in, and a guard on the fixture: if a control loses its
+        // only real example, the manual pass stops covering it.
+        var kinds = Tool("demo_search").Form.AllFields().Select(f => f.Kind).Distinct().ToList();
+
+        Assert.Equal(15, Tool("demo_search").Form.Fields.Count);
+        Assert.Equal(2, Tool("demo_search").Form.RequiredCount);
+
+        foreach (var kind in (FieldKind[])
+                 [
+                     FieldKind.Text, FieldKind.MultilineText, FieldKind.Choice, FieldKind.Integer,
+                     FieldKind.Number, FieldKind.Boolean, FieldKind.DateTime, FieldKind.PrimitiveList,
+                     FieldKind.Group, FieldKind.ObjectList,
+                 ])
+        {
+            Assert.Contains(kind, kinds);
+        }
+    }
+
+    [Fact]
+    public void The_wide_tool_is_wide_enough_to_catch_virtualization()
+    {
+        // Phase 0 measured 209 fields becoming 14 in the UI Automation tree with virtualization on
+        // (§7.6). Forty is well past what one viewport realises, which is all the guard needs.
+        Assert.Equal(40, Tool("demo_wide").Form.Fields.Count);
+        Assert.Equal(0, Tool("demo_wide").Form.RequiredCount);
+    }
+
     [Fact]
     public async Task A_tool_level_error_comes_back_as_an_error_rather_than_an_exception()
     {
@@ -189,7 +302,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var server = ToolTreeBuilder.BuildServerNode(Connection.Snapshot());
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
-        Assert.Equal(12, tools.Count);
+        Assert.Equal(14, tools.Count);
         Assert.Contains(server.Children.Single().Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 

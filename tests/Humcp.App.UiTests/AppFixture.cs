@@ -17,9 +17,60 @@ public sealed class AppFixture : IAsyncLifetime
 
     public Window Window { get; private set; } = null!;
 
+    /// <summary>
+    /// A window the app opened beside its main one — a generated form, or the sub-form an object
+    /// list opens for a row (§8: windows are non-modal, and several can be open at once).
+    /// </summary>
+    /// <remarks>
+    /// Looked for among the main window's children rather than among the process's top-level
+    /// windows. An owned WPF window has its own top-level handle but UI Automation reports it under
+    /// its owner, and <c>GetAllTopLevelWindows</c> does not return it at all — which reads as "the
+    /// form never opened" when the form is open and announcing itself.
+    /// </remarks>
+    public Window? Owned(string title, TimeSpan? within = null)
+    {
+        var deadline = DateTime.UtcNow + (within ?? TimeSpan.FromSeconds(5));
+
+        do
+        {
+            var match = OpenWindows().FirstOrDefault(w => UiaTree.Safe(() => w.Title) == title);
+
+            if (match is not null) return match;
+            Thread.Sleep(100);
+        }
+        while (DateTime.UtcNow < deadline);
+
+        return null;
+    }
+
+    /// <summary>
+    /// Descendants rather than children: a sub-form opened from a generated form is owned by that
+    /// form, so it sits two levels down.
+    /// </summary>
+    private IEnumerable<Window> OpenWindows() =>
+        Window.FindAllDescendants(cf => cf.ByControlType(ControlType.Window))
+            .Select(w => w.AsWindow())
+            .Concat(_app?.GetAllTopLevelWindows(Automation) ?? []);
+
+    /// <summary>Every window the application currently has open, for a failure message worth reading.</summary>
+    public IReadOnlyList<string> Titles() =>
+        [.. OpenWindows().Select(w => UiaTree.Safe(() => w.Title) ?? "(none)")];
+
+    public bool HasExited => _app?.HasExited ?? true;
+
+    /// <summary>Where the app under test keeps its parameter history. Never the tester's own profile.</summary>
+    public string HistoryPath { get; } = Path.Combine(
+        Path.GetTempPath(), "humcp-uitests", Guid.NewGuid().ToString("n"), "history.json");
+
     public ValueTask InitializeAsync()
     {
         var executable = LocateApplication();
+
+        // Inherited by the child process. The suite runs real tools from real forms, and MRU
+        // history is written to disk on a successful call (§4, pitfall 3) — into a temporary
+        // directory here, so a test run never leaves anything in the profile of whoever ran it.
+        Environment.SetEnvironmentVariable("HUMCP_HISTORY", HistoryPath);
+
         _app = Application.Launch(executable);
 
         Window = _app.GetMainWindow(Automation, TimeSpan.FromSeconds(30))
@@ -36,6 +87,17 @@ public sealed class AppFixture : IAsyncLifetime
 
         Automation.Dispose();
         _app?.Dispose();
+
+        try
+        {
+            var directory = Path.GetDirectoryName(HistoryPath);
+            if (directory is not null && Directory.Exists(directory)) Directory.Delete(directory, recursive: true);
+        }
+        catch (IOException)
+        {
+            // A temporary directory that outlives the test run is not a failure worth reporting.
+        }
+
         return ValueTask.CompletedTask;
     }
 

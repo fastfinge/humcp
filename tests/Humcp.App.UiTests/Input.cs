@@ -61,6 +61,32 @@ internal static class Input
     }
 
     /// <summary>
+    /// Types text the way a person does, one keystroke at a time.
+    /// </summary>
+    /// <remarks>
+    /// Not the same as setting <c>Text</c> through the value pattern, and the difference is not
+    /// cosmetic: a button whose availability is decided by a <c>CommandBinding</c> re-evaluates on
+    /// <c>CommandManager.RequerySuggested</c>, which real input raises and a programmatic property
+    /// change does not. Setting the text leaves such a button disabled forever, which is a fact
+    /// about the harness and reads exactly like a defect in the application.
+    /// </remarks>
+    public static void Type(string text)
+    {
+        Keyboard.Type(text);
+        Settle(150);
+    }
+
+    /// <summary>A chord: the modifier is held down while the key is pressed, and released after.</summary>
+    public static void Press(VirtualKeyShort modifier, VirtualKeyShort key)
+    {
+        Keyboard.Press(modifier);
+        Keyboard.Press(key);
+        Keyboard.Release(key);
+        Keyboard.Release(modifier);
+        Settle();
+    }
+
+    /// <summary>
     /// Tabs around the window and reports every distinct stop as <c>ControlType:Name</c>, stopping
     /// when it returns to where it started. Fails rather than continuing if focus ever leaves the
     /// application.

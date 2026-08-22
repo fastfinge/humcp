@@ -53,16 +53,58 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     [Fact]
-    public void A_tool_that_needs_parameters_is_declined_with_an_explanation()
+    public void A_tool_that_needs_parameters_opens_a_form_instead_of_being_declined()
     {
+        // Phase 1 answered this with a sentence saying forms were not built yet (§7.18). Phase 3
+        // is where that sentence was meant to stop being true, so the test that held it honest is
+        // now the test that says so.
         PressEnterOn("Echo");
 
-        // Phase 1 has no form to fill in, so the honest answer is a sentence saying so — not a
-        // call that fails on the server, and not silence.
-        var status = WaitForStatus(text => text.Contains("parameter"));
-        output.WriteLine(status);
+        var form = fixture.Owned("Echo — humcp test server", TimeSpan.FromSeconds(10));
+        Assert.True(form is not null, "Enter on a tool with parameters opened no form.");
 
-        Assert.Contains("Phase 3", status);
+        output.WriteLine(form!.Name);
+
+        try
+        {
+            // The form window has a status line of its own, and a different automation id, because
+            // a form is a UIA descendant of the window that opened it: two elements called
+            // "LiveStatus" would make every lookup from the main window a coin toss.
+            var status = form.FindFirstDescendant(cf => cf.ByAutomationId("FormStatus"))?.Name ?? "";
+            Assert.Contains("2 parameters, 1 required", status);
+        }
+        finally
+        {
+            form.Close();
+            Input.Settle(200);
+        }
+    }
+
+    [Fact]
+    public void Typing_a_letter_in_the_tree_moves_to_the_next_tool_starting_with_it()
+    {
+        // Part of what Windows assumes of any list-shaped control, and WPF's TreeView is the one
+        // that does not have it — a manual pass pressed S on a nine-tool server and went nowhere
+        // (phase3-notes 4.10). This tree is sized by whatever a server publishes, so the difference
+        // on a forty-tool one is a keystroke against forty of them.
+        Input.EnsureForeground(Window, fixture.Automation);
+
+        FindTreeItem("Always fails").Focus();
+        Input.Settle(150);
+
+        Input.Press(VirtualKeyShort.KEY_S);
+        Input.Settle(400);
+
+        var focused = fixture.Automation.FocusedElement();
+        output.WriteLine(UiaTree.Safe(() => focused?.Name) ?? "(nothing)");
+
+        Assert.StartsWith("Search documents", UiaTree.Safe(() => focused?.Name) ?? "");
+
+        // Pressing it again goes to the next match rather than sticking.
+        Input.Press(VirtualKeyShort.KEY_S);
+        Input.Settle(400);
+
+        Assert.StartsWith("Slow tool", UiaTree.Safe(() => fixture.Automation.FocusedElement()?.Name) ?? "");
     }
 
     [Fact]
@@ -130,7 +172,12 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
         Input.Press(VirtualKeyShort.ESCAPE);
         Input.Settle(300);
 
-        Assert.Null(Window.FindFirstChild(cf => cf.ByControlType(ControlType.Window)));
+        // Specifically the details window. Since Phase 3 the app has other windows — a generated
+        // form is owned by this one and shows up as its child — so "no child windows at all" would
+        // be asserting something this test has no opinion about.
+        Assert.DoesNotContain(
+            Window.FindAllChildren(cf => cf.ByControlType(ControlType.Window)),
+            w => (UiaTree.Safe(() => w.Name) ?? "").StartsWith("Details:", StringComparison.Ordinal));
     }
 
     // ------------------------------------------------------------------ helpers

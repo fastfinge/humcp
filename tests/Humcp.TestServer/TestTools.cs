@@ -36,10 +36,12 @@ internal static class TestTools
         yield return TinyImage();
         yield return Report();
         yield return Tree();
+        yield return Search();
+        yield return Wide();
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 12;
+    public const int Count = 14;
 
     // ------------------------------------------------------------------ info_
 
@@ -270,6 +272,114 @@ internal static class TestTools
             Description = "Takes a recursive type. A form cannot have infinite depth, so the recursive " +
                           "part has to degrade to a JSON editor rather than expand forever.",
             ReadOnly = true,
+        });
+
+    // ------------------------------------------------------------------ forms worth generating
+
+    /// <summary>Which part of a document a search looks at. The required enum of ROADMAP §4, pitfall 4.</summary>
+    public enum SearchScope
+    {
+        Everything,
+        Titles,
+        Bodies,
+        Comments,
+    }
+
+    /// <summary>How loud a log line is. An enum inside a list, which is 13 of the corpus's 82 lists.</summary>
+    public enum Level
+    {
+        Info,
+        Warning,
+        Error,
+    }
+
+    /// <summary>One row of an array of objects — 20 of the corpus's fields, and the Tier 2 case with a sub-form.</summary>
+    public sealed record SearchRule(
+        [Description("Which field this rule applies to.")] string Field,
+        [Description("What that field has to contain.")] string Value);
+
+    /// <summary>
+    /// Fifteen parameters, two of them required, one of those an enum — the shape ROADMAP §4's
+    /// pitfall 4 is about, and the Phase 3 exit criterion's "comfortable to fill in by ear". Every
+    /// control the renderer knows is on this one form: text, multi-line text, whole and fractional
+    /// numbers, a check box that defaults on and one that states nothing, two enumerations, a list
+    /// of strings, a list of enumerations, a nested object, a list of objects, and a date.
+    /// </summary>
+    private static McpServerTool Search() => McpServerTool.Create(
+        ([Description("What to search for.")] string query,
+         [Description("Which part of each document to look at.")] SearchScope scope,
+         [Description("Largest number of results to return.")] int limit = 20,
+         [Description("How many results to skip.")] int offset = 0,
+         [Description("Whether capital letters have to match.")] bool caseSensitive = false,
+         [Description("Whether to include documents that have been archived.")] bool includeArchived = true,
+         [Description("Which way to sort the results.")] Ordering order = Ordering.Ascending,
+         [Description("Only return documents carrying all of these tags.")] string[]? tags = null,
+         [Description("Only return log lines at these levels.")] Level[]? levels = null,
+         [Description("Narrows what goes in the results.")] ReportFilter? filter = null,
+         [Description("Extra conditions, all of which have to hold.")] SearchRule[]? rules = null,
+         [Description("Anything worth recording about why this search was run.")]
+         string notes = "One line.\nAnd a second, so the box knows to be tall.",
+         [Description("Only return documents changed since this moment.")] DateTime? since = null,
+         [Description("Discard results scoring below this.")] double minimumScore = 0.5,
+         [Description("A credential, here to prove the history file never writes one down.")]
+         string? apiToken = null) =>
+            string.Join(System.Environment.NewLine,
+                $"query:           {query}",
+                $"scope:           {scope}",
+                $"limit:           {limit}",
+                $"offset:          {offset}",
+                $"caseSensitive:   {caseSensitive}",
+                $"includeArchived: {includeArchived}",
+                $"order:           {order}",
+                $"tags:            {Join(tags)}",
+                $"levels:          {Join(levels)}",
+                $"filter:          {(filter is null ? "(none)" : $"contains={filter.Contains} limit={filter.Limit}")}",
+                $"rules:           {(rules is null ? "(none)" : string.Join("; ", rules.Select(r => $"{r.Field}={r.Value}")))}",
+                $"notes:           {notes.Replace("\n", "\\n", StringComparison.Ordinal)}",
+                $"since:           {since?.ToString("O") ?? "(none)"}",
+                $"minimumScore:    {minimumScore}",
+                $"apiToken:        {(apiToken is null ? "(none)" : "(supplied)")}"),
+        new McpServerToolCreateOptions
+        {
+            Name = "demo_search",
+            Title = "Search documents",
+            Description = "Searches nothing at all and reports back exactly what it was sent. Fifteen " +
+                          "parameters, two required, so the generated form has to be navigable rather " +
+                          "than merely correct.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    private static string Join<T>(T[]? values) =>
+        values is null || values.Length == 0 ? "(none)" : string.Join(", ", values);
+
+    /// <summary>
+    /// Forty parameters, all optional, all the same. Nothing about it is realistic and that is the
+    /// point: it is the virtualization guard (ROADMAP §7.6, §9). With
+    /// <c>VirtualizingStackPanel.IsVirtualizing</c> left at its default, most of these are absent
+    /// from the UI Automation tree entirely — Phase 0 measured 209 fields becoming 14 — and a test
+    /// that counts them fails the moment somebody turns it on for performance.
+    /// </summary>
+    private static McpServerTool Wide() => McpServerTool.Create(
+        (string? field01 = null, string? field02 = null, string? field03 = null, string? field04 = null,
+         string? field05 = null, string? field06 = null, string? field07 = null, string? field08 = null,
+         string? field09 = null, string? field10 = null, string? field11 = null, string? field12 = null,
+         string? field13 = null, string? field14 = null, string? field15 = null, string? field16 = null,
+         string? field17 = null, string? field18 = null, string? field19 = null, string? field20 = null,
+         string? field21 = null, string? field22 = null, string? field23 = null, string? field24 = null,
+         string? field25 = null, string? field26 = null, string? field27 = null, string? field28 = null,
+         string? field29 = null, string? field30 = null, string? field31 = null, string? field32 = null,
+         string? field33 = null, string? field34 = null, string? field35 = null, string? field36 = null,
+         string? field37 = null, string? field38 = null, string? field39 = null, string? field40 = null) =>
+            "Forty parameters, and nothing was done with any of them.",
+        new McpServerToolCreateOptions
+        {
+            Name = "demo_wide",
+            Title = "Forty parameters",
+            Description = "Forty optional string parameters, so a generated form is long enough for UI " +
+                          "virtualization to start hiding fields from screen readers if it were ever enabled.",
+            ReadOnly = true,
+            Idempotent = true,
         });
 
     private static McpServerTool DeleteEverything() => McpServerTool.Create(

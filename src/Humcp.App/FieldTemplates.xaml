@@ -1,0 +1,456 @@
+<!--
+    The generated form, one control at a time (ROADMAP §5's tiers, §7's contract).
+
+    Every template here is the same five things in the same order, and the order is the point: a
+    label with an access key, the control, and — where they exist — the constraint sentence, the
+    problem, and the keystroke nothing else would announce.
+
+      • AutomationProperties.Name        — the plain label, never decorated with "(required)" (§7.4)
+      • AutomationProperties.HelpText    — the schema's first sentence and its limits (§7.2)
+      • AutomationProperties.LabeledBy   — pointing at a real Label with a real access key (§7.3)
+      • AutomationProperties.IsRequiredForForm — how "required" is said, in the user's own words
+      • AutomationProperties.ItemStatus  — what is wrong with this value (§7.5)
+
+    Nothing here signals anything by colour alone. A problem is announced, spelled out in words
+    under the control, and set in bold; low-vision users are half of this application's audience and
+    a red border is not a message.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Humcp.App">
+
+    <local:AccessKeyConverter x:Key="AccessKey" />
+    <local:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
+
+    <local:AppendHintConverter x:Key="AppendHint" />
+    <local:AppendHintConverter x:Key="CalendarHint"
+                               Hint="Press Alt plus Down Arrow to open the calendar." />
+    <local:AppendHintConverter x:Key="HistoryHint"
+                               Hint="Press Alt plus Down Arrow for values you have used here before." />
+    <local:AppendHintConverter x:Key="MultilineHint"
+                               Hint="This box takes more than one line. Press Enter for a new line, Tab to leave." />
+    <local:AppendHintConverter x:Key="JsonHint"
+                               Hint="Press Enter for a new line, Tab to leave the box." />
+
+    <local:FieldTemplateSelector x:Key="FieldTemplates" Prefix="Field" />
+
+    <!-- Buttons inside a field carry no access key, on purpose. Their letters would be fixed
+         while the field labels around them are whatever a server called its parameters, and §7.21
+         says an access key is unique or absent — Windows cycles focus between controls sharing
+         one. A form with two lists on it would have two Add buttons claiming the same letter in any
+         case. They are one Tab away from the box they belong to. -->
+
+    <!-- ================================================================ shared chrome -->
+
+    <Style x:Key="FieldRow" TargetType="StackPanel">
+        <Setter Property="Margin" Value="0,0,0,10" />
+    </Style>
+
+    <Style x:Key="FieldLabel" TargetType="Label">
+        <Setter Property="Padding" Value="0,0,0,2" />
+        <Style.Triggers>
+            <!-- The visible marker for a required field. Deliberately weight rather than an
+                 asterisk: the label is what LabeledBy points at, and a star in it is a star some
+                 screen reader will read out as one (§7.4). -->
+            <DataTrigger Binding="{Binding IsRequired}" Value="True">
+                <Setter Property="FontWeight" Value="Bold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
+
+    <!-- TargetType is Control so one style serves every kind of input. The theme style still
+         applies underneath, so each control keeps the appearance Windows gives it. -->
+    <Style x:Key="FieldInput" TargetType="Control">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+        <Setter Property="AutomationProperties.IsRequiredForForm" Value="{Binding IsRequired}" />
+        <Setter Property="AutomationProperties.ItemStatus" Value="{Binding Status}" />
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="Padding" Value="4,3" />
+    </Style>
+
+    <Style x:Key="ProblemText" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,3,0,0" />
+        <Setter Property="Visibility"
+                Value="{Binding Status, Converter={StaticResource EmptyToCollapsed}}" />
+    </Style>
+
+    <!-- An item's accessible name is the plain text of its content, and with a bound object that
+         means its ToString. Both classes bound here now have one worth hearing, and these say it
+         again explicitly: a combo box announcing "ChoiceOption { Label = Ascending, Value = …" on
+         every option is a defect nobody sees and everybody hears (§7.23, phase3-notes 4.1). -->
+    <Style x:Key="ChoiceItem" TargetType="ComboBoxItem" BasedOn="{StaticResource {x:Type ComboBoxItem}}">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Label}" />
+    </Style>
+
+    <Style x:Key="EntryItem" TargetType="ListBoxItem" BasedOn="{StaticResource {x:Type ListBoxItem}}">
+        <Setter Property="AutomationProperties.Name" Value="{Binding Display}" />
+    </Style>
+
+    <Style x:Key="RowButton" TargetType="Button">
+        <Setter Property="Padding" Value="10,3" />
+        <Setter Property="Margin" Value="6,0,0,0" />
+    </Style>
+
+    <!-- ================================================================ Tier 1: one control -->
+
+    <DataTemplate x:Key="Field.Text">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <TextBox x:Name="Input" Style="{StaticResource FieldInput}"
+                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                     AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- The same field, once it has been filled in before. MCP cannot autocomplete a tool argument
+         (§4, pitfall 3), so the only source of suggestions is what this user typed last time. -->
+    <DataTemplate x:Key="Field.History">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <ComboBox x:Name="Input" Style="{StaticResource FieldInput}"
+                      IsEditable="True" IsTextSearchEnabled="False"
+                      ItemsSource="{Binding History}"
+                      Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                      AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource HistoryHint}}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="Field.Multiline">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <TextBox x:Name="Input" Style="{StaticResource FieldInput}"
+                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="True" AcceptsTab="False" MinLines="4" MaxLines="12"
+                     TextWrapping="Wrap" VerticalScrollBarVisibility="Auto"
+                     AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                     AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource MultilineHint}}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="Field.Choice">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <ComboBox x:Name="Input" Style="{StaticResource FieldInput}"
+                      ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}"
+                      DisplayMemberPath="Label" ItemContainerStyle="{StaticResource ChoiceItem}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- The label is a Label rather than the check box's own content, so that every field on the
+         form is built the same way and LabeledBy means the same thing everywhere. -->
+    <DataTemplate x:Key="Field.Boolean">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <CheckBox x:Name="Input" Style="{StaticResource FieldInput}"
+                      IsChecked="{Binding Value}"
+                      HorizontalAlignment="Left" Padding="4,0,0,0"
+                      AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="Field.Date">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <!-- §7.15: the calendar opens with Alt+Down Arrow and nothing anywhere says so. -->
+            <DatePicker x:Name="Input" Style="{StaticResource FieldInput}"
+                        SelectedDate="{Binding Date}"
+                        HorizontalAlignment="Left" MinWidth="200"
+                        AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                        AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource CalendarHint}}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <DataTemplate x:Key="Field.DateTime">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <StackPanel Orientation="Horizontal">
+                <DatePicker x:Name="Input" Style="{StaticResource FieldInput}"
+                            SelectedDate="{Binding Date}" MinWidth="200"
+                            AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                            AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource CalendarHint}}" />
+                <Label x:Name="TimeLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=TimeInput}"
+                       Content="Time of day" Margin="12,0,4,0" VerticalAlignment="Center" />
+                <TextBox x:Name="TimeInput" Style="{StaticResource FieldInput}"
+                         Text="{Binding Time, UpdateSourceTrigger=PropertyChanged}"
+                         MinWidth="90" VerticalAlignment="Center"
+                         AutomationProperties.Name="Time of day"
+                         AutomationProperties.HelpText="Left empty this means midnight. Type a time such as 14:30."
+                         AutomationProperties.LabeledBy="{Binding ElementName=TimeLabel}" />
+            </StackPanel>
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- A list of primitives. Add and Remove, and no Edit: an entry box that silently changes
+         meaning from "the next one" to "that one" is a mode, and a mode with no marker is exactly
+         what a user working by ear cannot check.
+
+         Two templates rather than one with the entry control swapped in. A DataTemplate is its own
+         name scope, so an entry control chosen at runtime is a control the label cannot point its
+         Target at — and a label whose access key focuses nothing is worse than the duplication. -->
+    <DataTemplate x:Key="Field.List">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Draft}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
+                        Content="Add"
+                        Command="{x:Static local:FormCommands.AddEntry}"
+                        CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
+                        AutomationProperties.HelpText="Adds what is in the box beside this to the list." />
+                <TextBox x:Name="Draft" Style="{StaticResource FieldInput}"
+                         Text="{Binding Draft.Text, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.Name="{Binding Label}"
+                         AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                         AutomationProperties.HelpText="{Binding HelpText, ConverterParameter='Type a value and press Enter to add it to the list below.', Converter={StaticResource AppendHint}}">
+                    <TextBox.InputBindings>
+                        <KeyBinding Key="Enter"
+                                    Command="{x:Static local:FormCommands.AddEntry}"
+                                    CommandParameter="{Binding}" />
+                    </TextBox.InputBindings>
+                </TextBox>
+            </DockPanel>
+
+            <DockPanel LastChildFill="True" Margin="0,6,0,0">
+                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
+                        Content="Remove"
+                        VerticalAlignment="Top"
+                        Command="{x:Static local:FormCommands.RemoveEntry}"
+                        CommandParameter="{Binding ElementName=Entries}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
+                         ItemContainerStyle="{StaticResource EntryItem}"
+                         MinHeight="60" MaxHeight="160"
+                         AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
+                         AutomationProperties.HelpText="Arrow through the entries. Delete removes the selected one."
+                         AutomationProperties.ItemStatus="{Binding Status}">
+                    <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="Delete"
+                                    Command="{x:Static local:FormCommands.RemoveEntry}"
+                                    CommandParameter="{Binding ElementName=Entries}" />
+                    </local:EntryListBox.InputBindings>
+                </local:EntryListBox>
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- The same list, where the schema closed the set of values it can hold. Thirteen of the
+         corpus's 82 lists are this. -->
+    <DataTemplate x:Key="Field.ListOfChoices">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Draft}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+
+            <DockPanel LastChildFill="True">
+                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
+                        Content="Add"
+                        Command="{x:Static local:FormCommands.AddEntry}"
+                        CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
+                        AutomationProperties.HelpText="Adds the value beside this to the list." />
+                <ComboBox x:Name="Draft" Style="{StaticResource FieldInput}"
+                          ItemsSource="{Binding Draft.Options}" SelectedItem="{Binding Draft.Selected}"
+                          DisplayMemberPath="Label" ItemContainerStyle="{StaticResource ChoiceItem}"
+                          AutomationProperties.Name="{Binding Label}"
+                          AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                          AutomationProperties.HelpText="{Binding HelpText, ConverterParameter='Choose a value and press Add to put it in the list below.', Converter={StaticResource AppendHint}}" />
+            </DockPanel>
+
+            <DockPanel LastChildFill="True" Margin="0,6,0,0">
+                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
+                        Content="Remove"
+                        VerticalAlignment="Top"
+                        Command="{x:Static local:FormCommands.RemoveEntry}"
+                        CommandParameter="{Binding ElementName=Entries}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
+                         ItemContainerStyle="{StaticResource EntryItem}"
+                         MinHeight="60" MaxHeight="160"
+                         AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
+                         AutomationProperties.HelpText="Arrow through the entries. Delete removes the selected one."
+                         AutomationProperties.ItemStatus="{Binding Status}">
+                    <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="Delete"
+                                    Command="{x:Static local:FormCommands.RemoveEntry}"
+                                    CommandParameter="{Binding ElementName=Entries}" />
+                    </local:EntryListBox.InputBindings>
+                </local:EntryListBox>
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- ================================================================ Tier 2: composites -->
+
+    <DataTemplate x:Key="Field.Group">
+        <GroupBox Margin="0,0,0,10" Focusable="False" IsTabStop="False"
+                  AutomationProperties.Name="{Binding Label}"
+                  AutomationProperties.HelpText="{Binding HelpText}"
+                  AutomationProperties.IsRequiredForForm="{Binding IsRequired}"
+                  AutomationProperties.ItemStatus="{Binding Status}">
+            <GroupBox.Header>
+                <TextBlock Text="{Binding Label}" FontWeight="Bold" />
+            </GroupBox.Header>
+            <StackPanel Margin="6,6,0,0">
+                <local:FormItemsControl ItemsSource="{Binding Fields}"
+                                        ItemTemplateSelector="{StaticResource FieldTemplates}" />
+                <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+            </StackPanel>
+        </GroupBox>
+    </DataTemplate>
+
+    <!-- A list of objects. Each row is a whole form of its own, so it opens in a window of its
+         own (§5, Tier 2) rather than being nested three levels deep in this one. -->
+    <DataTemplate x:Key="Field.ObjectList">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Rows}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+
+            <DockPanel LastChildFill="True">
+                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top">
+                    <Button Style="{StaticResource RowButton}" Content="Add entry" Margin="6,0,0,4"
+                            Command="{x:Static local:FormCommands.AddRow}" CommandParameter="{Binding}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Add an entry to {0}'}"
+                            AutomationProperties.HelpText="Adds an entry and opens it for editing in its own window." />
+                    <Button Style="{StaticResource RowButton}" Content="Edit" Margin="6,0,0,4"
+                            Command="{x:Static local:FormCommands.EditRow}" CommandParameter="{Binding ElementName=Rows}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Edit entry in {0}'}"
+                            AutomationProperties.HelpText="Opens the selected entry in its own window. Enter does the same." />
+                    <Button Style="{StaticResource RowButton}" Content="Remove" Margin="6,0,0,0"
+                            Command="{x:Static local:FormCommands.RemoveEntry}" CommandParameter="{Binding ElementName=Rows}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Remove entry from {0}'}"
+                            AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                </StackPanel>
+
+                <local:EntryListBox x:Name="Rows" ItemsSource="{Binding Rows}" DisplayMemberPath="Display"
+                         ItemContainerStyle="{StaticResource EntryItem}"
+                         MinHeight="60" MaxHeight="160"
+                         AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
+                         AutomationProperties.HelpText="Arrow through the entries. Enter opens one, Delete removes it."
+                         AutomationProperties.ItemStatus="{Binding Status}">
+                    <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="Enter"
+                                    Command="{x:Static local:FormCommands.EditRow}"
+                                    CommandParameter="{Binding ElementName=Rows}" />
+                        <KeyBinding Key="Delete"
+                                    Command="{x:Static local:FormCommands.RemoveEntry}"
+                                    CommandParameter="{Binding ElementName=Rows}" />
+                    </local:EntryListBox.InputBindings>
+                </local:EntryListBox>
+            </DockPanel>
+
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- ================================================================ Tier 3: honest JSON -->
+
+    <!-- Never a dead end (§5). The box starts with the shape the schema describes, and its help
+         text already says, in words, why this field could not be drawn as anything better (§7.18). -->
+    <DataTemplate x:Key="Field.Raw">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <TextBox x:Name="Input" Style="{StaticResource FieldInput}"
+                     Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                     AcceptsReturn="True" AcceptsTab="False" MinLines="6" MaxLines="18"
+                     FontFamily="Consolas" TextWrapping="NoWrap"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                     AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                     AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource JsonHint}}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+</ResourceDictionary>

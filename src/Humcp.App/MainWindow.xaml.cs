@@ -25,13 +25,22 @@ public partial class MainWindow : Window
 
     private readonly ObservableCollection<CatalogueNode> _roots = [];
     private readonly List<string> _speechLog = [];
+    private readonly List<ToolWindow> _forms = [];
+    private readonly WindowManager _windows = new();
     private readonly IAnnouncer _announcer;
     private readonly ServerConnection _connection;
+    private readonly MruHistory _history = MruHistory.Load();
     private readonly CancellationTokenSource _shutdown = new();
 
     private CancellationTokenSource? _currentCall;
     private bool _callInFlight;
     private int _paneIndex;
+
+    /// <summary>How long a typed run stays one search, matching the shell's own type-ahead.</summary>
+    private static readonly TimeSpan TypeAheadWindow = TimeSpan.FromSeconds(1);
+
+    private string _prefix = "";
+    private DateTime _prefixAt;
 
     public MainWindow()
     {
@@ -57,6 +66,11 @@ public partial class MainWindow : Window
         Tree.ItemsSource = _roots;
         UpdateRunAvailability();
 
+        // The main window keeps its place in the task bar; everything humcp opens beside it does
+        // not, and every window carries the same Window menu (§8).
+        _windows.TrackMain(this);
+        _windows.Attach(this, WindowMenu, closable: false);
+
         Loaded += async (_, _) =>
         {
             Tree.Focus();
@@ -66,6 +80,10 @@ public partial class MainWindow : Window
         Closed += (_, _) =>
         {
             _shutdown.Cancel();
+
+            foreach (var form in _forms.ToList()) form.Close();
+
+            _history.Save();
             _ = _connection.DisposeAsync();
             _announcer.Dispose();
         };
@@ -127,12 +145,11 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!tool.RunsWithoutArguments)
+        // A tool with parameters gets a form window; a tool with none is a call, and making the
+        // user open a window with nothing on it to press one more button would be ceremony.
+        if (tool.ParameterCount > 0)
         {
-            // An honest dead end rather than a broken call: Phase 3 generates the form.
-            SetStatus($"{tool.DisplayName} needs {tool.RequiredParameterCount} " +
-                      $"parameter{(tool.RequiredParameterCount == 1 ? "" : "s")}. " +
-                      "Generated forms arrive in Phase 3.");
+            OpenForm(tool);
             return;
         }
 
@@ -181,10 +198,30 @@ public partial class MainWindow : Window
         ResultBox.ScrollToHome();
     }
 
+    /// <summary>
+    /// Opens the form for a tool, or brings the one already open to the front. Non-modal (§8), so
+    /// several tools can be part-filled at once and the tree stays usable behind them.
+    /// </summary>
+    private void OpenForm(ToolInfo tool)
+    {
+        if (_forms.FirstOrDefault(f => f.ToolName == tool.Name) is { } existing)
+        {
+            WindowManager.Activate(existing);
+            SetStatus($"{tool.DisplayName} is already open.");
+            return;
+        }
+
+        var form = new ToolWindow(this, tool, _connection, _history, _windows);
+
+        _forms.Add(form);
+        form.Closed += (_, _) => _forms.Remove(form);
+        form.Show();
+    }
+
     private void UpdateRunAvailability()
     {
         var tool = SelectedTool();
-        var runnable = !_callInFlight && tool is { RunsWithoutArguments: true };
+        var runnable = tool is not null && (tool.ParameterCount > 0 || !_callInFlight);
 
         RunButton.IsEnabled = runnable;
         RunMenuItem.IsEnabled = runnable;
@@ -212,6 +249,63 @@ public partial class MainWindow : Window
             container.BringIntoView();
             return;
         }
+    }
+
+    /// <summary>
+    /// First-letter navigation: typing a letter moves to the next node whose name begins with it,
+    /// and typing several in quick succession matches the whole run.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// Written by hand because WPF's <c>TreeView</c> does not have it. A list box and a combo box
+    /// both do — it is <c>TextSearch</c>, and it is part of what the Windows accessibility contract
+    /// assumes of every list-shaped control — but the tree simply drops the keystroke, which a
+    /// manual pass found by pressing S on a nine-tool server and going nowhere (phase3-notes 4.10).
+    /// </para>
+    /// <para>
+    /// This tree is the application's primary navigation, and it is sized by whatever a server
+    /// publishes: on a forty-tool server, arrowing is forty presses and listening to forty names.
+    /// The filter box of §8 is a better answer and is Phase 6's; this is the one every other tree on
+    /// the system already has.
+    /// </para>
+    /// </remarks>
+    private void OnTreeTextInput(object sender, TextCompositionEventArgs e)
+    {
+        var typed = e.Text;
+        if (typed.Length == 0 || char.IsControl(typed[0])) return;
+
+        var now = DateTime.UtcNow;
+        _prefix = now - _prefixAt > TypeAheadWindow ? typed : _prefix + typed;
+        _prefixAt = now;
+
+        // A repeated single letter means "the next one starting with it" rather than a literal run
+        // of that letter, which is how every other list on Windows behaves.
+        var target = _prefix.Length > 1 && _prefix.All(c => c == _prefix[0]) ? _prefix[..1] : _prefix;
+
+        if (Select(target)) e.Handled = true;
+    }
+
+    private bool Select(string prefix)
+    {
+        var nodes = EnumerateContainers(Tree, _roots).ToList();
+        if (nodes.Count == 0) return false;
+
+        // From just after the current selection, wrapping, so repeated presses cycle the matches.
+        var start = nodes.FindIndex(n => n.Container.IsSelected) + 1;
+
+        for (var i = 0; i < nodes.Count; i++)
+        {
+            var (node, container) = nodes[(start + i) % nodes.Count];
+
+            if (!node.AccessibleName.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase)) continue;
+
+            container.IsSelected = true;
+            container.BringIntoView();
+            container.Focus();
+            return true;
+        }
+
+        return false;
     }
 
     private static IEnumerable<(CatalogueNode Node, TreeViewItem Container)> EnumerateContainers(
@@ -303,7 +397,7 @@ public partial class MainWindow : Window
 
         if (node.Tool is not { } tool)
         {
-            TextWindow.Show(this, $"Details: {node.AccessibleName}", node.AccessibleName);
+            TextWindow.Show(this, $"Details: {node.AccessibleName}", node.AccessibleName, _windows);
             return;
         }
 
@@ -323,7 +417,7 @@ public partial class MainWindow : Window
             .AppendLine(Pretty(tool.InputSchema))
             .ToString();
 
-        TextWindow.Show(this, $"Details: {tool.DisplayName}", text);
+        TextWindow.Show(this, $"Details: {tool.DisplayName}", text, _windows);
     }
 
     private void OnSpeechDiagnostics(object sender, RoutedEventArgs e)
@@ -338,7 +432,7 @@ public partial class MainWindow : Window
             .AppendLine(log.Length == 0 ? "  (no messages)" : log)
             .ToString();
 
-        TextWindow.Show(this, "Speech diagnostics", text);
+        TextWindow.Show(this, "Speech diagnostics", text, _windows);
     }
 
     private void OnConnectionDiagnostics(object sender, RoutedEventArgs e)
@@ -362,7 +456,7 @@ public partial class MainWindow : Window
                         $"{BuiltInServers.ArgumentsVariable}.")
             .ToString();
 
-        TextWindow.Show(this, "Connection diagnostics", text);
+        TextWindow.Show(this, "Connection diagnostics", text, _windows);
     }
 
     private static string Describe(bool? hint) => hint switch

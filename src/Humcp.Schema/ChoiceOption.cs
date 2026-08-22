@@ -27,4 +27,15 @@ public sealed record ChoiceOption(string Label, JsonElement Value)
 
     /// <summary>True when this option means "not set" rather than a value.</summary>
     public bool IsNull => Value.ValueKind is JsonValueKind.Null or JsonValueKind.Undefined;
+
+    /// <summary>
+    /// The label, because this is what a screen reader reads out.
+    /// </summary>
+    /// <remarks>
+    /// A record's generated <c>ToString</c> prints every property it has, and an items control
+    /// falls back to it for an item's accessible name — so a combo box of these announced
+    /// "ChoiceOption { Label = Ascending, Value = …" on every option. The same trap as ROADMAP
+    /// §7.12's <c>DataItem</c> names, found the same way: by listening (phase3-notes 4.1).
+    /// </remarks>
+    public override string ToString() => Label;
 }

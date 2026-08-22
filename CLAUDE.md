@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0, 1 and 2 complete, Phase 3 next
+## Project status: Phases 0–3 complete, Phase 4 next
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -28,12 +28,22 @@ every one of the 213 schemas produces a form. 813 tests. Record in **`docs/phase
 its findings are now §5 (two new rules), §6.2, §9's corpus provenance, §11's Phase 7 entry, and
 three answers in §13.
 
-Still outstanding from Phase 0 and non-blocking: the JAWS and Narrator passes.
+**Phase 3 is complete**: generated forms, eleven templates covering the whole control vocabulary,
+the optional toggle, MRU history, validation surfacing, a sub-form window for a row of an object
+list, and the §8 window model. 902 tests, 36 of them over the live UIA tree.
 
-The next unit of work is **Phase 3** (§10): `DataTemplateSelector` over `FieldModel`, the full
-accessibility contract (§7), the required/optional toggle, the enum-first wizard heuristic, MRU
-history, and validation surfacing. `FieldKind` is named for the shape of the data rather than for a
-WPF type precisely so Phase 3 owns that mapping.
+**The manual pass found nine defects and the automated suite had found none of them** — the number
+worth remembering from this phase. Combo boxes reading out C# object literals; a Close button and
+Escape that closed nothing; windows that read like dialogues; the optional-fields shortcut throwing
+the caret out of the form; a form opening on an object leaving the caret nowhere; Alt+T opening a
+menu instead of a field; Ctrl+Enter pressing whatever button had focus; Delete doing nothing in a
+list that advertises it; and a validation message NVDA never spoke. All nine fixed, each with a
+test, each re-checked by ear. Record in **`docs/phase3-notes.md`**; its findings are now §4 pitfall
+4, §5's "what a filled-in form means", §6.3, §7.20–26, §8's window model and §9.
+
+The next unit of work is **Phase 4** (§10): result rendering.
+
+Still outstanding and non-blocking: JAWS and Narrator have not seen the nine fixes.
 
 ## What humcp is
 
@@ -100,7 +110,7 @@ without saying so is not.
 ## Architecture
 
 ```
-src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel. Pure. No MCP SDK, no WPF.
+src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel -> FieldState. Pure. No MCP SDK, no WPF.
 src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU. No UI.
 src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
 src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager.
@@ -124,7 +134,39 @@ is what makes v4's OpenAPI support cheap, since OpenAPI 3.1's Schema Object *is*
 opaque `Binding` slot, model safety as a neutral `OperationSafety` record, and have the result
 renderer take `(schema, value)` rather than a `CallToolResult`.
 
-`Humcp.Schema` is the core IP and is pure logic — build and test it without a UI.
+`Humcp.Schema` is the core IP and is pure logic — build and test it without a UI. **That now
+includes the editable form state** (`FieldState`, `FormState`): §6.3 explains why view-models by
+shape live below the App, and the short version is that what an empty box means is a rule and not a
+pixel. WPF binds to them directly; the App owns templates, windows and keystrokes.
+
+## The window model
+
+Non-modal and multi-document (§8), built in Phase 3 after the first manual pass reported the form
+windows "read like dialogues rather than windows". Every window humcp opens — forms, the sub-form
+for a row of an object list, F1 details, diagnostics — carries its own menu bar with a `Window` menu
+listing every open window, numbered and with the current one checked. Ctrl+1…9 switches; Escape and
+Ctrl+W close. **Only the main window is in the task bar and in Alt+Tab**: a session across several
+servers can open a great many windows, and burying every other application on the machine under them
+is not a trade worth making when the same list can be named and numbered inside humcp.
+
+`WindowManager` owns all of this. Anything that opens a window passes it through and calls `Track`
+before `Show`.
+
+## What a filled-in form sends
+
+**A value the user did not choose is not sent.** A box still holding what the schema's `default`
+put there says nothing; a required field is the exception, because the call has to state it. One
+expression covers every kind of field — `IsRequired || value != initial` — including the case that
+looks like an exception: a check box that started ticked because the schema said so and has been
+unticked sends `false` out loud, since otherwise a stated default could not be turned off.
+
+Found by a corpus test on five real servers at once, not by reasoning (phase3-notes 3.2). Do not
+"fix" it by sending prefilled defaults.
+
+**There is exactly one refusal, and it is not a validation failure.** Unparseable text in a Tier 3
+editor means there is no argument object to construct, which is a different thing from suspecting
+the server will decline. Everything else warns once, says how many problems and how to overrule,
+and sends unchanged on the second press.
 
 ## The schema engine: never fail to render
 
@@ -181,6 +223,32 @@ These are the rules generated WPF code most often violates. Full contract in §7
 - **If a control has a keystroke nothing announces, the renderer puts it in `HelpText`** (§7.15) —
   a `DatePicker` opens its calendar with Alt+Down Arrow and no screen reader mentions it. Spell
   keystrokes out ("Alt plus Down Arrow"); the text is spoken.
+- **Nothing is signalled by colour alone** (§7.20). A validation problem goes into `ItemStatus`, into
+  words under the control, into the error summary, and is marked visually with weight rather than
+  hue. Half the audience has some sight and is using it.
+- **An access key is unique or absent** (§7.21). Windows cycles focus between controls sharing one,
+  so a duplicate on a 23-field form sends Alt+S to four unrelated boxes. `AccessKeys.Assign` gives
+  up rather than duplicating.
+- **Focus after a failed submit goes to the first invalid field in *tab order*** (§7.22), which is
+  not the first issue `ValidationReport` lists — it sorts alphabetically within a depth.
+- **Anything bound into an items control needs a `ToString` worth hearing** (§7.23), or an explicit
+  item name. `DisplayMemberPath` fixes the screen and says nothing to UI Automation — a drop-down of
+  records announced "ChoiceOption { Label = Titles, Value = …" on every option. §7.12 one layer down.
+- **A property being set is not the same fact as a property being announced** (§7.24). NVDA does not
+  speak `ItemStatus` on focus, so a validation message that a UI test asserted was present was never
+  heard by anyone. Only listening tells the two apart.
+- **The caret survives whatever the keyboard does to the form** (§7.25). Rebuilding the field list
+  destroys the focused control and WPF drops focus to the window; put it back. Focusing a field that
+  turns out to be a group means focusing the group's first member, never giving up quietly.
+- **Everything the platform gives a control of that shape, ours has too** (§7.26). WPF's `TreeView`
+  has no first-letter navigation and every other list-shaped control on Windows does, so the tree
+  implements it by hand.
+- **A list selects what it focuses**, or `Delete` and every other "selected entry" command is dead.
+- **A menu item's check mark needs `IsCheckable`** to exist as a state a reader can read.
+- **`Button.IsCancel` closes a modal dialog and nothing else.** Every window humcp opens is
+  non-modal, so closing is a command bound to Escape and Ctrl+W, never `IsCancel`.
+- **An owned window is a child of its owner in the UIA tree**, so automation ids must be unique
+  across the process, and `GetAllTopLevelWindows` will not find a form (§9).
 - **No WebView2 or `WebBrowser` anywhere.**
 - Every interactive control needs a non-empty `AutomationProperties.Name`, plus `HelpText` and a
   real `Label` via `LabeledBy`. Required fields use `IsRequiredForForm` — never append "(required)"
@@ -231,7 +299,13 @@ golden tests afterwards — the corpus changing is the point, but it changes the
 **`dotnet test` takes over the desktop.** `tests/Humcp.App.UiTests` launches the real app, takes
 the foreground and sends real keystrokes to it. That is deliberate (§9), and the suite refuses to
 type unless the app owns the foreground — but do not run it while the user is working, and never
-add a test that types without calling `Input.EnsureForeground` first.
+add a test that types without calling `Input.EnsureForeground` first. When it does refuse, the
+failure says so in the message; it is an environment condition, not a defect.
+
+Drive *setup* through UI Automation patterns (`Invoke`, `Select`, `Toggle`), which need no
+foreground. Keystrokes are for the assertions that are about the keyboard. It also runs real tools
+from real forms, so `HUMCP_HISTORY` points MRU history at a temporary directory — a test run must
+never write into the profile of whoever ran it.
 
 Phase 1's server is hard-coded to the in-repo fixture. To point the app at a real server instead,
 without a code edit:
@@ -241,6 +315,9 @@ set HUMCP_STDIO_COMMAND=npx.cmd
 set HUMCP_STDIO_ARGS=-y @modelcontextprotocol/server-everything
 dotnet run --project src/Humcp.App
 ```
+
+`HUMCP_HISTORY` moves the MRU history file off its default path in `%APPDATA%\humcp\`, which is what
+the UI suite uses and what to set when trying a real server without keeping what you type.
 
 ## Testing notes
 
@@ -254,6 +331,9 @@ dotnet run --project src/Humcp.App
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
 - The fake in-process MCP server should exercise hostile input deliberately — 10,000-character
-  descriptions, control characters, deeply nested schemas — since all of it is untrusted.
+  descriptions, control characters, deeply nested schemas — since all of it is untrusted. Two of its
+  fourteen tools exist for the form generator: `demo_search` has fifteen parameters, two required,
+  one of them an enum, and covers every control the renderer knows; `demo_wide` has forty, and is
+  the virtualization guard.
 - Automated UIA assertions prove names exist; only manual NVDA/JAWS/Narrator testing proves the app
   is pleasant. Do both at each phase exit.

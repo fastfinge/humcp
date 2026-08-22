@@ -1,0 +1,144 @@
+<!--
+    One tool's generated form (ROADMAP §10, Phase 3). Non-modal, so several can be open at once
+    (§8), and self-contained: the parameters, the problems and the result are three panes of the
+    same window, cycled with F6, so filling a form in and reading what it produced never crosses a
+    window boundary.
+
+    The window's own name is set in code as well as its Title: a WPF Window is a ContentControl and
+    announces its entire content as its name when nothing else is set (§7.17, phase1-notes 2.3).
+-->
+<Window x:Class="Humcp.App.ToolWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Humcp.App"
+        Height="800" Width="820" MinWidth="480"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel>
+
+        <!-- ================================================== menu bar -->
+        <!-- Reached with Alt and arrowed between, never tabbed to — which takes all three of these
+             settings, because WPF tab-stops every top-level MenuItem otherwise (§7.14). -->
+        <Menu DockPanel.Dock="Top" AutomationProperties.Name="Main menu"
+              Focusable="False" IsTabStop="False"
+              KeyboardNavigation.TabNavigation="None">
+            <MenuItem Header="_Tool">
+                <MenuItem Header="_Run" InputGestureText="Ctrl+Enter"
+                          Command="{x:Static local:FormCommands.Submit}" />
+                <MenuItem Header="Show _optional parameters" InputGestureText="Ctrl+O"
+                          IsCheckable="True" IsChecked="{Binding ShowOptional, Mode=TwoWay}" />
+                <MenuItem Header="_Details of this field" InputGestureText="F1"
+                          Command="{x:Static local:FormCommands.Details}" />
+                <Separator />
+                <MenuItem Header="_Close" InputGestureText="Esc"
+                          Command="{x:Static local:WindowManager.CloseWindow}" />
+            </MenuItem>
+            <MenuItem x:Name="WindowMenu" Header="_Window" />
+        </Menu>
+
+        <!-- ================================================== the tool -->
+        <StackPanel DockPanel.Dock="Top" Margin="10,10,10,6">
+            <TextBlock x:Name="Heading" FontWeight="Bold" FontSize="15" TextWrapping="Wrap"
+                       AutomationProperties.HeadingLevel="Level1" />
+            <TextBlock x:Name="Summary" TextWrapping="Wrap" Margin="0,4,0,0"
+                       Visibility="Collapsed" />
+            <CheckBox x:Name="OptionalToggle" Margin="0,8,0,0"
+                      Content="Show _optional parameters"
+                      AutomationProperties.Name="Show optional parameters"
+                      AutomationProperties.HelpText="Optional parameters start hidden, because most tools have far more of them than required ones. Control plus O does the same."
+                      IsChecked="{Binding ShowOptional, Mode=TwoWay}" />
+        </StackPanel>
+
+        <!-- ================================================== status -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <!-- A polite live region, and deliberately without an AutomationProperties.Name: a
+                     TextBlock's accessible name is its text, so naming it would make every
+                     announcement say the label instead of the message (§7.16). -->
+                <TextBlock x:Name="FormStatus" AutomationProperties.LiveSetting="Polite" TextWrapping="Wrap" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="10,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="3*" MinHeight="120" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="2*" MinHeight="80" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+
+            <!-- ================================================== pane 1: the form -->
+            <DockPanel Grid.Row="0">
+                <TextBlock x:Name="ParametersHeading" DockPanel.Dock="Top" Text="Parameters" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,6" />
+
+                <!-- Focusable="False" on the scroll viewer: WPF makes one a tab stop as soon as it
+                     has something to scroll, and a scroll viewer is not a control (§7.14). -->
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled"
+                              Focusable="False" Padding="0,0,12,0">
+                    <local:FormItemsControl x:Name="Fields"
+                                            ItemsSource="{Binding VisibleFields}"
+                                            ItemTemplateSelector="{StaticResource FieldTemplates}" />
+                </ScrollViewer>
+            </DockPanel>
+
+            <!-- ================================================== pane 2: what is wrong -->
+            <DockPanel x:Name="ProblemsPane" Grid.Row="1" Visibility="Collapsed" Margin="0,8,0,0">
+                <TextBlock x:Name="ProblemsHeading" DockPanel.Dock="Top" Text="Problems" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+
+                <!-- §7.5's other half: an error summary that can be arrowed through, since a control
+                     that says what is wrong with it only says so once you have found it. -->
+                <ListBox x:Name="Problems" MaxHeight="120"
+                         AutomationProperties.Name="Problems"
+                         AutomationProperties.HelpText="Arrow through the problems. Enter moves to the field one is about."
+                         MouseDoubleClick="OnProblemActivated">
+                    <ListBox.InputBindings>
+                        <KeyBinding Key="Enter"
+                                    Command="{x:Static local:FormCommands.GoToProblem}"
+                                    CommandParameter="{Binding ElementName=Problems}" />
+                    </ListBox.InputBindings>
+                </ListBox>
+            </DockPanel>
+
+            <!-- ================================================== pane 3: the result -->
+            <DockPanel Grid.Row="2" Margin="0,8,0,0">
+                <TextBlock x:Name="ResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+
+                <!-- §7.9: a read-only multiline TextBox, never a TextBlock. The caret is the point. -->
+                <TextBox x:Name="FormResultBox"
+                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
+                         AcceptsReturn="True" TextWrapping="NoWrap"
+                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
+                         FontFamily="Consolas"
+                         AutomationProperties.Name="Result"
+                         AutomationProperties.HelpText="Read-only. Arrow keys review the text line by line."
+                         Text="This tool has not been run yet." />
+            </DockPanel>
+
+            <!-- ================================================== commands -->
+            <!-- In the grid rather than docked to the bottom of the window, and that is a tab-order
+                 decision rather than a layout one. A DockPanel has to declare what it docks before
+                 the child that fills the rest, so buttons at the bottom of the window are declared
+                 before the form in the middle of it — and tab order follows the tree, not the
+                 screen. Run and Close came before the first field (phase3-notes 4.3).
+
+                 KeyboardNavigation.TabIndex does not fix it: it is only consulted on elements that
+                 are themselves tab stops or navigation containers, and a bare panel is neither, so
+                 WPF flattens straight through it. Putting the buttons where they visually are is
+                 the fix that cannot come apart again. -->
+            <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,8">
+                <Button x:Name="FormRunButton" Content="_Run tool" Padding="14,4" Margin="0,0,8,0"
+                        Command="{x:Static local:FormCommands.Submit}"
+                        AutomationProperties.HelpText="Runs the tool with what is on this form. Control plus Enter does the same." />
+                <!-- Command, not IsCancel. IsCancel closes a *modal* dialog and does nothing at all
+                     on a window shown with Show() — which is what this button did for a whole
+                     manual pass (phase3-notes 4.2). -->
+                <Button Content="_Close" Padding="14,4"
+                        Command="{x:Static local:WindowManager.CloseWindow}"
+                        AutomationProperties.HelpText="Closes this window. Escape does the same. Anything typed here is kept until humcp closes." />
+            </StackPanel>
+        </Grid>
+    </DockPanel>
+</Window>

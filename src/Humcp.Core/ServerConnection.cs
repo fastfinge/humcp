@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Humcp.Schema;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
@@ -125,11 +126,18 @@ public sealed class ServerConnection : IAsyncDisposable
         }
     }
 
+    /// <summary>Calls a tool with no arguments at all.</summary>
+    public Task<ToolCallOutcome> CallAsync(ToolInfo tool, CancellationToken cancellationToken = default)
+        => CallAsync(tool, null, cancellationToken);
+
     /// <summary>
-    /// Calls a tool with no arguments — Phase 1's whole call surface. Phase 3 adds an argument
-    /// dictionary built from a generated form.
+    /// Calls a tool with the arguments a generated form assembled (ROADMAP §10, Phase 3). The
+    /// object arrives from <see cref="Schema.FormState"/> and is passed through as it stands —
+    /// nothing here second-guesses it, because the schema engine has already decided what a filled
+    /// in form means and the server is the authority on the rest.
     /// </summary>
-    public async Task<ToolCallOutcome> CallAsync(ToolInfo tool, CancellationToken cancellationToken = default)
+    public async Task<ToolCallOutcome> CallAsync(
+        ToolInfo tool, JsonObject? arguments, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tool);
 
@@ -143,7 +151,7 @@ public sealed class ServerConnection : IAsyncDisposable
             // @modelcontextprotocol/server-everything, which answers a zero-argument call with
             // "expected object, received undefined" if the member is omitted.
             var result = await _client
-                .CallToolAsync(tool.Name, NoArguments, cancellationToken: cancellationToken)
+                .CallToolAsync(tool.Name, Marshal(arguments), cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             return MapResult(result);
@@ -174,6 +182,24 @@ public sealed class ServerConnection : IAsyncDisposable
             // Shutting down a child process that has already died is not news.
             RecordDiagnostic("Disconnect: " + ex.Message);
         }
+    }
+
+    /// <summary>
+    /// The argument object as the SDK wants it. Each value crosses as a <see cref="JsonElement"/>
+    /// rather than as a live <see cref="JsonNode"/>: the form on screen still owns its nodes, and a
+    /// request being serialised on a background thread must not be reading an object the user is
+    /// still typing into.
+    /// </summary>
+    private static IReadOnlyDictionary<string, object?> Marshal(JsonObject? arguments)
+    {
+        if (arguments is null || arguments.Count == 0) return NoArguments;
+
+        var marshalled = new Dictionary<string, object?>(arguments.Count, StringComparer.Ordinal);
+
+        foreach (var (name, value) in arguments)
+            marshalled[name] = JsonSerializer.SerializeToElement(value);
+
+        return marshalled;
     }
 
     private static McpClientOptions ClientOptions() => new()
