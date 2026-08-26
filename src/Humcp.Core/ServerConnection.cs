@@ -255,7 +255,11 @@ public sealed class ServerConnection : IAsyncDisposable
             // from the document the SDK owns, so a ToolInfo outlives the listing it came from; and
             // it means a hostile schema is defused once, at the edge, rather than on whatever thread
             // happens to open a window later.
-            Form: FormBuilder.Build(tool.JsonSchema));
+            Form: FormBuilder.Build(tool.JsonSchema),
+
+            // Carried, not interpreted. What a result means needs the value as well, and the two
+            // meet in the renderer rather than here (ROADMAP §6.1, hedge 5).
+            OutputSchema: tool.ProtocolTool.OutputSchema);
     }
 
     private static OperationSafety Map(ToolAnnotations? annotations)
@@ -271,33 +275,33 @@ public sealed class ServerConnection : IAsyncDisposable
         {
             blocks.Add(block switch
             {
-                TextContentBlock text =>
-                    new TextResultBlock(TextSanitizer.CleanMultiline(text.Text)),
+                TextContentBlock text => Text(text.Text),
 
-                // §4, pitfall 6: ImageContent has no alt text, so the honest presentation is the
-                // object itself. Phase 4 adds Save and Open; v2 adds generated alt text.
+                // §4, pitfall 6: nothing in the protocol carries alt text, so what crosses is the
+                // bytes and what is known about them. Phase 4's window offers Save and Open; v2's
+                // IResultSummarizer seam is where a description would come from.
                 ImageContentBlock image =>
-                    new ObjectResultBlock(Describe("Image", image.MimeType, image.Data.Length)),
+                    new MediaResultBlock(MediaKind.Image, Mime(image.MimeType), image.DecodedData),
 
                 AudioContentBlock audio =>
-                    new ObjectResultBlock(Describe("Audio", audio.MimeType, audio.Data.Length)),
+                    new MediaResultBlock(MediaKind.Audio, Mime(audio.MimeType), audio.DecodedData),
 
-                ResourceLinkBlock link =>
-                    new ObjectResultBlock(TextSanitizer.Clean(
-                        $"Resource link: {link.Title ?? link.Name}. {link.Uri}", TextSanitizer.HelpLength)),
+                ResourceLinkBlock link => new LinkResultBlock(
+                    Uri: TextSanitizer.Clean(link.Uri, TextSanitizer.NameLength),
+                    Label: NameHumanizer.DisplayName(link.Title, link.Name),
+                    Description: TextSanitizer.FirstSentence(link.Description),
+                    MimeType: Mime(link.MimeType),
+                    Size: link.Size),
 
-                EmbeddedResourceBlock embedded =>
-                    new ObjectResultBlock(TextSanitizer.Clean(
-                        $"Embedded resource: {embedded.Resource?.Uri}", TextSanitizer.HelpLength)),
+                EmbeddedResourceBlock embedded => Embedded(embedded),
 
-                _ => (ResultBlock)new ObjectResultBlock(
-                    TextSanitizer.Clean($"Result part of type {block.Type}, not yet rendered.",
-                        TextSanitizer.HelpLength)),
+                _ => Unknown(block),
             });
         }
 
-        // §4, pitfall 8: a result carrying anything other than "complete" is not something Phase 1
-        // understands, and pretending otherwise would show the user a half-answer as a whole one.
+        // §4, pitfall 8: a result carrying anything other than "complete" is not something this
+        // build understands, and pretending otherwise would show the user a half-answer as a whole
+        // one.
         if (result.ResultType is { Length: > 0 } and not "complete")
         {
             return new ToolCallOutcome(
@@ -311,19 +315,70 @@ public sealed class ServerConnection : IAsyncDisposable
         return new ToolCallOutcome(
             IsError: result.IsError == true,
             Blocks: blocks,
-            StructuredJson: result.StructuredContent?.ToString());
+            Structured: Structured(result));
     }
 
-    private static string Describe(string kind, string? mimeType, int bytes)
+    /// <summary>
+    /// Text as a result rather than as a description: line structure kept (§7.19), and capped at a
+    /// length real answers do not reach — with the original length carried so that a result which
+    /// did reach it can say so.
+    /// </summary>
+    private static TextResultBlock Text(string? text)
     {
-        var type = TextSanitizer.Clean(mimeType, 60);
-        var size = bytes switch
-        {
-            < 1024 => $"{bytes} bytes",
-            < 1024 * 1024 => $"{bytes / 1024.0:0.#} KB",
-            _ => $"{bytes / (1024.0 * 1024.0):0.#} MB",
-        };
-
-        return type.Length > 0 ? $"{kind}, {type}, {size}" : $"{kind}, {size}";
+        var cleaned = TextSanitizer.CleanMultiline(text, TextSanitizer.ResultLength);
+        return new TextResultBlock(cleaned, text?.Length ?? 0);
     }
+
+    /// <summary>
+    /// An embedded resource, which arrives as one of two quite different things: text, which is
+    /// text, and a blob, which is a file.
+    /// </summary>
+    private static ResultBlock Embedded(EmbeddedResourceBlock embedded) => embedded.Resource switch
+    {
+        TextResourceContents text => new ResourceTextResultBlock(
+            TextSanitizer.Clean(text.Uri, TextSanitizer.NameLength),
+            Mime(text.MimeType),
+            TextSanitizer.CleanMultiline(text.Text, TextSanitizer.ResultLength)),
+
+        BlobResourceContents blob => new MediaResultBlock(
+            MediaKind.File,
+            Mime(blob.MimeType),
+            blob.DecodedData,
+            TextSanitizer.Clean(blob.Uri, TextSanitizer.NameLength)),
+
+        _ => new UnknownResultBlock("resource", "(the server sent a resource with no contents)"),
+    };
+
+    /// <summary>
+    /// A part of a kind this build has never met. Shown as JSON rather than dropped: the protocol
+    /// is a moving target (§4, pitfall 8) and an unknown part is news, not noise.
+    /// </summary>
+    private static UnknownResultBlock Unknown(ContentBlock block)
+    {
+        string json;
+
+        try
+        {
+            json = JsonSerializer.Serialize(block, McpJsonUtilities.DefaultOptions);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            json = $"(this part could not be read: {ex.Message})";
+        }
+
+        return new UnknownResultBlock(
+            TextSanitizer.Clean(block.Type, 60),
+            TextSanitizer.CleanMultiline(json, TextSanitizer.DetailsLength));
+    }
+
+    /// <summary>
+    /// The structured content, detached from the response it arrived in: the response is free to be
+    /// dropped the moment this method returns, and a window may be reading the value minutes later.
+    /// </summary>
+    private static JsonElement? Structured(CallToolResult result) =>
+        result.StructuredContent is { ValueKind: not JsonValueKind.Undefined } content
+            ? content.Clone()
+            : null;
+
+    private static string Mime(string? mimeType) => TextSanitizer.Clean(mimeType, 60);
 }

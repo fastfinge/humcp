@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text;
+using System.Text.Json;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -38,10 +39,17 @@ internal static class TestTools
         yield return Tree();
         yield return Search();
         yield return Wide();
+        yield return Weather();
+        yield return Table();
+        yield return Wrapped();
+        yield return Mixed();
+        yield return Links();
+        yield return Deep();
+        yield return Nothing();
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 14;
+    public const int Count = 21;
 
     // ------------------------------------------------------------------ info_
 
@@ -393,4 +401,307 @@ internal static class TestTools
             Destructive = true,
             ReadOnly = false,
         });
+
+    // ------------------------------------------------------------------ result_
+
+    /// <summary>
+    /// The corpus's only real example of a published output schema outside the filesystem and
+    /// memory servers, in the shape @modelcontextprotocol/server-everything ships it: an object of
+    /// scalars, described property by property.
+    /// </summary>
+    private static McpServerTool Weather() => McpServerTool.Create(
+        ([Description("Which city to report on.")] string city = "Chicago") => new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = $"It is 22.5 degrees and cloudy in {city}." }],
+            StructuredContent = JsonSerializer.SerializeToElement(new
+            {
+                city,
+                temperature = 22.5,
+                conditions = "Partly cloudy",
+                humidity = 63,
+                measuredAt = "2026-08-26T09:15:00Z",
+            }),
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_weather",
+            Title = "Weather report",
+            Description = "Answers with structured content and publishes an output schema for it, " +
+                          "so the result renderer has names and descriptions from the server.",
+            ReadOnly = true,
+            Idempotent = true,
+            UseStructuredContent = true,
+            OutputSchema = Schema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "city": { "type": "string", "description": "Which city this is about." },
+                    "temperature": { "type": "number", "title": "Temperature in celsius" },
+                    "conditions": { "type": "string", "description": "What the sky is doing." },
+                    "humidity": { "type": "integer", "description": "Humidity as a percentage." },
+                    "measuredAt": { "type": "string", "format": "date-time" }
+                  },
+                  "required": ["city", "temperature", "conditions", "humidity"]
+                }
+                """),
+        });
+
+    /// <summary>
+    /// An array of uniform objects, which is the shape that becomes a grid — and the shape nine of
+    /// the corpus's 25 output schemas have, always as a property of an object rather than at the
+    /// top level (the memory server's <c>entities</c> and <c>relations</c>).
+    /// </summary>
+    private static McpServerTool Table() => McpServerTool.Create(
+        ([Description("How many rows to answer with.")] int rows = 8) => new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = $"{Math.Clamp(rows, 0, 5000)} rows." }],
+            StructuredContent = JsonSerializer.SerializeToElement(new
+            {
+                entities = Enumerable.Range(1, Math.Clamp(rows, 0, 5000)).Select(i => new
+                {
+                    name = $"entity-{i:D4}",
+                    kind = i % 3 == 0 ? "person" : "place",
+                    observations = new[] { $"seen {i} times", "recorded" },
+                    score = Math.Round(i / 7.0, 3),
+                    active = i % 2 == 0,
+                }),
+            }),
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_table",
+            Title = "Table of entities",
+            Description = "Answers with an array of objects, which is what a grid is for. Ask for " +
+                          "more rows than the renderer will show and it has to say so rather than hide them.",
+            ReadOnly = true,
+            Idempotent = true,
+            UseStructuredContent = true,
+            OutputSchema = Schema("""
+                {
+                  "type": "object",
+                  "properties": {
+                    "entities": {
+                      "type": "array",
+                      "description": "One row per entity.",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "name": { "type": "string", "description": "What the entity is called." },
+                          "kind": { "type": "string", "enum": ["person", "place"] },
+                          "observations": { "type": "array", "items": { "type": "string" } },
+                          "score": { "type": "number" },
+                          "active": { "type": "boolean" }
+                        }
+                      }
+                    }
+                  }
+                }
+                """),
+        });
+
+    /// <summary>
+    /// Structured content that is the text again in a wrapper — <c>{ "content": "…" }</c>, which is
+    /// what 13 of the corpus's 25 output schemas describe. A client that renders both says
+    /// everything twice.
+    /// </summary>
+    private static McpServerTool Wrapped() => McpServerTool.Create(
+        () =>
+        {
+            var body = string.Join(System.Environment.NewLine,
+                "/home/demo", "/home/demo/notes.txt", "/home/demo/pictures");
+
+            return new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = body }],
+                StructuredContent = JsonSerializer.SerializeToElement(new { content = body }),
+            };
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_wrapped",
+            Title = "Text in a wrapper",
+            Description = "Answers with the same string twice: once as text and once as structured " +
+                          "content, which is how the filesystem server answers everything.",
+            ReadOnly = true,
+            Idempotent = true,
+            UseStructuredContent = true,
+            OutputSchema = Schema("""
+                { "type": "object", "properties": { "content": { "type": "string" } } }
+                """),
+        });
+
+    /// <summary>
+    /// One result carrying every kind of part at once: text, an image, a sound, a link, an embedded
+    /// text resource and an embedded blob. The phase's exit criterion, in one call.
+    /// </summary>
+    private static McpServerTool Mixed() => McpServerTool.Create(
+        () => new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock { Text = "Six parts follow, one of each kind this protocol has." },
+                ImageContentBlock.FromBytes(TinyPng(), "image/png"),
+                AudioContentBlock.FromBytes(TinyWav(), "audio/wav"),
+                new ResourceLinkBlock
+                {
+                    Uri = "https://modelcontextprotocol.io/specification",
+                    Name = "specification",
+                    Title = "The MCP specification",
+                    Description = "The revision this server speaks.",
+                    MimeType = "text/html",
+                },
+                new EmbeddedResourceBlock
+                {
+                    Resource = new TextResourceContents
+                    {
+                        Uri = "humcp://demo/notes.txt",
+                        MimeType = "text/plain",
+                        Text = string.Join(System.Environment.NewLine,
+                            "An embedded text resource.",
+                            "It has lines, so it wants a caret rather than a label."),
+                    },
+                },
+                new EmbeddedResourceBlock
+                {
+                    Resource = BlobResourceContents.FromBytes(
+                        new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 },
+                        "humcp://demo/blob.dat",
+                        "application/x-not-a-real-type"),
+                },
+            ],
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_mixed",
+            Title = "One of everything",
+            Description = "Returns text, an image, a sound, a resource link, an embedded text " +
+                          "resource and an embedded blob in one result.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    /// <summary>
+    /// Three links, one for each branch of <c>LinkPolicy</c>: a web address, a file, and a scheme
+    /// humcp will not hand to the shell whatever it turns out to be.
+    /// </summary>
+    private static McpServerTool Links() => McpServerTool.Create(
+        () => new CallToolResult
+        {
+            Content =
+            [
+                new ResourceLinkBlock
+                {
+                    Uri = "https://example.com/report.html",
+                    Name = "report",
+                    Title = "A web page",
+                    Description = "Opens in the browser.",
+                    MimeType = "text/html",
+                    Size = 4096,
+                },
+                new ResourceLinkBlock
+                {
+                    Uri = "file:///C:/Windows/System32/notepad.exe",
+                    Name = "notepad",
+                    Title = "A file",
+                    Description = "Shown in a folder, never launched.",
+                },
+                new ResourceLinkBlock
+                {
+                    Uri = "ms-settings:windowsupdate",
+                    Name = "settings",
+                    Title = "A scheme humcp does not follow",
+                    Description = "Copyable and inert.",
+                },
+            ],
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_links",
+            Title = "Three resource links",
+            Description = "One web address, one file and one custom scheme, so the client has to " +
+                          "decide what it is prepared to hand to the shell.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    /// <summary>
+    /// A structure past every limit the renderer has: nested twenty deep, with a long string and a
+    /// table of two thousand rows in it. Nothing here is realistic and that is the point — a result
+    /// that cannot be shown whole has to say so rather than stop somewhere quietly.
+    /// </summary>
+    private static McpServerTool Deep() => McpServerTool.Create(
+        () => new CallToolResult
+        {
+            Content = [new TextContentBlock { Text = "A deliberately awkward structure." }],
+            StructuredContent = JsonSerializer.SerializeToElement(new
+            {
+                note = new string('n', 4000),
+                rows = Enumerable.Range(1, 2000).Select(i => new { i, label = $"row {i}" }),
+                nest = Nest(20),
+            }),
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_deep",
+            Title = "Awkward structure",
+            Description = "Twenty levels of nesting, a four-thousand-character string and two " +
+                          "thousand rows, so every limit in the result renderer is exercised at once.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    private static object Nest(int depth) =>
+        depth == 0 ? new { bottom = "reached" } : new { depth, inner = Nest(depth - 1) };
+
+    /// <summary>A result with nothing in it at all, which is a state and not a failure.</summary>
+    private static McpServerTool Nothing() => McpServerTool.Create(
+        () => new CallToolResult { Content = [] },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_empty",
+            Title = "Nothing at all",
+            Description = "Answers with no content of any kind. A window with nothing in it still " +
+                          "has to say what happened.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    // ------------------------------------------------------------------ fixtures for the above
+
+    private static JsonElement Schema(string json) => JsonDocument.Parse(json).RootElement;
+
+    /// <summary>One transparent pixel. The smallest honest PNG there is.</summary>
+    private static byte[] TinyPng() => Convert.FromBase64String(
+        "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
+
+    /// <summary>A quarter of a second of silence, as a real RIFF/WAVE file.</summary>
+    private static byte[] TinyWav()
+    {
+        const int rate = 8000;
+        const int samples = rate / 4;
+
+        var wav = new byte[44 + samples];
+        var header = new MemoryStream(wav);
+        var write = new BinaryWriter(header);
+
+        write.Write("RIFF"u8.ToArray());
+        write.Write(36 + samples);
+        write.Write("WAVE"u8.ToArray());
+        write.Write("fmt "u8.ToArray());
+        write.Write(16);                 // PCM header length
+        write.Write((short)1);           // PCM
+        write.Write((short)1);           // mono
+        write.Write(rate);
+        write.Write(rate);               // bytes per second
+        write.Write((short)1);           // block align
+        write.Write((short)8);           // bits per sample
+        write.Write("data"u8.ToArray());
+        write.Write(samples);
+
+        // The samples themselves stay zero: silence is a sound, and this exists to be described,
+        // saved and opened rather than listened to.
+        Array.Fill(wav, (byte)128, 44, samples);
+
+        return wav;
+    }
 }

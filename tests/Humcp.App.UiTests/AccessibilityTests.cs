@@ -62,7 +62,7 @@ public class AccessibilityTests(AppFixture fixture, ITestOutputHelper output)
 
         // §8: status is part of the accessible name, so it is heard on arrow-through.
         Assert.StartsWith("humcp test server, connected,", server.Name);
-        Assert.Contains("14 tools", server.Name);
+        Assert.Contains("21 tools", server.Name);
         Assert.Contains("protocol ", server.Name);
     }
 
@@ -158,7 +158,13 @@ public class AccessibilityTests(AppFixture fixture, ITestOutputHelper output)
         Assert.True(cycled, "The tab order never returned to its first stop.");
     }
 
+    /// <summary>
+    /// The text box of the first part of the result. Since Phase 4 a result is a set of controls
+    /// rather than one box, so this reaches through the view — which is named differently from the
+    /// form window's view, because an owned window is a UIA descendant of this one (§9).
+    /// </summary>
     private AutomationElement ResultBox()
-        => Window.FindFirstDescendant(cf => cf.ByAutomationId("ResultBox"))
+        => Window.FindFirstDescendant(cf => cf.ByAutomationId("MainResults"))
+               ?.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))
            ?? throw new InvalidOperationException("The result box is not in the UIA tree.");
 }

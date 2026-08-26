@@ -50,7 +50,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
     [Fact]
     public void Lists_every_published_tool()
     {
-        Assert.Equal(14, Connection.Tools.Count);
+        Assert.Equal(21, Connection.Tools.Count);
     }
 
     [Fact]
@@ -59,10 +59,16 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var outcome = await Connection.CallAsync(Tool("demo_image"), TestContext.Current.CancellationToken);
 
         // §4, pitfall 6: the protocol has nowhere to put alt text, so the honest presentation is
-        // the object itself — kind, type and size — rather than silence.
-        var block = Assert.IsType<ObjectResultBlock>(Assert.Single(outcome.Blocks));
-        Assert.StartsWith("Image, image/png, ", block.Description);
+        // what the thing is — kind, type and size — rather than silence.
+        var block = Assert.IsType<MediaResultBlock>(Assert.Single(outcome.Blocks));
+
+        Assert.Equal(MediaKind.Image, block.Kind);
+        Assert.Equal("image/png", block.MimeType);
+        Assert.StartsWith("Image, PNG, ", block.Description);
         Assert.Contains("bytes", block.Description);
+
+        // And the bytes survive the crossing, which is what Save and Open need.
+        Assert.NotEmpty(block.Data.ToArray());
     }
 
     [Fact]
@@ -302,7 +308,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var server = ToolTreeBuilder.BuildServerNode(Connection.Snapshot());
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
-        Assert.Equal(14, tools.Count);
+        Assert.Equal(21, tools.Count);
         Assert.Contains(server.Children.Single().Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 

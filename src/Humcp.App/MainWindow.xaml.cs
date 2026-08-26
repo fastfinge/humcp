@@ -36,11 +36,9 @@ public partial class MainWindow : Window
     private bool _callInFlight;
     private int _paneIndex;
 
-    /// <summary>How long a typed run stays one search, matching the shell's own type-ahead.</summary>
-    private static readonly TimeSpan TypeAheadWindow = TimeSpan.FromSeconds(1);
-
-    private string _prefix = "";
-    private DateTime _prefixAt;
+    /// <summary>What is in the result pane, for the details window (F1) to write out in full.</summary>
+    private ToolInfo? _lastTool;
+    private DateTimeOffset _lastCallAt;
 
     public MainWindow()
     {
@@ -65,6 +63,15 @@ public partial class MainWindow : Window
 
         Tree.ItemsSource = _roots;
         UpdateRunAvailability();
+
+        // The view opens whatever windows its parts need, and says what it did through the one
+        // live region this window owns (§7's core rule). Its automation id differs from the form
+        // window's on purpose: an owned window is a UIA *descendant* of this one, so an id shared
+        // between them makes every lookup from here a coin toss (§9, phase3-notes 4.3).
+        MainResults.Owner = this;
+        MainResults.Windows = _windows;
+        MainResults.Announce = SetStatus;
+        MainResults.ShowMessage("Result", "No tool has been run yet.");
 
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
@@ -172,9 +179,8 @@ public partial class MainWindow : Window
             // fixture's two-second tool is for (ROADMAP §4, pitfall 9).
             var outcome = await _connection.CallAsync(tool, _currentCall.Token);
 
-            var text = ResultFormatter.Render(tool.DisplayName, outcome, started);
-            ShowResult($"Result — {tool.DisplayName}", text);
-            SetStatus(ResultFormatter.Announcement(outcome, text));
+            ShowResult(tool, outcome, started);
+            SetStatus(ResultFormatter.Announcement(outcome));
         }
         catch (OperationCanceledException)
         {
@@ -189,13 +195,20 @@ public partial class MainWindow : Window
         }
     }
 
-    private void ShowResult(string heading, string text)
+    /// <summary>
+    /// Puts a result in the pane. The heading says which tool and whether it failed, because an
+    /// error is a fact that has to survive the announcement it was first said in (§7.20, §7.24).
+    /// </summary>
+    private void ShowResult(ToolInfo tool, ToolCallOutcome outcome, DateTimeOffset started)
     {
-        ResultHeading.Text = heading;
-        AutomationProperties.SetName(ResultBox, heading);
-        ResultBox.Text = text;
-        ResultBox.CaretIndex = 0;
-        ResultBox.ScrollToHome();
+        _lastTool = tool;
+        _lastCallAt = started;
+
+        ResultHeading.Text = outcome.IsError
+            ? $"Result — {tool.DisplayName} — error"
+            : $"Result — {tool.DisplayName}";
+
+        MainResults.Show(tool, outcome);
     }
 
     /// <summary>
@@ -251,63 +264,6 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>
-    /// First-letter navigation: typing a letter moves to the next node whose name begins with it,
-    /// and typing several in quick succession matches the whole run.
-    /// </summary>
-    /// <remarks>
-    /// <para>
-    /// Written by hand because WPF's <c>TreeView</c> does not have it. A list box and a combo box
-    /// both do — it is <c>TextSearch</c>, and it is part of what the Windows accessibility contract
-    /// assumes of every list-shaped control — but the tree simply drops the keystroke, which a
-    /// manual pass found by pressing S on a nine-tool server and going nowhere (phase3-notes 4.10).
-    /// </para>
-    /// <para>
-    /// This tree is the application's primary navigation, and it is sized by whatever a server
-    /// publishes: on a forty-tool server, arrowing is forty presses and listening to forty names.
-    /// The filter box of §8 is a better answer and is Phase 6's; this is the one every other tree on
-    /// the system already has.
-    /// </para>
-    /// </remarks>
-    private void OnTreeTextInput(object sender, TextCompositionEventArgs e)
-    {
-        var typed = e.Text;
-        if (typed.Length == 0 || char.IsControl(typed[0])) return;
-
-        var now = DateTime.UtcNow;
-        _prefix = now - _prefixAt > TypeAheadWindow ? typed : _prefix + typed;
-        _prefixAt = now;
-
-        // A repeated single letter means "the next one starting with it" rather than a literal run
-        // of that letter, which is how every other list on Windows behaves.
-        var target = _prefix.Length > 1 && _prefix.All(c => c == _prefix[0]) ? _prefix[..1] : _prefix;
-
-        if (Select(target)) e.Handled = true;
-    }
-
-    private bool Select(string prefix)
-    {
-        var nodes = EnumerateContainers(Tree, _roots).ToList();
-        if (nodes.Count == 0) return false;
-
-        // From just after the current selection, wrapping, so repeated presses cycle the matches.
-        var start = nodes.FindIndex(n => n.Container.IsSelected) + 1;
-
-        for (var i = 0; i < nodes.Count; i++)
-        {
-            var (node, container) = nodes[(start + i) % nodes.Count];
-
-            if (!node.AccessibleName.StartsWith(prefix, StringComparison.CurrentCultureIgnoreCase)) continue;
-
-            container.IsSelected = true;
-            container.BringIntoView();
-            container.Focus();
-            return true;
-        }
-
-        return false;
-    }
-
     private static IEnumerable<(CatalogueNode Node, TreeViewItem Container)> EnumerateContainers(
         ItemsControl parent, IEnumerable<CatalogueNode> nodes)
     {
@@ -332,10 +288,29 @@ public partial class MainWindow : Window
     /// </summary>
     private void CyclePane(int direction)
     {
-        Action[] panes = [() => Tree.Focus(), () => ResultBox.Focus()];
+        Func<bool>[] panes = [FocusTree, () => MainResults.FocusFirst()];
 
-        _paneIndex = (_paneIndex + direction + panes.Length) % panes.Length;
-        panes[_paneIndex]();
+        for (var attempt = 0; attempt < panes.Length; attempt++)
+        {
+            _paneIndex = (_paneIndex + direction + panes.Length) % panes.Length;
+            if (panes[_paneIndex]()) return;
+        }
+    }
+
+    /// <summary>
+    /// Puts the caret in the tree, and answers whether it arrived.
+    /// </summary>
+    /// <remarks>
+    /// <c>TreeView.Focus()</c> answers <b>false</b> once the tree has items — focus belongs to the
+    /// selected <c>TreeViewItem</c>, which is the same fact §9 records about focusing a tree from a
+    /// test. Read as a pane's success it means the cycle skips straight past the tree to the result
+    /// and never comes back, which is what F6 did for the length of one manual pass: the tree was
+    /// announced, and then the caret was somewhere else. Ask where the focus ended up instead.
+    /// </remarks>
+    private bool FocusTree()
+    {
+        Tree.Focus();
+        return Tree.IsKeyboardFocusWithin;
     }
 
     /// <summary>
@@ -389,6 +364,16 @@ public partial class MainWindow : Window
     /// </summary>
     private void ShowDetails()
     {
+        // In the result pane, F1 is about the result: every part written out, the structured
+        // content as JSON, and the schema it was read against. The rendered result is what is easy
+        // to read; this is what is complete, and it is one keystroke away from it.
+        if (MainResults.IsKeyboardFocusWithin && MainResults.Outcome is { } outcome)
+        {
+            TextWindow.Show(this, $"Details: {_lastTool?.DisplayName ?? "result"}",
+                ResultFormatter.Render(_lastTool, outcome, _lastCallAt), _windows);
+            return;
+        }
+
         if (Tree.SelectedItem is not CatalogueNode node)
         {
             SetStatus("Nothing is selected in the tree.");

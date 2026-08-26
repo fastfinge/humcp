@@ -103,18 +103,13 @@
 
             <!-- ================================================== pane 3: the result -->
             <DockPanel Grid.Row="2" Margin="0,8,0,0">
-                <TextBlock x:Name="ResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
+                <TextBlock x:Name="FormResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
                            AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
 
-                <!-- §7.9: a read-only multiline TextBox, never a TextBlock. The caret is the point. -->
-                <TextBox x:Name="FormResultBox"
-                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
-                         AcceptsReturn="True" TextWrapping="NoWrap"
-                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas"
-                         AutomationProperties.Name="Result"
-                         AutomationProperties.HelpText="Read-only. Arrow keys review the text line by line."
-                         Text="This tool has not been run yet." />
+                <!-- Phase 4: whatever the tool answered with, as controls — a grid for a table,
+                     a tree for a structure, a picture with Save and Open beside it, and §7.9's
+                     read-only caret-navigable TextBox for anything that is text. -->
+                <local:ResultView x:Name="FormResults" />
             </DockPanel>
 
             <!-- ================================================== commands -->
@@ -129,14 +124,19 @@
                  WPF flattens straight through it. Putting the buttons where they visually are is
                  the fix that cannot come apart again. -->
             <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,8">
+                <!-- The shortcut is set here rather than left to WPF, which would announce the
+                     command's own Text in the same slot and call it a shortcut (§7.27), and it is
+                     spelled out because the string is spoken (§7.15). -->
                 <Button x:Name="FormRunButton" Content="_Run tool" Padding="14,4" Margin="0,0,8,0"
                         Command="{x:Static local:FormCommands.Submit}"
+                        AutomationProperties.AcceleratorKey="Control plus Enter"
                         AutomationProperties.HelpText="Runs the tool with what is on this form. Control plus Enter does the same." />
                 <!-- Command, not IsCancel. IsCancel closes a *modal* dialog and does nothing at all
                      on a window shown with Show() — which is what this button did for a whole
                      manual pass (phase3-notes 4.2). -->
                 <Button Content="_Close" Padding="14,4"
                         Command="{x:Static local:WindowManager.CloseWindow}"
+                        AutomationProperties.AcceleratorKey="Escape"
                         AutomationProperties.HelpText="Closes this window. Escape does the same. Anything typed here is kept until humcp closes." />
             </StackPanel>
         </Grid>

@@ -684,8 +684,10 @@ public class FormTests(AppFixture fixture, ITestOutputHelper output)
             }
         }
 
+        /// <summary>The text of the first part of whatever the last run produced.</summary>
         public string Result() =>
-            Window.FindFirstDescendant(cf => cf.ByAutomationId("FormResultBox"))?.AsTextBox().Text ?? "";
+            Window.FindFirstDescendant(cf => cf.ByAutomationId("FormResults"))
+                ?.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))?.AsTextBox().Text ?? "";
 
         /// <summary>Runs the tool the way the Run button does, without needing the foreground.</summary>
         public void Run()

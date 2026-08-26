@@ -286,6 +286,7 @@
                         Command="{x:Static local:FormCommands.RemoveEntry}"
                         CommandParameter="{Binding ElementName=Entries}"
                         AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.AcceleratorKey="Delete"
                         AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
                 <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
                          ItemContainerStyle="{StaticResource EntryItem}"
@@ -340,6 +341,7 @@
                         Command="{x:Static local:FormCommands.RemoveEntry}"
                         CommandParameter="{Binding ElementName=Entries}"
                         AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.AcceleratorKey="Delete"
                         AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
                 <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
                          ItemContainerStyle="{StaticResource EntryItem}"
@@ -400,10 +402,12 @@
                     <Button Style="{StaticResource RowButton}" Content="Edit" Margin="6,0,0,4"
                             Command="{x:Static local:FormCommands.EditRow}" CommandParameter="{Binding ElementName=Rows}"
                             AutomationProperties.Name="{Binding Label, StringFormat='Edit entry in {0}'}"
+                            AutomationProperties.AcceleratorKey="Enter"
                             AutomationProperties.HelpText="Opens the selected entry in its own window. Enter does the same." />
                     <Button Style="{StaticResource RowButton}" Content="Remove" Margin="6,0,0,0"
                             Command="{x:Static local:FormCommands.RemoveEntry}" CommandParameter="{Binding ElementName=Rows}"
                             AutomationProperties.Name="{Binding Label, StringFormat='Remove entry from {0}'}"
+                            AutomationProperties.AcceleratorKey="Delete"
                             AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
                 </StackPanel>
 

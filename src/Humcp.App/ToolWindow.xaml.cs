@@ -56,6 +56,9 @@ public partial class ToolWindow : Window
     private bool _callInFlight;
     private int _paneIndex;
 
+    /// <summary>When the result on screen was asked for, for the details window (F1).</summary>
+    private DateTimeOffset _lastOutcomeAt;
+
     public ToolWindow(
         Window owner, ToolInfo tool, ServerConnection connection, MruHistory history, WindowManager windows)
     {
@@ -82,6 +85,11 @@ public partial class ToolWindow : Window
 
         Heading.Text = tool.DisplayName;
         AutomationProperties.SetName(Fields, $"{tool.DisplayName} parameters");
+
+        FormResults.Owner = this;
+        FormResults.Windows = windows;
+        FormResults.Announce = SetStatus;
+        FormResults.ShowMessage("Result", "This tool has not been run yet.");
 
         if (tool.Summary.Length > 0)
         {
@@ -329,9 +337,8 @@ public partial class ToolWindow : Window
         {
             var outcome = await _connection.CallAsync(_tool, submission.Arguments, _closing.Token);
 
-            var text = ResultFormatter.Render(_tool.DisplayName, outcome, started);
-            ShowResult(text);
-            SetStatus(ResultFormatter.Announcement(outcome, text));
+            ShowResult(outcome, started);
+            SetStatus(ResultFormatter.Announcement(outcome));
 
             if (!outcome.IsError) Remember();
         }
@@ -346,14 +353,19 @@ public partial class ToolWindow : Window
         }
     }
 
-    private void ShowResult(string text)
+    /// <summary>
+    /// Puts a result in the third pane. The heading carries whether the call failed, because an
+    /// error has to survive the announcement it was first said in (§7.20, §7.24).
+    /// </summary>
+    private void ShowResult(ToolCallOutcome outcome, DateTimeOffset started)
     {
-        ResultHeading.Text = $"Result — {_tool.DisplayName}";
-        AutomationProperties.SetName(FormResultBox, ResultHeading.Text);
+        _lastOutcomeAt = started;
 
-        FormResultBox.Text = text;
-        FormResultBox.CaretIndex = 0;
-        FormResultBox.ScrollToHome();
+        FormResultHeading.Text = outcome.IsError
+            ? $"Result — {_tool.DisplayName} — error"
+            : $"Result — {_tool.DisplayName}";
+
+        FormResults.Show(_tool, outcome);
     }
 
     /// <summary>
@@ -502,7 +514,7 @@ public partial class ToolWindow : Window
         {
             () => FocusField(_state.VisibleFields.FirstOrDefault()),
             () => ProblemsPane.Visibility == Visibility.Visible && Focus(Problems),
-            () => Focus(FormResultBox),
+            () => FormResults.FocusFirst(),
         };
 
         for (var attempt = 0; attempt < panes.Count; attempt++)
@@ -538,6 +550,14 @@ public partial class ToolWindow : Window
     /// </summary>
     private void ShowDetails()
     {
+        // In the result pane, F1 is about the result rather than about the form behind it.
+        if (FormResults.IsKeyboardFocusWithin && FormResults.Outcome is { } outcome)
+        {
+            TextWindow.Show(this, $"Details: {_tool.DisplayName} result",
+                ResultFormatter.Render(_tool, outcome, _lastOutcomeAt), _windows);
+            return;
+        }
+
         if ((Keyboard.FocusedElement as FrameworkElement)?.DataContext is not FieldState field)
         {
             TextWindow.Show(this, $"Details: {_tool.DisplayName}", ToolDetails(), _windows);

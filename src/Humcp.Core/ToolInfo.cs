@@ -20,10 +20,18 @@ public sealed record ToolInfo(
     string Summary,
     string FullDescription,
     OperationSafety Safety,
-    FormModel Form)
+    FormModel Form,
+    JsonElement? OutputSchema = null)
 {
     /// <summary>The schema exactly as the server sent it, for Copy Schema and for validation.</summary>
     public JsonElement InputSchema => Form.Schema;
+
+    /// <summary>
+    /// The schema for what a call answers with, where the source published one — 25 of the corpus's
+    /// 213 tools do. Paired with the value by the result renderer, which takes the two together and
+    /// nothing else (ROADMAP §6.1, hedge 5).
+    /// </summary>
+    public bool DescribesItsOutput => OutputSchema is { ValueKind: not JsonValueKind.Undefined };
 
     /// <summary>Top-level parameters. Nested fields are inside <see cref="Form"/>.</summary>
     public int ParameterCount => Form.Fields.Count;

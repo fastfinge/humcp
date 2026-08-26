@@ -28,6 +28,19 @@ public static class TextSanitizer
     public const int DetailsLength = 20_000;
 
     /// <summary>
+    /// Cap for the text of a result, which is the payload rather than a description of one.
+    /// </summary>
+    /// <remarks>
+    /// Ten times <see cref="DetailsLength"/>, and the difference matters: a tool that reads a file
+    /// answers with the file, and a description cap applied to that would quietly hand back the
+    /// first twenty thousand characters of somebody's document as though it were the whole thing.
+    /// Truncation still happens somewhere — this is untrusted text on its way to a control that has
+    /// to stay responsive — but at a length real answers do not reach, and it is always announced
+    /// (§7.18).
+    /// </remarks>
+    public const int ResultLength = 200_000;
+
+    /// <summary>
     /// Collapses a string to a single safe line: control and formatting characters become spaces,
     /// runs of whitespace collapse to one, and the result is trimmed and capped at
     /// <paramref name="maxLength"/> including the ellipsis.

@@ -72,14 +72,13 @@
                             AutomationProperties.HelpText="Restarts the server process and lists its tools again. F5." />
                 </StackPanel>
 
-                <TreeView x:Name="Tree"
+                <local:TypeAheadTreeView x:Name="Tree"
                           AutomationProperties.Name="Servers and tools"
                           AutomationProperties.HelpText="Arrow to a tool and press Enter. A tool with parameters opens a form; one without runs straight away. F1 describes it in full."
                           VirtualizingStackPanel.IsVirtualizing="False"
                           SelectedItemChanged="OnTreeSelectionChanged"
-                          KeyDown="OnTreeKeyDown"
-                          TextInput="OnTreeTextInput">
-                    <TreeView.ItemContainerStyle>
+                          KeyDown="OnTreeKeyDown">
+                    <local:TypeAheadTreeView.ItemContainerStyle>
                         <Style TargetType="TreeViewItem">
                             <Setter Property="IsExpanded" Value="True" />
                             <!-- The whole status is in the name, so it is heard on arrow-through
@@ -87,13 +86,13 @@
                             <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
                             <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
                         </Style>
-                    </TreeView.ItemContainerStyle>
-                    <TreeView.ItemTemplate>
+                    </local:TypeAheadTreeView.ItemContainerStyle>
+                    <local:TypeAheadTreeView.ItemTemplate>
                         <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                             <TextBlock Text="{Binding AccessibleName}" />
                         </HierarchicalDataTemplate>
-                    </TreeView.ItemTemplate>
-                </TreeView>
+                    </local:TypeAheadTreeView.ItemTemplate>
+                </local:TypeAheadTreeView>
             </DockPanel>
 
             <!-- IsTabStop, not Focusable: the splitter stays programmatically focusable so a
@@ -108,16 +107,10 @@
                 <TextBlock x:Name="ResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
                            AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
 
-                <!-- §7.9: a read-only multiline TextBox, never a TextBlock. The caret is the point —
-                     it is what lets the output be reviewed line by line and selected in pieces. -->
-                <TextBox x:Name="ResultBox"
-                         IsReadOnly="True" IsReadOnlyCaretVisible="True"
-                         AcceptsReturn="True" TextWrapping="NoWrap"
-                         VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto"
-                         FontFamily="Consolas"
-                         AutomationProperties.Name="Result"
-                         AutomationProperties.HelpText="Read-only. Arrow keys review the text line by line."
-                         Text="No tool has been run yet." />
+                <!-- Phase 4: a result is a set of controls rather than one box of text — a grid
+                     for a table, a tree for a structure, a picture with Save and Open beside it,
+                     and §7.9's read-only caret-navigable TextBox for anything that is text. -->
+                <local:ResultView x:Name="MainResults" />
             </DockPanel>
 
         </Grid>

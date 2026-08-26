@@ -8,6 +8,7 @@
                 <!-- Application-wide so that a form opened from anywhere finds its controls,
                      including the sub-form window an object list opens for one of its rows. -->
                 <ResourceDictionary Source="FieldTemplates.xaml" />
+                <ResourceDictionary Source="ResultTemplates.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

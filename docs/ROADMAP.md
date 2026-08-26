@@ -198,6 +198,29 @@ a different thing: there is no argument object to send. That one case refuses, s
 the caret to the box (§7.18). Everything else warns once and sends on the second press
 (phase3-notes 3.6).
 
+### The other direction: what a result means
+
+The same engine runs backwards. `ResultBuilder.Build(schema?, value)` takes a value and produces a
+`ResultNode` tree — values, groups, lists and tables — and the schema is **optional**, which the
+corpus turned from a portability hedge into a requirement: 25 of its 213 tools publish an
+`outputSchema` at all (phase4-notes 3.1). So the *shape* is read from the value, and the schema,
+where there is one, supplies names and descriptions — which is worth having, since a server's own
+`title` and `description` reach the user through a client that has never heard of that server.
+
+Three rules came out of the corpus rather than out of taste:
+
+- **A wrapper of one property comes off.** SEP-2106 still asks an `outputSchema` to describe an
+  object, so a tool whose answer is a list publishes `{"entities": […]}` — 17 of the 25. The
+  property's own name is kept and the wrapper is not drawn.
+- **Structured content that repeats the text is not drawn twice.** Thirteen of the 25 are
+  `{"content": "…"}` holding the string the tool already sent as text. The announcement says which
+  of the two it is showing; the raw JSON stays under <kbd>F1</kbd>.
+- **A limit that bites says so.** A table caps at 200 rows and reports the real total, because
+  virtualization stays off (§7.6) and the two are one decision (phase4-notes 3.4).
+
+The invariant is `FormBuilder`'s, unchanged: **there is no value it refuses to render.** Anything it
+cannot take apart becomes a node holding the JSON with a sentence saying why.
+
 ### What a filled-in form means
 
 **A value the user did not choose is not sent** (phase3-notes 3.2). A box still holding what the
@@ -299,6 +322,23 @@ Small, and annoying to reverse later, so they are written down rather than left 
 - **`HUMCP_HISTORY` overrides where MRU history is written**, so the UI suite can run real tools from
   real forms without writing into the profile of whoever ran it.
 
+### 6.4 Layout decisions taken in Phase 4
+
+`ResultModel.cs` and `ResultBuilder.cs` are in `Humcp.Schema`, beside `FieldModel` and
+`FormBuilder`, for the reason §6.3 gives about `FieldState`: what a result *says* is a set of rules
+— that this is a table of eight rows, that this string is four thousand characters and wants a
+window, that this structured content is the text again — and rules that can only be exercised by
+launching a desktop application get exercised once.
+
+What stayed in `Humcp.App` is what genuinely needs WPF: a decoded picture, a command a button can be
+bound to, and the five `DataTemplate`s. `ResultSections` is the App-side view-model, and it is
+deliberately thin.
+
+Two rules went into `Humcp.Core` rather than into the App even though both are about the shell —
+`MediaTypes` (what extension a saved file gets) and `LinkPolicy` (which links are handed to the
+shell). They are security decisions with a right answer, and a security decision that can only be
+tested by opening a window is a security decision that will not be tested.
+
 ### 6.1 Portability hedges for v4 (OpenAPI)
 
 Five rules that cost nothing in v1 and preserve the option of a second capability source later.
@@ -315,7 +355,10 @@ should not be invented until there is a second implementation to validate it aga
 4. **Model safety as a neutral `OperationSafety` record** (`IsReadOnly`, `IsDestructive`,
    `IsIdempotent`) rather than passing MCP's `ToolAnnotations` around. OpenAPI derives the same
    record from the HTTP verb — more reliably than MCP does (§12).
-5. **The result renderer takes `(schema, value)`, not `CallToolResult`.**
+5. **The result renderer takes `(schema, value)`, not `CallToolResult`.** Discharged in Phase 4,
+   and it cost nothing: `ResultBuilder.Build(JsonElement? schema, JsonElement value)` is the
+   signature, the schema is optional because most tools publish none, and `Humcp.App` still has no
+   reference to the MCP SDK.
 
 ---
 
@@ -470,6 +513,35 @@ vision, and is the one most likely to be lost to a designer with good intentions
     silently lacked it (phase3-notes 4.10). A generated UI is judged against the platform's
     expectations, not against its toolkit's defaults.
 
+### Added by Phase 4
+
+Four more, from [`phase4-notes.md`](phase4-notes.md). Two of them are about the way back from a
+call; the other two were true through the whole of Phase 3 and were heard for the first time here,
+because Phase 3 listened to fields and Phase 4 listened to buttons.
+
+27. **A button bound to a `RoutedUICommand` announces that command's `Text` as its keyboard
+    shortcut.** WPF's `ButtonBaseAutomationPeer` falls back to it for `AcceleratorKey`, so a command
+    called "Save as" makes every button bound to it claim a shortcut it does not have — in the slot
+    that correctly reads "U" for a button with a real access key. The form's Run button spent a
+    phase announcing "Run" where it should have said "Control plus Enter". Commands carry no `Text`;
+    a button with a real keystroke sets `AutomationProperties.AcceleratorKey` itself, spelled out
+    (§7.15).
+28. **Every part of a result has exactly one focusable control that says what it is.** A heading in a
+    `TextBlock` and an explanation under it are on screen and in nobody's ear, and the buttons beside
+    them are named for the action rather than for the thing — so an image announced itself only as
+    "Save Image, PNG, 70 bytes". This is §7.24 generalised: it is not only validation messages that
+    a window can know and never say.
+29. **A control that navigates with the arrow keys sets its own current position when it takes
+    focus.** A list box selects its first item; a grid sets a current cell. Without it the control
+    does not handle the first arrow key at all, and WPF treats the press as directional navigation
+    and moves focus out of the control — a grid of two hundred rows, all of them on screen and none
+    of them reachable, with nothing announced. Found twice in two phases and two controls
+    (phase3-notes 4.8, phase4-notes 4.3).
+30. **A `Focus()` return value is not a report about where the caret went.** `TreeView.Focus()`
+    answers `false` while moving focus into the tree, because focus belongs to the selected item —
+    so a pane cycle that trusted the answer skipped the tree entirely and <kbd>F6</kbd> stopped
+    reaching the application's primary navigation. Ask the control where the focus is.
+
 Also added to the keyboard map below: <kbd>Escape</kbd> and <kbd>Ctrl</kbd>+<kbd>W</kbd> close a
 window. **`Button.IsCancel` is not how** — it sets `DialogResult` on a window shown with
 `ShowDialog` and does nothing at all on one shown with `Show`, which is every window humcp opens
@@ -500,6 +572,8 @@ itself (4.7).
 | <kbd>Enter</kbd> (on a tool) | Open its form window |
 | <kbd>F1</kbd> | Full details for the focused tool or field |
 | <kbd>Ctrl+Enter</kbd> | Submit form |
+| <kbd>Enter</kbd> (in a result) | Open what the caret is on in a window of its own |
+| <kbd>Ctrl+Shift+C</kbd> | Copy the value the caret is on |
 | <kbd>Esc</kbd> | Close current form / result window |
 | <kbd>Applications</kbd> | Context menu (Copy schema, Copy result, Run again) |
 
@@ -651,6 +725,20 @@ Phase 3 added three more, all three learned by chasing a failure that was not wh
   for ever — which reads exactly like a defect in the application. Where the thing under test is a
   command's availability, send real keystrokes.
 
+Phase 4 added four more, three of which are about scoping a lookup or a claim rather than about
+UI Automation itself:
+
+- **A cycle asserted at one end is not asserted.** The <kbd>F6</kbd> test pressed the key twice and
+  looked for the result pane; it passed for a whole phase while the tree had silently dropped out of
+  the cycle (phase4-notes 4.1). Walk the whole ring.
+- **A `DataGrid` refuses `SetFocus` through UI Automation**, exactly as a `TreeView` does. Open the
+  window that focuses it, or tab into it.
+- **A bare `ContentControl` creates no automation peer**, so a view built on one is absent from the
+  tree and nothing can be scoped to it. Give it a peer reporting an unnamed `Group`.
+- **The result view in the main window and the one in a form need different automation ids**
+  (`MainResults`, `FormResults`). Phase 3 learned this about two buttons called `RunButton`; it is
+  just as true of two panes, and for the same reason — an owned window is a descendant of its owner.
+
 Three more rules about writing these tests, from the same phase. **Wait for a state, never for a
 duration**: for the automation tree to stop changing after fields are revealed, for a window to
 have closed, for a button to have become enabled after a selection. All three were intermittent
@@ -754,11 +842,43 @@ answered: the prefix groups help and they stay.
 Outstanding, neither blocking: JAWS and Narrator have not seen the nine fixes, and item 25 of the
 checklist — the application with no screen reader running at all — wants a sighted pass.
 
-### Phase 4 — Result rendering (~4–5 days)
+### Phase 4 — Result rendering ✅ done
 `structuredContent` + `outputSchema` → `DataGrid` or property tree. Multi-part `content` arrays.
 Images as objects with save/open. `resource_link` and embedded resources. `isError` handling.
 
 **Exit:** every content type has a defined, non-degenerate accessible presentation.
+
+**Exit met.** Every kind of part has a control of its own and a name on it: text in a caret-navigable
+box, a picture with Save and Open beside a sentence saying what it is, a link with an action only
+where humcp will follow one, an embedded resource as text or as a file, a table as a real grid with
+column headers, and anything else structured as a tree read "label, value". 1,013 tests, 51 of them
+over the live UIA tree.
+
+**The corpus decided the shape of the component**: only **25 of its 213 tools publish an
+`outputSchema` at all**, and 17 of those 25 are one property wrapping the answer — 13 of them a bare
+string the tool has already sent as text. So the renderer reads the shape from the *value* and takes
+names from the schema where there is one, takes the wrapper off, and does not draw a structured
+result that merely repeats the text (phase4-notes 3.1–3.3). Written schema-first it would have had
+nothing to show for 188 of 213 tools.
+
+**The manual pass found eight defects and the automated suite had found none of them** — the same
+sentence as Phase 3 — and re-checking the fixes by ear turned up a ninth. <kbd>F6</kbd> had stopped
+reaching the tree; a grid announced
+`ResultRow { Number = 1, Cells = System.Collections…` on every row; an arrow key in a grid landed in
+the menu bar with two hundred rows unreachable; a picture said what it was to nobody; every
+command-bound button in the application announced the command's name where a screen reader says the
+shortcut; a link read "speaks.. text/html"; a nested value opened as JSON; and the completion
+announcement mixed three registers in one sentence. All fixed, each with a test. Four additions to
+the contract (§7.27–30), four to the testing notes (§9). Full record in
+[`phase4-notes.md`](phase4-notes.md).
+
+Two new rules that are security decisions rather than accessibility ones, both in `Humcp.Core` so
+they are testable without a desktop: humcp chooses a saved file's extension from an allow-list of
+media types and never from the server, and it hands only `http`/`https` to the browser, revealing a
+`file:` URI in a folder rather than opening it (phase4-notes 3.5).
+
+Outstanding, neither blocking: JAWS and Narrator, still carried from Phase 0, and now a picture on
+screen that no sighted pass has looked at.
 
 ### Phase 5 — MRTR and elicitation (~3–4 days)
 Declare the `elicitation` capability. Handle `resultType: "input_required"`: build the form from
@@ -787,6 +907,10 @@ Three items carried in from earlier phases:
   and the first real one for this seam.
 - **Replace the hard-coded server and the environment override** (§6.0) with real configuration,
   and drop `Humcp.App`'s build-order reference to the test fixture.
+- **A grid that can be sorted, and says that it has been.** A `DataGrid` sorts by a column header
+  for nothing, and a sort a screen reader user cannot tell has happened is worse than no sort
+  (phase4-notes 6). The same goes for the <kbd>Applications</kbd>-key context menu the keyboard map
+  promises.
 - **A way to turn MRU history off and empty it.** It is a plain-text file of things people typed,
   and although a parameter whose name reads like a credential is never recorded (phase3-notes 3.10),
   that is a heuristic and the user should have the final say. `MruHistory.Forget()` already exists.

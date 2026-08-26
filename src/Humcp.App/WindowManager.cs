@@ -30,11 +30,15 @@ public sealed class WindowManager
 {
     /// <summary>Switches to the nth open window. Parameter: a zero-based index.</summary>
     public static readonly RoutedUICommand Switch =
-        new("Switch to window", nameof(Switch), typeof(WindowManager));
+        new("", nameof(Switch), typeof(WindowManager));
 
     /// <summary>Closes the window it is invoked on. Not bound on the main window.</summary>
+    /// <remarks>
+    /// Empty text, like every other command here: WPF announces a bound command's <c>Text</c> as a
+    /// button's keyboard shortcut when none is set (§7.27).
+    /// </remarks>
     public static readonly RoutedUICommand CloseWindow =
-        new("Close window", nameof(CloseWindow), typeof(WindowManager));
+        new("", nameof(CloseWindow), typeof(WindowManager));
 
     private readonly ObservableCollection<Window> _windows = [];
 

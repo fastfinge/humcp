@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0–3 complete, Phase 4 next
+## Project status: Phases 0–4 complete, Phase 5 next
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -30,20 +30,31 @@ three answers in §13.
 
 **Phase 3 is complete**: generated forms, eleven templates covering the whole control vocabulary,
 the optional toggle, MRU history, validation surfacing, a sub-form window for a row of an object
-list, and the §8 window model. 902 tests, 36 of them over the live UIA tree.
+list, and the §8 window model. 902 tests, 36 of them over the live UIA tree. **The manual pass found
+nine defects and the automated suite had found none of them.** Record in
+**`docs/phase3-notes.md`**; its findings are now §4 pitfall 4, §5's "what a filled-in form means",
+§6.3, §7.20–26, §8's window model and §9.
 
-**The manual pass found nine defects and the automated suite had found none of them** — the number
-worth remembering from this phase. Combo boxes reading out C# object literals; a Close button and
-Escape that closed nothing; windows that read like dialogues; the optional-fields shortcut throwing
-the caret out of the form; a form opening on an object leaving the caret nowhere; Alt+T opening a
-menu instead of a field; Ctrl+Enter pressing whatever button had focus; Delete doing nothing in a
-list that advertises it; and a validation message NVDA never spoke. All nine fixed, each with a
-test, each re-checked by ear. Record in **`docs/phase3-notes.md`**; its findings are now §4 pitfall
-4, §5's "what a filled-in form means", §6.3, §7.20–26, §8's window model and §9.
+**Phase 4 is complete**: result rendering. Every kind of content has a control of its own — text in
+a caret-navigable box, a picture with Save and Open, a link with an action only where humcp will
+follow one, an embedded resource as text or as a file, a table as a real `DataGrid` with column
+headers, anything else structured as a tree read "label, value". 1,013 tests, 51 over the live UIA
+tree.
 
-The next unit of work is **Phase 4** (§10): result rendering.
+**The corpus decided the component's shape: 25 of 213 tools publish an `outputSchema` at all**, and
+17 of those 25 wrap the answer in one property (13 of them a bare string the tool already sent as
+text). So shape comes from the value, names come from the schema when there is one, the wrapper
+comes off, and structured content that merely repeats the text is not drawn twice.
 
-Still outstanding and non-blocking: JAWS and Narrator have not seen the nine fixes.
+**The manual pass found eight defects, and again the suite had found none** — including two that had
+been true since Phase 3 — and re-checking the fixes by ear found a ninth. Record in
+**`docs/phase4-notes.md`**; its findings are now §5's "the other direction", §6.4, §7.27–30, §9 and
+the keyboard map.
+
+The next unit of work is **Phase 5** (§10): MRTR and elicitation.
+
+Still outstanding and non-blocking: JAWS and Narrator have seen none of the Phase 3 or Phase 4
+fixes, and the picture Phase 4 puts on screen has had no sighted pass.
 
 ## What humcp is
 
@@ -110,10 +121,13 @@ without saying so is not.
 ## Architecture
 
 ```
-src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel -> FieldState. Pure. No MCP SDK, no WPF.
-src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU. No UI.
+src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel -> FieldState on the way in,
+                                     (schema?, value) -> ResultNode on the way back. Pure.
+src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU,
+                                     and the two shell rules (MediaTypes, LinkPolicy). No UI.
 src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
-src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager.
+src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager,
+                                     result view, and the one place that calls the shell.
 tools/Humcp.Harvester/               Starts real MCP servers, writes their schemas into the corpus.
 tests/              TestServer (a real stdio fixture server), Schema.Tests (golden),
                     Core.Tests (the round trip over a real pipe), App.UiTests (FlaUI),
@@ -167,6 +181,41 @@ Found by a corpus test on five real servers at once, not by reasoning (phase3-no
 editor means there is no argument object to construct, which is a different thing from suspecting
 the server will decline. Everything else warns once, says how many problems and how to overrule,
 and sends unchanged on the second press.
+
+## What a rendered result shows
+
+`ResultBuilder.Build(schema?, value)` — §6.1's fifth hedge, and **the schema is optional because
+almost nothing publishes one**: 25 of the corpus's 213 tools have an `outputSchema` at all. Shape is
+read from the value; a schema, where there is one, supplies names and descriptions, so a server's
+own `title` reaches the user through a client that has never heard of it.
+
+Three rules came from the corpus rather than from taste, and all three are about SEP-2106 forcing an
+object where the tool has a string or a list:
+
+- **A wrapper of one property comes off** and its name is kept — `{"entities": […]}` is shown as
+  *"Entities, table, 8 rows, 5 columns"*, not as *"Structured result, 1 field"*. 17 of the 25.
+- **Structured content that repeats the text is not drawn twice.** 13 of the 25 are
+  `{"content": "…"}` holding the string already sent as text; drawing both would say everything
+  twice, which is phase1-notes 2.7 in a new place. The announcement says which it is showing.
+- **A limit that bites says so.** A table caps at 200 rows and announces the real total. The cap and
+  §7.6's "virtualization stays off" are one decision: every row shown is a row built.
+
+Shape decides the control and nothing else does — array of objects → `DataGrid`, anything else
+structured → tree, long string → a window of text, and <kbd>Enter</kbd> anywhere opens what the
+caret is on in a window of that kind. There is no per-server branch anywhere in the renderer.
+
+## The two shell rules
+
+Saving or opening a result is the only place humcp asks Windows to choose a program, and both
+inputs — the bytes and the media type — come from a third party. Both rules live in `Humcp.Core`
+because a security decision that can only be tested by opening a window will not be tested.
+
+- **`MediaTypes`: the extension is ours, never the server's.** An allow-list of media types to
+  extensions; anything else is saved as `.bin` and never opened. `image/svg+xml` saves as `.svg` and
+  is deliberately not openable — it is an image everywhere else and a scriptable document here.
+- **`LinkPolicy`: two schemes.** `http`/`https` go to the browser; a `file:` URI is *revealed* in a
+  folder, never launched; everything else is copyable and inert **and says so**. `ms-settings:`,
+  `vscode://` and a `file:` URI ending in `.exe` are the same attack.
 
 ## The schema engine: never fail to render
 
@@ -243,6 +292,19 @@ These are the rules generated WPF code most often violates. Full contract in §7
 - **Everything the platform gives a control of that shape, ours has too** (§7.26). WPF's `TreeView`
   has no first-letter navigation and every other list-shaped control on Windows does, so the tree
   implements it by hand.
+- **A button bound to a `RoutedUICommand` announces that command's `Text` as its keyboard shortcut**
+  (§7.27). WPF uses it as the `AcceleratorKey` fallback, so "Save as" is read out in the slot a
+  reader uses for the shortcut. Commands carry no `Text`; buttons with a real keystroke set
+  `AutomationProperties.AcceleratorKey` themselves, spelled out ("Control plus Enter").
+- **Every part of a result needs one focusable control that says what it is** (§7.28). A heading and
+  an explanation in `TextBlock`s are on screen and in nobody's ear — for a whole pass an image
+  announced itself only through its Save button.
+- **A control that navigates with arrows sets its own current position on focus** (§7.29). A grid
+  with no current cell does not handle an arrow key at all, so WPF moves focus out of it: 200 rows
+  on screen, none reachable, nothing announced. A list box in Phase 3, a grid in Phase 4.
+- **A `Focus()` return value is not a report about where the caret went** (§7.30).
+  `TreeView.Focus()` answers false while moving focus into the tree, which silently took the tree
+  out of the F6 pane cycle.
 - **A list selects what it focuses**, or `Delete` and every other "selected entry" command is dead.
 - **A menu item's check mark needs `IsCheckable`** to exist as a state a reader can read.
 - **`Button.IsCancel` closes a modal dialog and nothing else.** Every window humcp opens is
@@ -330,10 +392,27 @@ the UI suite uses and what to set when trying a real server without keeping what
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
+- **The fixture server publishes 21 tools**, seven of them added in Phase 4 with the `result_`
+  prefix: one per shape a result can have (structured content with and without a schema, a table, a
+  wrapper that repeats its text, six kinds of content at once, three links exercising each branch of
+  `LinkPolicy`, a structure past every rendering limit, and a result with nothing in it).
 - The fake in-process MCP server should exercise hostile input deliberately — 10,000-character
   descriptions, control characters, deeply nested schemas — since all of it is untrusted. Two of its
   fourteen tools exist for the form generator: `demo_search` has fifteen parameters, two required,
   one of them an enum, and covers every control the renderer knows; `demo_wide` has forty, and is
   the virtualization guard.
+- **A cycle asserted at one end is not asserted.** The F6 test looked for the result pane and passed
+  for a whole phase while the tree had dropped out of the cycle.
+- **A `DataGrid` refuses `SetFocus` through UI Automation**, exactly as a `TreeView` does. **A bare
+  `ContentControl` has no automation peer at all**, so a view built on one cannot be scoped to in a
+  test — `ResultView` reports itself as an unnamed group for that reason.
+- **Prefix every named element in a window that is not the main one.** §9's "automation ids are
+  unique across the process", learned about two buttons in Phase 3 and re-learned twice in Phase 4
+  (`MainResults`/`FormResults`, `ResultHeading`/`FormResultHeading`). With a form open, a lookup
+  from the main window finds the form's element, every wait times out at thirty seconds, and the
+  suite looks hung rather than wrong.
 - Automated UIA assertions prove names exist; only manual NVDA/JAWS/Narrator testing proves the app
-  is pleasant. Do both at each phase exit.
+  is pleasant. Do both at each phase exit. **Phase 3 found nine defects by ear that its 886
+  green tests had missed, and Phase 4 found eight that its 1,007 had — plus a ninth while
+  re-checking the fixes.** Two phases running,
+  the manual pass has out-found the suite; budget for it rather than hoping.

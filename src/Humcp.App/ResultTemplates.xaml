@@ -1,0 +1,213 @@
+<!--
+    A rendered result, one part at a time (ROADMAP §10, Phase 4).
+
+    Phase 4's exit criterion is that every kind of content has a defined, non-degenerate accessible
+    presentation, and this file is where each of them is defined:
+
+      • text                 — a read-only, caret-navigable TextBox (§7.9), never a TextBlock
+      • an image or a sound  — what is known about it in words, the picture where one can safely be
+                               decoded, and Save and Open (§4, pitfall 6)
+      • a resource link      — the address in a box that can be reviewed and copied, and an action
+                               only where LinkPolicy allows one
+      • an embedded resource — text as text, bytes as a file
+      • structured content   — a grid when it is a table, a tree when it is not
+
+    Nothing is signalled by colour (§7.20): a truncated result, a link that cannot be opened and an
+    image with no description all say so in words, in the control's own help text and on screen.
+    Buttons inside a part carry no access key, for the reason the form's row buttons do not — their
+    letters would be fixed while the parts around them are whatever a server sent, and §7.21 says an
+    access key is unique or absent.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:local="clr-namespace:Humcp.App">
+
+    <local:ResultTemplateSelector x:Key="ResultTemplates" Prefix="Result" />
+
+    <!-- Its own instance rather than FieldTemplates', because a StaticResource looks in the
+         dictionary it is written in. The converter holds no state, so two of them are one. -->
+    <local:EmptyToCollapsedConverter x:Key="EmptyToCollapsed" />
+
+    <local:AppendHintConverter x:Key="TreeHint"
+                               Hint="Arrow keys open and close the branches. Enter opens whatever the caret is on in a window of its own." />
+
+    <!-- Keyed rather than inline, because a nested value opens in a tree window of its own and the
+         two trees have to read identically. A node's name is the whole node — its label and its
+         value in one breath — since a tree node is announced as one thing (§7.23's rule, for a
+         tree). -->
+    <Style x:Key="Result.NodeStyle" TargetType="TreeViewItem">
+        <Setter Property="IsExpanded" Value="{Binding IsRoot, Mode=OneTime}" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+    </Style>
+
+    <HierarchicalDataTemplate x:Key="Result.NodeTemplate" ItemsSource="{Binding Children}">
+        <TextBlock Text="{Binding AccessibleName}" />
+    </HierarchicalDataTemplate>
+
+    <Style x:Key="ResultPart" TargetType="StackPanel">
+        <Setter Property="Margin" Value="0,0,0,14" />
+    </Style>
+
+    <Style x:Key="PartHeading" TargetType="TextBlock">
+        <Setter Property="FontWeight" Value="Bold" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,0,0,4" />
+        <Setter Property="AutomationProperties.HeadingLevel" Value="Level3" />
+    </Style>
+
+    <Style x:Key="PartNote" TargetType="TextBlock">
+        <Setter Property="TextWrapping" Value="Wrap" />
+        <Setter Property="Margin" Value="0,4,0,0" />
+    </Style>
+
+    <Style x:Key="PartButton" TargetType="Button">
+        <Setter Property="Padding" Value="12,3" />
+        <Setter Property="Margin" Value="0,6,8,0" />
+    </Style>
+
+    <Style x:Key="ReadOnlyText" TargetType="TextBox">
+        <Setter Property="IsReadOnly" Value="True" />
+        <Setter Property="IsReadOnlyCaretVisible" Value="True" />
+        <Setter Property="FontFamily" Value="Consolas" />
+        <Setter Property="AutomationProperties.Name" Value="{Binding AutomationName}" />
+        <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+    </Style>
+
+    <!-- ================================================================ text -->
+
+    <!-- §7.9: a read-only multiline TextBox, never a TextBlock. The caret is the point — it is what
+         lets a result be reviewed line by line, word by word, and selected in pieces. -->
+    <DataTemplate x:Key="Result.Text">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+            <TextBox Style="{StaticResource ReadOnlyText}"
+                     Text="{Binding Text, Mode=OneWay}"
+                     AcceptsReturn="True" TextWrapping="NoWrap" MinLines="6" MaxHeight="360"
+                     VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- ================================================================ images and sounds -->
+
+    <!-- §4, pitfall 6: the protocol has nowhere to put alt text, so an honest client says what the
+         thing *is* — kind, type, size — shows it to whoever can see it, and offers to save it or
+         open it. The Open button exists only for a media type MediaTypes recognises; where it does
+         not, the box above the buttons says why rather than the button being quietly missing. -->
+    <DataTemplate x:Key="Result.Media">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+
+            <Image Source="{Binding Preview}"
+                   MaxHeight="260" MaxWidth="420" Stretch="Uniform" StretchDirection="DownOnly"
+                   HorizontalAlignment="Left" Margin="0,0,0,4"
+                   AutomationProperties.Name="{Binding Description}"
+                   Visibility="{Binding Preview, Converter={StaticResource EmptyToCollapsed}}" />
+
+            <!-- A read-only box rather than a label, and that is §7.24 rather than a layout
+                 preference: what is known about a picture is the only thing there is to know about
+                 it, and in a TextBlock it is on screen and in nobody's ear. The buttons beside it
+                 are named for the part, so tabbing past would otherwise be the whole of what a
+                 screen reader user is told. -->
+            <TextBox Style="{StaticResource ReadOnlyText}"
+                     Text="{Binding Explanation, Mode=OneWay}" TextWrapping="Wrap"
+                     AutomationProperties.Name="{Binding Heading}"
+                     AutomationProperties.HelpText="Read-only. Everything the protocol says about this part. Tab for what can be done with it." />
+
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource PartButton}" Content="Save as…"
+                        Command="{x:Static local:ResultCommands.Save}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Description, StringFormat='Save {0}'}"
+                        AutomationProperties.HelpText="Writes this to a file you choose. humcp picks the extension from the media type, never from the server." />
+                <Button Style="{StaticResource PartButton}" Content="Open"
+                        Command="{x:Static local:ResultCommands.Open}" CommandParameter="{Binding}"
+                        Visibility="{Binding CanOpen, Converter={StaticResource EmptyToCollapsed}}"
+                        AutomationProperties.Name="{Binding Description, StringFormat='Open {0}'}"
+                        AutomationProperties.HelpText="Opens this with whichever program Windows uses for its type." />
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- ================================================================ resource links -->
+
+    <!-- The address goes in a read-only box rather than a label, for the same reason results do:
+         it can be reviewed with a caret and selected in pieces. Whether there is an action beside
+         it is LinkPolicy's decision, and where there is not, the note says why (§7.18). -->
+    <DataTemplate x:Key="Result.Link">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+
+            <!-- HelpText explicitly, over the style's: a link's explanation is the whole of what
+                 humcp will do with it, and a reason that is only on screen has not been given to
+                 anybody working by ear (§7.24). -->
+            <TextBox Style="{StaticResource ReadOnlyText}"
+                     Text="{Binding Uri, Mode=OneWay}" TextWrapping="Wrap"
+                     AutomationProperties.HelpText="{Binding Explanation}" />
+
+            <TextBlock Style="{StaticResource PartNote}" Text="{Binding Explanation}" />
+
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource PartButton}" Content="{Binding ActionName}"
+                        Command="{x:Static local:ResultCommands.Follow}" CommandParameter="{Binding}"
+                        Visibility="{Binding CanOpen, Converter={StaticResource EmptyToCollapsed}}"
+                        AutomationProperties.Name="{Binding ActionName}"
+                        AutomationProperties.HelpText="{Binding Explanation}" />
+                <Button Style="{StaticResource PartButton}" Content="Copy link"
+                        Command="{x:Static local:ResultCommands.Copy}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="Copy link"
+                        AutomationProperties.HelpText="Puts the address on the clipboard." />
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- ================================================================ structured content -->
+
+    <!-- A table becomes a grid, because a grid is the one presentation that gives a screen reader
+         the column header with every value. Enter on a cell that holds a whole object opens it. -->
+    <DataTemplate x:Key="Result.Table">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+            <local:ResultDataGrid x:Name="Grid" Table="{Binding Root}" MaxHeight="340">
+                <local:ResultDataGrid.InputBindings>
+                    <KeyBinding Key="Enter" Command="{x:Static local:ResultCommands.Expand}"
+                                CommandParameter="{Binding ElementName=Grid}" />
+                    <KeyBinding Key="C" Modifiers="Control+Shift"
+                                Command="{x:Static local:ResultCommands.Copy}"
+                                CommandParameter="{Binding ElementName=Grid}" />
+                </local:ResultDataGrid.InputBindings>
+            </local:ResultDataGrid>
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- Everything else becomes a tree: a value has a shape of its own and a tree is the control
+         that has one too. Each node is read as one thing — its name and its value in a breath — and
+         a node holding more than a line of text, or a table, opens in a window with Enter.
+
+         The root opens by itself and nothing else does. A result can be thousands of nodes, and a
+         tree that expands all of them reads out the whole answer before the user has asked for any
+         of it. -->
+    <DataTemplate x:Key="Result.Tree">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+
+            <local:TypeAheadTreeView x:Name="Nodes" ItemsSource="{Binding Roots}" MaxHeight="340"
+                                     AutomationProperties.Name="{Binding AutomationName}"
+                                     AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource TreeHint}}">
+                <local:TypeAheadTreeView.ItemContainerStyle>
+                    <StaticResource ResourceKey="Result.NodeStyle" />
+                </local:TypeAheadTreeView.ItemContainerStyle>
+                <local:TypeAheadTreeView.ItemTemplate>
+                    <StaticResource ResourceKey="Result.NodeTemplate" />
+                </local:TypeAheadTreeView.ItemTemplate>
+                <local:TypeAheadTreeView.InputBindings>
+                    <KeyBinding Key="Enter" Command="{x:Static local:ResultCommands.Expand}"
+                                CommandParameter="{Binding ElementName=Nodes}" />
+                    <KeyBinding Key="C" Modifiers="Control+Shift"
+                                Command="{x:Static local:ResultCommands.Copy}"
+                                CommandParameter="{Binding ElementName=Nodes}" />
+                </local:TypeAheadTreeView.InputBindings>
+            </local:TypeAheadTreeView>
+        </StackPanel>
+    </DataTemplate>
+
+</ResourceDictionary>

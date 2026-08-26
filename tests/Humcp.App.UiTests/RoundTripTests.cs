@@ -22,12 +22,12 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
         var result = WaitForResult(text => text.Contains("humcp test server"));
         output.WriteLine(UiaTree.Flatten(result, 200));
 
-        Assert.Contains("Server information — complete", result);
         Assert.Contains("Process id:", result);
 
-        // The result box takes the tool's name too, so a user arriving by F6 knows what they are
-        // reading before they start reading it.
-        Assert.Contains("Server information", ResultBox().Name);
+        // Which tool this is the result of is on the heading above it, so a user arriving by F6
+        // knows what they are reading before they start reading it.
+        Assert.Equal("Result — Server information", ResultHeading());
+        Assert.Equal("Result", ResultBox().Name);
     }
 
     [Fact]
@@ -38,7 +38,10 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
         var result = WaitForResult(text => text.Contains("Line 200 of 200"));
 
         Assert.Contains("Line   1 of 200", result);
-        Assert.True(result.Split('\n').Length > 200);
+
+        // Exactly two hundred, since Phase 4: the box holds the tool's own text and nothing
+        // else, and what used to be a header above it is now the heading beside it.
+        Assert.Equal(200, result.ReplaceLineEndings("\n").Split('\n').Length);
     }
 
     [Fact]
@@ -48,8 +51,14 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
 
         var result = WaitForResult(text => text.Contains("always fails"));
 
-        Assert.Contains("— error at", result);
         Assert.Contains("always fails", result);
+
+        // Three places, none of them a colour (§7.20): the heading says so, the announcement said
+        // so when it happened, and the part's own help text says so to whoever arrives later —
+        // because a property that is set is not a property that is spoken (§7.24).
+        Assert.Equal("Result — Always fails — error", ResultHeading());
+        Assert.StartsWith("The tool reported an error.", ResultBox().HelpText);
+        Assert.Contains("Tool returned an error", WaitForStatus(s => s.Contains("error")));
     }
 
     [Fact]
@@ -124,18 +133,43 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
         FindTreeItem("humcp test server").Focus();
         Input.Settle(150);
 
-        // Two presses at most: the pane cycle is two long, and where it starts depends on what the
-        // previous test left focused.
-        for (var i = 0; i < 2; i++)
+        // Both panes, and in both directions of the cycle. The original test only looked for the
+        // result, which is how F6 spent a whole phase never stopping on the tree at all: a WPF
+        // TreeView answers false to Focus() once it has items, and a pane cycle that reads that as
+        // failure walks straight past it (phase4-notes 4.1). A cycle asserted at one end is not
+        // asserted.
+        CycleUntil(InResult, "the result pane");
+        CycleUntil(e => UiaTree.Safe(() => e?.ControlType) == ControlType.TreeItem, "the tree");
+    }
+
+    /// <summary>Whether the focused element is inside the main window's result view.</summary>
+    private bool InResult(AutomationElement? focused)
+    {
+        if (focused is null) return false;
+
+        var results = Window.FindFirstDescendant(cf => cf.ByAutomationId("MainResults"));
+
+        return results is not null
+               && UiaTree.Descendants(results).Any(e => Equals(e, focused));
+    }
+
+    /// <summary>Presses F6 until the focused element is the one this test is about.</summary>
+    private void CycleUntil(Func<AutomationElement?, bool> wanted, string what)
+    {
+        var seen = new List<string>();
+
+        for (var press = 0; press < 4; press++)
         {
             Input.Press(VirtualKeyShort.F6);
-            Input.Settle(150);
+            Input.Settle(250);
 
-            if (fixture.Automation.FocusedElement()?.AutomationId == "ResultBox") return;
+            var focused = fixture.Automation.FocusedElement();
+            seen.Add(UiaTree.Safe(() => focused?.Name) ?? "(nothing)");
+
+            if (wanted(focused)) return;
         }
 
-        Assert.Fail("F6 never reached the result pane. Focus is on: " +
-                    (fixture.Automation.FocusedElement()?.Name ?? "(nothing)"));
+        Assert.Fail($"F6 never reached {what}. It visited: " + string.Join(" | ", seen));
     }
 
     [Fact]
@@ -211,8 +245,12 @@ public class RoundTripTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     private AutomationElement ResultBox()
-        => Window.FindFirstDescendant(cf => cf.ByAutomationId("ResultBox"))
+        => Window.FindFirstDescendant(cf => cf.ByAutomationId("MainResults"))
+               ?.FindFirstDescendant(cf => cf.ByControlType(ControlType.Edit))
            ?? throw new InvalidOperationException("The result box is not in the UIA tree.");
+
+    private string ResultHeading()
+        => Window.FindFirstDescendant(cf => cf.ByAutomationId("ResultHeading"))?.Name ?? "";
 
     private string WaitForResult(Func<string, bool> predicate)
         => WaitFor(() => ResultBox().AsTextBox().Text, predicate, "result box");
