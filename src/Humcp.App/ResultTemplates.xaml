@@ -112,7 +112,7 @@
             <TextBox Style="{StaticResource ReadOnlyText}"
                      Text="{Binding Explanation, Mode=OneWay}" TextWrapping="Wrap"
                      AutomationProperties.Name="{Binding Heading}"
-                     AutomationProperties.HelpText="Read-only. Everything the protocol says about this part. Tab for what can be done with it." />
+                     AutomationProperties.HelpText="Everything the protocol says about this part. Tab for what can be done with it." />
 
             <StackPanel Orientation="Horizontal">
                 <Button Style="{StaticResource PartButton}" Content="Save as…"

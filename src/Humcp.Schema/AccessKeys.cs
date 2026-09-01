@@ -42,6 +42,17 @@ public static class AccessKeys
     public static readonly IReadOnlyList<char> WindowCommands = ['t', 'w', 'r', 'c', 'o'];
 
     /// <summary>
+    /// The same list for the window a server's own question opens: the <b>Q</b>uestion and
+    /// <b>W</b>indow menus, and the <b>A</b>ccept, <b>D</b>ecline and <b>C</b>ancel buttons.
+    /// </summary>
+    /// <remarks>
+    /// A separate list rather than a longer shared one. Reserving a letter costs every form that
+    /// never had that button, and a question window's three answers are fixed while a tool form's
+    /// commands are different fixed ones.
+    /// </remarks>
+    public static readonly IReadOnlyList<char> QuestionCommands = ['q', 'w', 'a', 'd', 'c'];
+
+    /// <summary>
     /// One index per label, in the same order, or null where nothing was left to give it.
     /// </summary>
     public static IReadOnlyList<int?> Assign(IReadOnlyList<string> labels, IEnumerable<char>? reserved = null)

@@ -1,6 +1,8 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using Humcp.Schema;
 
@@ -74,10 +76,22 @@ internal static class FieldGroupWindow
         AutomationProperties.SetHelpText(close,
             "Closes this entry. Escape does the same. What you typed is kept.");
 
+        // A live region of its own, because the commands below have things to say — "added to
+        // Tags, two entries now" — and until Phase 5 this window had neither the commands nor
+        // anywhere to say what they did (phase5-notes 4.9).
+        var status = new TextBlock { TextWrapping = TextWrapping.Wrap };
+        AutomationProperties.SetLiveSetting(status, AutomationLiveSetting.Polite);
+        AutomationProperties.SetAutomationId(status, "RowStatus");
+
+        var statusBar = new StatusBar { Focusable = false, IsTabStop = false };
+        statusBar.Items.Add(new StatusBarItem { Content = status });
+
         var layout = new DockPanel();
         DockPanel.SetDock(heading, Dock.Top);
+        DockPanel.SetDock(statusBar, Dock.Bottom);
         DockPanel.SetDock(close, Dock.Bottom);
         layout.Children.Add(heading);
+        layout.Children.Add(statusBar);
         layout.Children.Add(close);
         layout.Children.Add(scroller);
 
@@ -95,6 +109,11 @@ internal static class FieldGroupWindow
         AutomationProperties.SetName(window, title);
 
         windows.Track(window);
+
+        // A routed command bubbles up the tree it was raised in, and this is a window of its own —
+        // so the owner's bindings never see it. A list inside a row of an object list had a dead
+        // Add button for exactly as long as nobody put a list inside one (phase5-notes 4.9).
+        FormCommandBindings.Attach(window, row.Fields, text => Say(status, text), windows);
 
         var bar = windows.CreateMenuBar(window, closable: true);
         DockPanel.SetDock(bar, Dock.Top);
@@ -115,6 +134,15 @@ internal static class FieldGroupWindow
         var indices = AccessKeys.Assign([.. fields.Select(f => f.Label)], ['c']);
 
         for (var i = 0; i < fields.Count; i++) fields[i].AccessKeyIndex = indices[i];
+    }
+
+    private static void Say(TextBlock status, string text)
+    {
+        status.Text = text;
+
+        var peer = UIElementAutomationPeer.FromElement(status)
+                   ?? UIElementAutomationPeer.CreatePeerForElement(status);
+        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
     private static void Focus(ItemsControl fields)

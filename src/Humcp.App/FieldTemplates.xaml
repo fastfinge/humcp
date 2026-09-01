@@ -203,8 +203,10 @@
                     </MultiBinding>
                 </Label.Content>
             </Label>
-            <!-- §7.15: the calendar opens with Alt+Down Arrow and nothing anywhere says so. -->
-            <DatePicker x:Name="Input" Style="{StaticResource FieldInput}"
+            <!-- §7.15: the calendar opens with Alt+Down Arrow and nothing anywhere says so.
+                 FieldDatePicker rather than DatePicker because focus lands on a text box inside it,
+                 which does not carry the required state or the access key set out here (§7.32). -->
+            <local:FieldDatePicker x:Name="Input" Style="{StaticResource FieldInput}"
                         SelectedDate="{Binding Date}"
                         HorizontalAlignment="Left" MinWidth="200"
                         AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
@@ -224,7 +226,7 @@
                 </Label.Content>
             </Label>
             <StackPanel Orientation="Horizontal">
-                <DatePicker x:Name="Input" Style="{StaticResource FieldInput}"
+                <local:FieldDatePicker x:Name="Input" Style="{StaticResource FieldInput}"
                             SelectedDate="{Binding Date}" MinWidth="200"
                             AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
                             AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource CalendarHint}}" />
@@ -259,14 +261,18 @@
                 </Label.Content>
             </Label>
 
-            <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
-                        Content="Add"
-                        Command="{x:Static local:FormCommands.AddEntry}"
-                        CommandParameter="{Binding}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
-                        AutomationProperties.HelpText="Adds what is in the box beside this to the list." />
-                <TextBox x:Name="Draft" Style="{StaticResource FieldInput}"
+            <!-- A Grid rather than a DockPanel, and that is a tab-order decision rather than a
+                 layout one. A DockPanel has to declare what it docks before the child that fills
+                 the rest, so the Add button was declared first and reached first — and its own
+                 box's help text says "choose a value and press Add", which sent the user forward
+                 past a button that was behind them (§7.7, phase5-notes 4.9). Tab order follows the
+                 tree and not the screen; a Grid lets the two agree. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <TextBox Grid.Column="0" x:Name="Draft" Style="{StaticResource FieldInput}"
                          Text="{Binding Draft.Text, UpdateSourceTrigger=PropertyChanged}"
                          AutomationProperties.Name="{Binding Label}"
                          AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
@@ -277,18 +283,20 @@
                                     CommandParameter="{Binding}" />
                     </TextBox.InputBindings>
                 </TextBox>
-            </DockPanel>
+                <Button Grid.Column="1" Style="{StaticResource RowButton}"
+                        Content="Add"
+                        Command="{x:Static local:FormCommands.AddEntry}"
+                        CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
+                        AutomationProperties.HelpText="Adds what is in the box beside this to the list." />
+            </Grid>
 
-            <DockPanel LastChildFill="True" Margin="0,6,0,0">
-                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
-                        Content="Remove"
-                        VerticalAlignment="Top"
-                        Command="{x:Static local:FormCommands.RemoveEntry}"
-                        CommandParameter="{Binding ElementName=Entries}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
-                        AutomationProperties.AcceleratorKey="Delete"
-                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
-                <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <local:EntryListBox Grid.Column="0" x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
                          ItemContainerStyle="{StaticResource EntryItem}"
                          MinHeight="60" MaxHeight="160"
                          AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
@@ -300,7 +308,15 @@
                                     CommandParameter="{Binding ElementName=Entries}" />
                     </local:EntryListBox.InputBindings>
                 </local:EntryListBox>
-            </DockPanel>
+                <Button Grid.Column="1" Style="{StaticResource RowButton}"
+                        Content="Remove"
+                        VerticalAlignment="Top"
+                        Command="{x:Static local:FormCommands.RemoveEntry}"
+                        CommandParameter="{Binding ElementName=Entries}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.AcceleratorKey="Delete"
+                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+            </Grid>
 
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
         </StackPanel>
@@ -319,31 +335,37 @@
                 </Label.Content>
             </Label>
 
-            <DockPanel LastChildFill="True">
-                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
-                        Content="Add"
-                        Command="{x:Static local:FormCommands.AddEntry}"
-                        CommandParameter="{Binding}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
-                        AutomationProperties.HelpText="Adds the value beside this to the list." />
-                <ComboBox x:Name="Draft" Style="{StaticResource FieldInput}"
+            <!-- A Grid rather than a DockPanel, and that is a tab-order decision rather than a
+                 layout one. A DockPanel has to declare what it docks before the child that fills
+                 the rest, so the Add button was declared first and reached first — and its own
+                 box's help text says "choose a value and press Add", which sent the user forward
+                 past a button that was behind them (§7.7, phase5-notes 4.9). Tab order follows the
+                 tree and not the screen; a Grid lets the two agree. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <ComboBox Grid.Column="0" x:Name="Draft" Style="{StaticResource FieldInput}"
                           ItemsSource="{Binding Draft.Options}" SelectedItem="{Binding Draft.Selected}"
                           DisplayMemberPath="Label" ItemContainerStyle="{StaticResource ChoiceItem}"
                           AutomationProperties.Name="{Binding Label}"
                           AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
                           AutomationProperties.HelpText="{Binding HelpText, ConverterParameter='Choose a value and press Add to put it in the list below.', Converter={StaticResource AppendHint}}" />
-            </DockPanel>
+                <Button Grid.Column="1" Style="{StaticResource RowButton}"
+                        Content="Add"
+                        Command="{x:Static local:FormCommands.AddEntry}"
+                        CommandParameter="{Binding}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Add to {0}'}"
+                        AutomationProperties.HelpText="Adds the value beside this to the list." />
+            </Grid>
 
-            <DockPanel LastChildFill="True" Margin="0,6,0,0">
-                <Button DockPanel.Dock="Right" Style="{StaticResource RowButton}"
-                        Content="Remove"
-                        VerticalAlignment="Top"
-                        Command="{x:Static local:FormCommands.RemoveEntry}"
-                        CommandParameter="{Binding ElementName=Entries}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
-                        AutomationProperties.AcceleratorKey="Delete"
-                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
-                <local:EntryListBox x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
+            <Grid Margin="0,6,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <local:EntryListBox Grid.Column="0" x:Name="Entries" ItemsSource="{Binding Items}" DisplayMemberPath="Display"
                          ItemContainerStyle="{StaticResource EntryItem}"
                          MinHeight="60" MaxHeight="160"
                          AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
@@ -355,7 +377,15 @@
                                     CommandParameter="{Binding ElementName=Entries}" />
                     </local:EntryListBox.InputBindings>
                 </local:EntryListBox>
-            </DockPanel>
+                <Button Grid.Column="1" Style="{StaticResource RowButton}"
+                        Content="Remove"
+                        VerticalAlignment="Top"
+                        Command="{x:Static local:FormCommands.RemoveEntry}"
+                        CommandParameter="{Binding ElementName=Entries}"
+                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                        AutomationProperties.AcceleratorKey="Delete"
+                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+            </Grid>
 
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
         </StackPanel>
@@ -393,8 +423,34 @@
                 </Label.Content>
             </Label>
 
-            <DockPanel LastChildFill="True">
-                <StackPanel DockPanel.Dock="Right" VerticalAlignment="Top">
+            <!-- The list before its buttons, for the reason the entry rows above give: tab order
+                 follows the tree and not the screen, so a button declared first is reached first
+                 however far right it is drawn (§7.7, phase5-notes 4.9). With no entries yet the
+                 list is skipped by Tab altogether, so Add entry is still the first thing reached
+                 on an empty one. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <local:EntryListBox Grid.Column="0" x:Name="Rows" ItemsSource="{Binding Rows}" DisplayMemberPath="Display"
+                         ItemContainerStyle="{StaticResource EntryItem}"
+                         MinHeight="60" MaxHeight="160"
+                         AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
+                         AutomationProperties.HelpText="Arrow through the entries. Enter opens one, Delete removes it."
+                         AutomationProperties.ItemStatus="{Binding Status}">
+                    <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="Enter"
+                                    Command="{x:Static local:FormCommands.EditRow}"
+                                    CommandParameter="{Binding ElementName=Rows}" />
+                        <KeyBinding Key="Delete"
+                                    Command="{x:Static local:FormCommands.RemoveEntry}"
+                                    CommandParameter="{Binding ElementName=Rows}" />
+                    </local:EntryListBox.InputBindings>
+                </local:EntryListBox>
+
+                <StackPanel Grid.Column="1" VerticalAlignment="Top">
                     <Button Style="{StaticResource RowButton}" Content="Add entry" Margin="6,0,0,4"
                             Command="{x:Static local:FormCommands.AddRow}" CommandParameter="{Binding}"
                             AutomationProperties.Name="{Binding Label, StringFormat='Add an entry to {0}'}"
@@ -410,23 +466,7 @@
                             AutomationProperties.AcceleratorKey="Delete"
                             AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
                 </StackPanel>
-
-                <local:EntryListBox x:Name="Rows" ItemsSource="{Binding Rows}" DisplayMemberPath="Display"
-                         ItemContainerStyle="{StaticResource EntryItem}"
-                         MinHeight="60" MaxHeight="160"
-                         AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
-                         AutomationProperties.HelpText="Arrow through the entries. Enter opens one, Delete removes it."
-                         AutomationProperties.ItemStatus="{Binding Status}">
-                    <local:EntryListBox.InputBindings>
-                        <KeyBinding Key="Enter"
-                                    Command="{x:Static local:FormCommands.EditRow}"
-                                    CommandParameter="{Binding ElementName=Rows}" />
-                        <KeyBinding Key="Delete"
-                                    Command="{x:Static local:FormCommands.RemoveEntry}"
-                                    CommandParameter="{Binding ElementName=Rows}" />
-                    </local:EntryListBox.InputBindings>
-                </local:EntryListBox>
-            </DockPanel>
+            </Grid>
 
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
         </StackPanel>

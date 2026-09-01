@@ -118,8 +118,7 @@ public sealed record UnknownResultBlock(string Kind, string Json) : ResultBlock
 public sealed record ToolCallOutcome(
     bool IsError,
     IReadOnlyList<ResultBlock> Blocks,
-    JsonElement? Structured = null,
-    bool NeedsMoreInput = false)
+    JsonElement? Structured = null)
 {
     /// <summary>A failure that never reached the server, or came back as a transport-level error.</summary>
     public static ToolCallOutcome Failure(string message)

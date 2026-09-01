@@ -50,7 +50,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
     [Fact]
     public void Lists_every_published_tool()
     {
-        Assert.Equal(21, Connection.Tools.Count);
+        Assert.Equal(28, Connection.Tools.Count);
     }
 
     [Fact]
@@ -308,7 +308,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var server = ToolTreeBuilder.BuildServerNode(Connection.Snapshot());
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
-        Assert.Equal(21, tools.Count);
+        Assert.Equal(28, tools.Count);
         Assert.Contains(server.Children.Single().Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 

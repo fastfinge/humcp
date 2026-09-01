@@ -35,20 +35,27 @@ public sealed record FormSubmission(ArgumentBuild Build, ValidationReport Report
 /// </remarks>
 public sealed class FormState : INotifyPropertyChanged
 {
+    private readonly IReadOnlyList<char> _reserved;
     private bool _showOptional;
 
-    private FormState(FormModel form)
+    private FormState(FormModel form, IReadOnlyList<char> reserved)
     {
         Form = form;
+        _reserved = reserved;
         Fields = FieldState.CreateAll(form.Fields);
         AssignAccessKeys();
         RefreshVisible();
     }
 
-    public static FormState Create(FormModel form)
+    /// <param name="reserved">
+    /// Letters the window around this form has already spent on its own menus and buttons. A field
+    /// that claims one of them is a field its own access key cannot reach, because a menu bar
+    /// mnemonic wins (phase3-notes 4.6).
+    /// </param>
+    public static FormState Create(FormModel form, IReadOnlyList<char>? reserved = null)
     {
         ArgumentNullException.ThrowIfNull(form);
-        return new FormState(form);
+        return new FormState(form, reserved ?? AccessKeys.WindowCommands);
     }
 
     public FormModel Form { get; }
@@ -236,7 +243,7 @@ public sealed class FormState : INotifyPropertyChanged
     private void AssignAccessKeys()
     {
         var fields = Fields.SelectMany(Labelled).ToList();
-        var indices = AccessKeys.Assign([.. fields.Select(f => f.Label)], AccessKeys.WindowCommands);
+        var indices = AccessKeys.Assign([.. fields.Select(f => f.Label)], _reserved);
 
         for (var i = 0; i < fields.Count; i++) fields[i].AccessKeyIndex = indices[i];
     }

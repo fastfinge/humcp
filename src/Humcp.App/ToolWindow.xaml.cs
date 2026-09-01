@@ -1,11 +1,11 @@
 using System.Text;
-using System.Text.Json;
 using System.Windows;
 using System.Windows.Automation;
 using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
+using System.Windows.Threading;
 using Humcp.Core;
 using Humcp.Schema;
 
@@ -55,6 +55,9 @@ public partial class ToolWindow : Window
     private string? _warnedAbout;
     private bool _callInFlight;
     private int _paneIndex;
+
+    /// <summary>How many questions this call has asked, so a second one is titled as a second one.</summary>
+    private int _questions;
 
     /// <summary>When the result on screen was asked for, for the details window (F1).</summary>
     private DateTimeOffset _lastOutcomeAt;
@@ -114,7 +117,15 @@ public partial class ToolWindow : Window
         {
             UpdateParametersHeading();
             SetStatus(OpeningAnnouncement());
-            FocusField(_state.FirstToFill);
+
+            // A form whose only parameters are optional has nothing visible to focus, and giving
+            // up leaves the caret on the window — where a screen reader says the title and stops
+            // (§7.25, phase5-notes 4.6). The toggle is the useful place to land, because on such a
+            // form it is the only thing there is to do.
+            if (FocusField(_state.FirstToFill)) return;
+            if (_state.HasOptional && OptionalToggle.Focus()) return;
+
+            FormRunButton.Focus();
         };
 
         // Ctrl+Enter has to be taken before the focused control sees it. A WPF Button handles Enter
@@ -147,11 +158,11 @@ public partial class ToolWindow : Window
         Add(FormCommands.PreviousPane, (_, _) => CyclePane(-1));
         Add(FormCommands.ToggleOptional, (_, _) => ToggleOptional(), (_, e) => e.CanExecute = _state.HasOptional);
 
-        Add(FormCommands.AddEntry, OnAddEntry, (_, e) => e.CanExecute = Entry(e) is ListFieldState { CanAdd: true });
-        Add(FormCommands.RemoveEntry, OnRemoveEntry, (_, e) => e.CanExecute = Selected(e) is not null);
-        Add(FormCommands.AddRow, OnAddRow);
-        Add(FormCommands.EditRow, OnEditRow, (_, e) => e.CanExecute = Selected(e) is GroupFieldState);
         Add(FormCommands.GoToProblem, OnGoToProblem, (_, e) => e.CanExecute = Selected(e) is ProblemEntry);
+
+        // The list and sub-form commands are shared with the question window, which had none of
+        // them for a whole manual pass and a form nobody could add to (phase5-notes 4.9).
+        FormCommandBindings.Attach(this, _state.Fields, SetStatus, _windows);
     }
 
     private void Add(RoutedUICommand command, ExecutedRoutedEventHandler executed,
@@ -178,91 +189,8 @@ public partial class ToolWindow : Window
         if (!FocusField(wasOn)) FocusField(_state.FirstToFill);
     }
 
-    /// <summary>The state a command's parameter names, whether it arrived directly or as a list box.</summary>
-    private static object? Entry(CanExecuteRoutedEventArgs e) => e.Parameter switch
-    {
-        ListBox box => box.DataContext,
-        var other => other,
-    };
-
     private static object? Selected(CanExecuteRoutedEventArgs e) =>
         e.Parameter is ListBox box ? box.SelectedItem : null;
-
-    private void OnAddEntry(object sender, ExecutedRoutedEventArgs e)
-    {
-        var list = e.Parameter switch
-        {
-            ListFieldState direct => direct,
-            ListBox box => box.DataContext as ListFieldState,
-            _ => null,
-        };
-
-        if (list is null || !list.AddDraft()) return;
-
-        // Said out loud because nothing else would: the entry box empties and the list grows, and
-        // neither of those is an event a screen reader announces on its own.
-        SetStatus($"Added to {list.Label}. {Count(list.Count, "entry", "entries")} now.");
-    }
-
-    private void OnRemoveEntry(object sender, ExecutedRoutedEventArgs e)
-    {
-        if (e.Parameter is not ListBox box) return;
-
-        switch (box.DataContext, box.SelectedItem)
-        {
-            case (ListFieldState list, FieldState entry):
-                var index = box.SelectedIndex;
-                list.Remove(entry);
-                SetStatus($"Removed from {list.Label}. {Count(list.Count, "entry", "entries")} left.");
-                Reselect(box, index);
-                break;
-
-            case (ObjectListFieldState rows, GroupFieldState row):
-                var position = box.SelectedIndex;
-                rows.Remove(row);
-                SetStatus($"Removed from {rows.Label}. {Count(rows.Count, "entry", "entries")} left.");
-                Reselect(box, position);
-                break;
-
-            default:
-                break;
-        }
-    }
-
-    /// <summary>
-    /// Keeps the caret in the list after a removal. Without this the selection is lost and focus
-    /// falls back to the top of the list box, which is a long way to arrow back from.
-    /// </summary>
-    private static void Reselect(ListBox box, int index)
-    {
-        if (box.Items.Count == 0) return;
-
-        box.SelectedIndex = Math.Min(index, box.Items.Count - 1);
-        box.Focus();
-    }
-
-    private void OnAddRow(object sender, ExecutedRoutedEventArgs e)
-    {
-        if (e.Parameter is not ObjectListFieldState rows) return;
-
-        var row = rows.AddRow();
-        SetStatus($"Added an entry to {rows.Label}.");
-        EditGroup(rows, row);
-    }
-
-    private void OnEditRow(object sender, ExecutedRoutedEventArgs e)
-    {
-        if (e.Parameter is not ListBox { DataContext: ObjectListFieldState rows, SelectedItem: GroupFieldState row })
-            return;
-
-        EditGroup(rows, row);
-    }
-
-    private void EditGroup(ObjectListFieldState list, GroupFieldState row)
-    {
-        var position = list.Rows.IndexOf(row) + 1;
-        FieldGroupWindow.Show(this, $"{list.Label}, entry {position}", row, _windows);
-    }
 
     private void OnGoToProblem(object sender, ExecutedRoutedEventArgs e)
     {
@@ -329,13 +257,14 @@ public partial class ToolWindow : Window
         CommandManager.InvalidateRequerySuggested();
 
         var started = DateTimeOffset.Now;
+        _questions = 0;
         SetStatus(submission.Report.WasChecked
             ? $"Running {_tool.DisplayName}."
             : $"Running {_tool.DisplayName}. {submission.Report.Summary}");
 
         try
         {
-            var outcome = await _connection.CallAsync(_tool, submission.Arguments, _closing.Token);
+            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, _closing.Token);
 
             ShowResult(outcome, started);
             SetStatus(ResultFormatter.Announcement(outcome));
@@ -354,6 +283,66 @@ public partial class ToolWindow : Window
     }
 
     /// <summary>
+    /// Shows a question the server asked in the middle of this call, and waits for the answer
+    /// (ROADMAP §10, Phase 5).
+    /// </summary>
+    /// <remarks>
+    /// Called on whatever thread the SDK resolved the input request on, which is why everything it
+    /// touches here is either marshalled by <see cref="ElicitationWindow.AskAsync"/> or dispatched
+    /// explicitly. The status line is the second kind: a window opening somewhere else is not an
+    /// event a screen reader announces on the window the user was last in.
+    /// </remarks>
+    private async Task<ElicitationAnswer> AskAsync(ElicitationRequest request, CancellationToken cancellationToken)
+    {
+        // Nothing is said here at all, and that is the finding rather than an omission. The
+        // window about to open announces itself, so a status line saying so is the same news twice
+        // (§7's core rule) — and a status line cannot be written without being said, because NVDA
+        // announces a live region when its *text* changes and not when the event is raised
+        // (phase5-notes 4.8). A message that must not be spoken has no business being one.
+        _questions++;
+
+        var title = _questions > 1
+            ? $"Question {_questions} — {_tool.DisplayName}"
+            : $"Question — {_tool.DisplayName}";
+
+        if (request.Kind == ElicitationKind.WebPage) title = $"A web page — {_tool.DisplayName}";
+
+        var answer = await ElicitationWindow.AskAsync(this, title, request, _windows, cancellationToken);
+
+        await Dispatcher.InvokeAsync(() => SayLater(answer.Action switch
+        {
+            ElicitationAction.Accept => $"Answered. {_tool.DisplayName} is still running.",
+            ElicitationAction.Decline => $"Declined. {_tool.DisplayName} is still running.",
+            _ => $"Question dismissed. {_tool.DisplayName} is still running.",
+        }));
+
+        return answer;
+    }
+
+    /// <summary>
+    /// Says something only if it is still true in a moment, and still news.
+    /// </summary>
+    /// <remarks>
+    /// The one announcement policy this phase needed. Answering the last question of a call and the
+    /// call finishing are milliseconds apart, and the two announcements collided: NVDA said
+    /// "Answered. Book a journey is still running." and the completion announcement — the one that
+    /// carries the result — was never heard at all (phase5-notes 4.4). "Still running" is only
+    /// worth saying while it is still running, so it waits to find out.
+    /// </remarks>
+    private void SayLater(string text)
+    {
+        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.2) };
+
+        timer.Tick += (_, _) =>
+        {
+            timer.Stop();
+            if (_callInFlight) SetStatus(text);
+        };
+
+        timer.Start();
+    }
+
+    /// <summary>
     /// Puts a result in the third pane. The heading carries whether the call failed, because an
     /// error has to survive the announcement it was first said in (§7.20, §7.24).
     /// </summary>
@@ -361,11 +350,22 @@ public partial class ToolWindow : Window
     {
         _lastOutcomeAt = started;
 
+        // Rebuilding the pane destroys whatever control the caret was in, and WPF then drops focus
+        // to the window — where a screen reader says the title and nothing else. §7.25 again, in
+        // the one place it had never been tried: running the tool again from the result pane
+        // (phase5-notes 4.5).
+        var wasReading = FormResults.IsKeyboardFocusWithin;
+
         FormResultHeading.Text = outcome.IsError
             ? $"Result — {_tool.DisplayName} — error"
             : $"Result — {_tool.DisplayName}";
 
         FormResults.Show(_tool, outcome);
+
+        // Only when the rebuild really did lose it: putting focus back where it already is makes
+        // the reader announce the control a second time.
+        if ((wasReading || Keyboard.FocusedElement is Window) && !FormResults.IsKeyboardFocusWithin)
+            FormResults.FocusFirst();
     }
 
     /// <summary>
@@ -530,6 +530,15 @@ public partial class ToolWindow : Window
         return true;
     }
 
+    /// <summary>
+    /// Puts a line in the status bar, which says it.
+    /// </summary>
+    /// <remarks>
+    /// There is no quiet version, and Phase 5 tried to add one. A screen reader announces a polite
+    /// live region when the region's <em>text</em> changes, not when the application raises the
+    /// event — so a status line that is written is a status line that is spoken, and the only way
+    /// not to say something is not to put it here (phase5-notes 4.8).
+    /// </remarks>
     private void SetStatus(string text)
     {
         FormStatus.Text = text;
@@ -564,34 +573,7 @@ public partial class ToolWindow : Window
             return;
         }
 
-        var text = new StringBuilder()
-            .AppendLine(field.Label)
-            .AppendLine(new string('-', 60))
-            .AppendLine($"Sent as:     {(field.Path.Length == 0 ? "(the whole argument object)" : field.Path)}")
-            .AppendLine($"Kind:        {field.Field.Kind}")
-            .AppendLine($"Tier:        {(int)field.Field.Tier} ({field.Field.Tier})")
-            .AppendLine($"Required:    {(field.IsRequired ? "yes" : "no")}")
-            .AppendLine($"Empty means: {(field.Field.AllowsNull ? "null" : "this parameter is not sent")}")
-            .AppendLine();
-
-        if (field.Field.DegradedReason is { Length: > 0 } reason)
-            text.AppendLine($"Shown as JSON because the schema describes {reason}.").AppendLine();
-
-        if (!field.Field.Constraints.IsEmpty)
-            text.AppendLine("Limits").AppendLine(field.Field.Constraints.Describe()).AppendLine();
-
-        if (field.Status is { Length: > 0 } status)
-            text.AppendLine("Problem").AppendLine(status).AppendLine();
-
-        text.AppendLine("Description")
-            .AppendLine(field.Field.FullDescription.Length > 0
-                ? field.Field.FullDescription
-                : "(the server supplied none)")
-            .AppendLine()
-            .AppendLine("Schema")
-            .AppendLine(Pretty(field.Field.Schema));
-
-        TextWindow.Show(this, $"Details: {field.Label}", text.ToString(), _windows);
+        TextWindow.Show(this, $"Details: {field.Label}", FieldDetails.Describe(field), _windows);
     }
 
     private string ToolDetails() => new StringBuilder()
@@ -604,18 +586,6 @@ public partial class ToolWindow : Window
         .AppendLine(_tool.FullDescription.Length > 0 ? _tool.FullDescription : "(the server supplied none)")
         .AppendLine()
         .AppendLine("Input schema")
-        .AppendLine(Pretty(_tool.InputSchema))
+        .AppendLine(FieldDetails.Pretty(_tool.InputSchema))
         .ToString();
-
-    private static string Pretty(JsonElement schema)
-    {
-        try
-        {
-            return JsonSerializer.Serialize(schema, new JsonSerializerOptions { WriteIndented = true });
-        }
-        catch (Exception ex) when (ex is JsonException or NotSupportedException)
-        {
-            return "(could not be formatted: " + ex.Message + ")";
-        }
-    }
 }

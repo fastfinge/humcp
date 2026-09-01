@@ -46,6 +46,24 @@ public class FormTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     [Fact]
+    public void A_form_with_nothing_visible_still_puts_the_caret_on_a_control()
+    {
+        // One parameter, optional, and therefore hidden — so there is no field to focus and the
+        // caret was left on the window, where a screen reader says the title and stops (§7.25,
+        // phase5-notes 4.6). The toggle is where it lands, because on such a form it is the only
+        // thing there is to do.
+        Input.EnsureForeground(Main, fixture.Automation);
+
+        using var form = Open("Come back in a moment", "Come back in a moment — humcp test server");
+        Input.Settle(300);
+
+        var focused = fixture.Automation.FocusedElement();
+
+        Assert.NotEqual(ControlType.Window, UiaTree.Safe(() => focused?.ControlType));
+        Assert.Equal("Show optional parameters", UiaTree.Safe(() => focused?.Name));
+    }
+
+    [Fact]
     public void The_form_is_a_group_of_groups_rather_than_a_list_of_data_items()
     {
         using var form = Open("Search documents", SearchForm);

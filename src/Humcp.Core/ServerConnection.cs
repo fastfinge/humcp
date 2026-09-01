@@ -45,6 +45,22 @@ public sealed class ServerConnection : IAsyncDisposable
         new Dictionary<string, object?>();
 
     private readonly ConcurrentQueue<string> _diagnostics = new();
+
+    /// <summary>
+    /// The window that should show a question, for the duration of one call.
+    /// </summary>
+    /// <remarks>
+    /// The SDK drives the whole multi round-trip exchange inside <c>CallToolAsync</c>: an
+    /// <c>input_required</c> result never reaches this code, it is resolved through the registered
+    /// handler and the original request is retried with a new id (phase5-notes 3.1). The handler is
+    /// registered once, per connection - but a question belongs to the window whose call provoked
+    /// it, and one connection can have several tool windows calling at once. An
+    /// <see cref="AsyncLocal{T}"/> set inside <see cref="CallAsync"/> is what carries that: the
+    /// handler runs on a pool thread, inside the calling flow, and reads the value the caller set.
+    /// Measured rather than assumed; phase5-notes 3.1 records the probe.
+    /// </remarks>
+    private readonly AsyncLocal<ElicitationPrompter?> _prompter = new();
+
     private McpClient? _client;
     private IReadOnlyList<ToolInfo> _tools = [];
 
@@ -128,7 +144,12 @@ public sealed class ServerConnection : IAsyncDisposable
 
     /// <summary>Calls a tool with no arguments at all.</summary>
     public Task<ToolCallOutcome> CallAsync(ToolInfo tool, CancellationToken cancellationToken = default)
-        => CallAsync(tool, null, cancellationToken);
+        => CallAsync(tool, null, null, cancellationToken);
+
+    /// <summary>Calls a tool with arguments and no way to ask the user anything.</summary>
+    public Task<ToolCallOutcome> CallAsync(
+        ToolInfo tool, JsonObject? arguments, CancellationToken cancellationToken = default)
+        => CallAsync(tool, arguments, null, cancellationToken);
 
     /// <summary>
     /// Calls a tool with the arguments a generated form assembled (ROADMAP §10, Phase 3). The
@@ -137,12 +158,19 @@ public sealed class ServerConnection : IAsyncDisposable
     /// in form means and the server is the authority on the rest.
     /// </summary>
     public async Task<ToolCallOutcome> CallAsync(
-        ToolInfo tool, JsonObject? arguments, CancellationToken cancellationToken = default)
+        ToolInfo tool,
+        JsonObject? arguments,
+        ElicitationPrompter? elicit,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tool);
 
         if (_client is null || State != ServerConnectionState.Connected)
             return ToolCallOutcome.Failure($"Not connected to {Descriptor.DisplayName}.");
+
+        // Set before the await, so that it flows into whatever thread the SDK resolves an input
+        // request on and no further: two windows calling one server each get their own.
+        _prompter.Value = elicit;
 
         try
         {
@@ -160,9 +188,20 @@ public sealed class ServerConnection : IAsyncDisposable
         {
             throw;
         }
+        catch (UnsupportedInputRequestException ex)
+        {
+            // Neither a transport failure nor the tool's fault: the server asked for something this
+            // client never claimed. Said in humcp's own words, because the SDK's are method names.
+            return ToolCallOutcome.Failure(
+                $"{tool.DisplayName} asked humcp for {ex.What}, which it does not do, so the call stopped there.");
+        }
         catch (Exception ex)
         {
             return ToolCallOutcome.Failure($"{tool.DisplayName} could not be called. {Describe(ex)}");
+        }
+        finally
+        {
+            _prompter.Value = null;
         }
     }
 
@@ -202,7 +241,7 @@ public sealed class ServerConnection : IAsyncDisposable
         return marshalled;
     }
 
-    private static McpClientOptions ClientOptions() => new()
+    private McpClientOptions ClientOptions() => new()
     {
         ClientInfo = new Implementation
         {
@@ -211,11 +250,120 @@ public sealed class ServerConnection : IAsyncDisposable
             Version = typeof(ServerConnection).Assembly.GetName().Version?.ToString(3) ?? "0.1.0",
         },
 
-        // No elicitation capability yet: MRTR arrives in Phase 5, and claiming a capability the app
-        // cannot honour is worse than not claiming it. Sampling and roots are deprecated (§4,
-        // pitfall 8) and are never claimed.
-        Capabilities = new ClientCapabilities(),
+        // Form mode, and nothing else. url mode exists to collect what the client must never see,
+        // which is the OAuth-shaped problem ROADMAP §11.3 defers to v3; declaring it would mean
+        // handing a server-chosen address to a browser in the middle of a tool call. Sampling and
+        // roots are deprecated (§4, pitfall 8) and are never claimed either.
+        Capabilities = new ClientCapabilities
+        {
+            Elicitation = new ElicitationCapability { Form = new FormElicitationCapability() },
+        },
+
+        // All three handlers are registered, including the two humcp cannot do. A handler that is
+        // missing makes the SDK throw with a message about handler registration; a handler that
+        // refuses makes it throw with a message about the user's tool (phase5-notes 3.4).
+        // Both of the refusals are deprecated APIs, and refusing them is exactly why they are
+        // referenced: a client that stops compiling against a deprecated request is a client that
+        // stops being able to turn one down.
+#pragma warning disable MCP9005
+        Handlers = new McpClientHandlers
+        {
+            ElicitationHandler = OnElicitAsync,
+            SamplingHandler = (_, _, _) => throw new UnsupportedInputRequestException("a language model"),
+            RootsHandler = (_, _) => throw new UnsupportedInputRequestException(
+                "a list of the folders it is allowed to read"),
+        },
+#pragma warning restore MCP9005
     };
+
+    // ------------------------------------------------------------------ being asked something
+
+    /// <summary>
+    /// A server's question, on its way to a window. Everything crossing out of here is neutral
+    /// (§6.1): the schema has already become a <see cref="FormModel"/>, and the answer comes back as
+    /// an <see cref="ElicitationAnswer"/>.
+    /// </summary>
+    private async ValueTask<ElicitResult> OnElicitAsync(
+        ElicitRequestParams? request, CancellationToken cancellationToken)
+    {
+        var prompter = _prompter.Value;
+
+        if (prompter is null)
+        {
+            // Nowhere to show it. Declining is the honest answer - the tool is told that nobody
+            // answered - and the diagnostic is what makes it findable afterwards.
+            RecordDiagnostic("A question arrived during a call that had nowhere to show one. Declined.");
+            return new ElicitResult { Action = "decline" };
+        }
+
+        var answer = await prompter(Describe(request), cancellationToken).ConfigureAwait(false);
+
+        return new ElicitResult
+        {
+            Action = answer.Action switch
+            {
+                ElicitationAction.Accept => "accept",
+                ElicitationAction.Decline => "decline",
+                _ => "cancel",
+            },
+
+            // Only an acceptance carries values. The spec says content is "typically omitted" for
+            // the other two, and an empty object would be an answer where there is none.
+            Content = answer.Action == ElicitationAction.Accept ? Content(answer.Content) : null,
+        };
+    }
+
+    private static ElicitationRequest Describe(ElicitRequestParams? request)
+    {
+        var isUrl = string.Equals(request?.Mode, "url", StringComparison.Ordinal);
+
+        return new ElicitationRequest
+        {
+            Kind = isUrl ? ElicitationKind.WebPage : ElicitationKind.Form,
+            Message = TextSanitizer.CleanMultiline(request?.Message, TextSanitizer.HelpLength),
+            Form = isUrl || request?.RequestedSchema is null
+                ? FormModel.Empty
+                : FormBuilder.Build(RequestedSchema(request)),
+            Url = isUrl ? TextSanitizer.Clean(request?.Url, TextSanitizer.NameLength) : null,
+        };
+    }
+
+    /// <summary>
+    /// The requested schema as JSON, which is what the schema engine takes. Round-tripped through
+    /// the SDK's own serialiser rather than read off the typed objects, so that what a form is
+    /// generated from is exactly what the server put on the wire.
+    /// </summary>
+    private static JsonElement RequestedSchema(ElicitRequestParams? request)
+    {
+        if (request?.RequestedSchema is not { } schema) return default;
+
+        try
+        {
+            return JsonSerializer.SerializeToElement(schema, McpJsonUtilities.DefaultOptions);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            // FormBuilder never fails to render and neither does this: an undefined element is a
+            // form with no fields on it, which is still a window with three answers in it.
+            return default;
+        }
+    }
+
+    /// <summary>
+    /// A filled-in form as the protocol wants it, one <see cref="JsonElement"/> per property, and
+    /// detached from the live nodes for the same reason arguments are (see <see cref="Marshal"/>).
+    /// </summary>
+    private static Dictionary<string, JsonElement>? Content(JsonObject? content)
+    {
+        if (content is null) return null;
+
+        var values = new Dictionary<string, JsonElement>(content.Count, StringComparer.Ordinal);
+
+        foreach (var (name, value) in content)
+            values[name] = JsonSerializer.SerializeToElement(value);
+
+        return values;
+    }
 
     private void RecordDiagnostic(string line)
     {
@@ -227,6 +375,7 @@ public sealed class ServerConnection : IAsyncDisposable
     {
         var message = exception switch
         {
+            _ when RunawayRoundTrips(exception) => RunawayMessage,
             McpProtocolException protocol => $"{protocol.Message} ({protocol.ErrorCode})",
             McpException mcp => mcp.Message,
             _ => exception.Message,
@@ -301,15 +450,16 @@ public sealed class ServerConnection : IAsyncDisposable
 
         // §4, pitfall 8: a result carrying anything other than "complete" is not something this
         // build understands, and pretending otherwise would show the user a half-answer as a whole
-        // one.
+        // one. "input_required" is no longer one of these — the SDK resolves it and retries before
+        // this method is reached, so a call that needed three round trips arrives here as one
+        // complete answer (phase5-notes 3.1).
         if (result.ResultType is { Length: > 0 } and not "complete")
         {
             return new ToolCallOutcome(
                 IsError: true,
                 Blocks: [new TextResultBlock(
                     $"The server answered with resultType \"{TextSanitizer.Clean(result.ResultType, 60)}\", " +
-                    "which this build does not handle yet. Multi round-trip requests arrive in Phase 5.")],
-                NeedsMoreInput: result.ResultType == "input_required");
+                    "which this build does not understand.")]);
         }
 
         return new ToolCallOutcome(
@@ -381,4 +531,22 @@ public sealed class ServerConnection : IAsyncDisposable
             : null;
 
     private static string Mime(string? mimeType) => TextSanitizer.Clean(mimeType, 60);
+
+    private const string RunawayMessage =
+        "The server kept asking for more input without ever finishing, and humcp stopped after ten rounds.";
+
+    /// <summary>
+    /// A server that never completes a multi round-trip exchange. The SDK stops at ten and says so
+    /// in its own vocabulary; every message humcp shows is spoken, so this one is rewritten.
+    /// </summary>
+    /// <remarks>
+    /// Recognised by the SDK's own sentence, which is as brittle as it looks and deliberately
+    /// harmless: when the wording changes the user gets the SDK's sentence instead of ours, which
+    /// is a worse sentence and not a worse outcome. There is nothing better to key on — the
+    /// exception carries no code of its own — and counting round trips here is not possible,
+    /// because a round trip that asks for nothing never reaches this client (phase5-notes 3.5).
+    /// </remarks>
+    private static bool RunawayRoundTrips(Exception exception)
+        => exception is McpException
+           && exception.Message.Contains("InputRequiredResult", StringComparison.Ordinal);
 }

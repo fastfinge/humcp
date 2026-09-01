@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0–4 complete, Phase 5 next
+## Project status: Phases 0–5 complete, Phase 6 next
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -51,10 +51,31 @@ been true since Phase 3 — and re-checking the fixes by ear found a ninth. Reco
 **`docs/phase4-notes.md`**; its findings are now §5's "the other direction", §6.4, §7.27–30, §9 and
 the keyboard map.
 
-The next unit of work is **Phase 5** (§10): MRTR and elicitation.
+**Phase 5 is complete**: MRTR and elicitation. A server can stop in the middle of a tool call and
+ask, and the question becomes a generated form in a window of its own — the same `FormBuilder`, the
+same templates, the same `FormState`. 1,046 tests, 70 over the live UIA tree.
 
-Still outstanding and non-blocking: JAWS and Narrator have seen none of the Phase 3 or Phase 4
-fixes, and the picture Phase 4 puts on screen has had no sighted pass.
+**Most of the protocol work turned out to be the SDK's.** `CallToolAsync` resolves an
+`input_required` result through the registered handlers and retries the original request itself,
+inside one `await`; humcp never sees the result type and never mints the new id. What it supplies is
+a handler that opens a window — and an `AsyncLocal` set in `CallAsync` to route the question back to
+the window whose call provoked it, because the handler is per connection and the question belongs to
+one call.
+
+**§3's claim that Tier 1 covers the whole elicitation subset is now measured, not assumed**: all
+eight of the SDK's schema shapes render at Tier 1, including the two titled enumerations that reach
+the client as `oneOf` and `anyOf` of constants.
+
+**The manual pass found ten defects and the suite had found none** — the third phase running, and
+the count is rising. Five were in code older than Phase 5, two of them on paths no earlier phase
+could reach; re-checking the fixes by ear found the tenth. Record in **`docs/phase5-notes.md`**; its
+findings are now §3's two elicitation modes, §5's elicitation exception, §6.5, §7.31–32, §9 and the
+keyboard map.
+
+The next unit of work is **Phase 6** (§10): the shell.
+
+Still outstanding and non-blocking: JAWS and Narrator have seen none of the Phase 3, 4 or 5 fixes,
+and the picture Phase 4 puts on screen has had no sighted pass.
 
 ## What humcp is
 
@@ -77,7 +98,8 @@ Things that were true in earlier revisions and are now **wrong**:
 |---|---|
 | `initialize` / `notifications/initialized` handshake | Removed. Protocol is stateless; every request carries version + capabilities in `_meta` |
 | `Mcp-Session-Id`, protocol-level sessions | Removed. Cross-call state uses server-minted handles passed as ordinary tool arguments |
-| Server-initiated `elicitation/create` / `sampling/createMessage` / `roots/list` | Removed. Replaced by **MRTR**: `tools/call` returns `resultType: "input_required"` with `inputRequests` + opaque `requestState`; client retries the original call with `inputResponses` and a **new** JSON-RPC id |
+| Server-initiated `elicitation/create` / `sampling/createMessage` / `roots/list` | Removed. Replaced by **MRTR**: `tools/call` returns `resultType: "input_required"` with `inputRequests` + opaque `requestState`; client retries with `inputResponses` and a **new** JSON-RPC id. **SDK 2.2.0 does all of that for you** — register handlers, `await CallToolAsync`, and a three-round-trip call returns once as `"complete"` |
+| Elicitation is a form | Two modes: `form` and `url`. humcp declares `form` only (§3) |
 | `ping`, `logging/setLevel`, `resources/subscribe` | Removed. Subscriptions go through `subscriptions/listen` |
 | Roots, Sampling, Logging as things to build on | **Deprecated** |
 | Results without `resultType` | All results carry `resultType`; treat a missing one from older servers as `"complete"` |
@@ -89,7 +111,15 @@ exists (§4, pitfall 3).
 
 Never hand-roll the protocol. `ModelContextProtocol.Core` 2.2.0 implements this revision and
 negotiates back to older servers — confirmed in Phase 1: 2026-07-28 against our fixture,
-2025-11-25 against `@modelcontextprotocol/server-everything`, same code either way.
+2025-11-25 against `@modelcontextprotocol/server-everything`, same code either way. Phase 5 is the
+strongest case for that rule so far: the entire MRTR retry loop is inside the SDK, and the parts of
+it humcp would have written by hand are the parts it does not have to.
+
+**Sampling and roots are declined by handlers that refuse, not by handlers that are missing.** With
+none registered the SDK throws a message about handler registration; with one that throws
+`UnsupportedInputRequestException` the user hears a sentence about their tool. Both APIs are
+deprecated and referenced on purpose — a client that stops compiling against a deprecated request is
+a client that stops being able to turn one down.
 
 **A zero-argument call still sends `"arguments": {}`.** Omitting the member is a different wire
 shape, and real servers reject it ("expected object, received undefined"). `ServerConnection`
@@ -127,7 +157,8 @@ src/Humcp.Core/     net10.0          Server registry, connections, tool catalogu
                                      and the two shell rules (MediaTypes, LinkPolicy). No UI.
 src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
 src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager,
-                                     result view, and the one place that calls the shell.
+                                     result view, the window a server's own question opens, and
+                                     the one place that calls the shell.
 tools/Humcp.Harvester/               Starts real MCP servers, writes their schemas into the corpus.
 tests/              TestServer (a real stdio fixture server), Schema.Tests (golden),
                     Core.Tests (the round trip over a real pipe), App.UiTests (FlaUI),
@@ -234,6 +265,14 @@ Three tiers (§5), degrading rather than failing:
 optional parameter the second way, so treating it as a union would send every optional parameter of
 every C# MCP server to a JSON editor. Do not "fix" this by reading the Tier 3 list literally.
 
+**An elicitation form hides nothing, and that is not a style choice.** The omission rule above is
+humcp's and it survives inside `Humcp.Schema` — but the client SDK writes every schema-stated
+`default` back into an elicitation answer on its way to the wire. humcp sends `{"plain":"typed"}`
+and `{"plain":"typed","count":7,"agreed":true,"size":"medium"}` arrives at the server. Carrying the
+tool form's optional-field toggle into a question window would therefore report values the user was
+never shown as values they chose. A field that will be sent whether or not it is on screen must be
+on screen (§7.31, phase5-notes 3.3).
+
 **Validate client-side, but never block submission on client validation alone.** The server is the
 authority; an over-strict client makes working tools unusable. Two rules make that safe:
 
@@ -305,6 +344,17 @@ These are the rules generated WPF code most often violates. Full contract in §7
 - **A `Focus()` return value is not a report about where the caret went** (§7.30).
   `TreeView.Focus()` answers false while moving focus into the tree, which silently took the tree
   out of the F6 pane cycle.
+- **A field that will be sent whether or not it is on screen must be on screen** (§7.31). Hiding is
+  only honest where hiding also means omitting — true of a tool form, false of an elicitation form.
+- **A property set on a composite is not what the part that takes focus reports** (§7.32). A
+  `DatePicker` focuses a text box inside itself, which inherits the name and help text and neither
+  `IsRequiredForForm` nor the access key. Set them where the focus lands; where they cannot be got
+  there, spell the keystroke out (§7.15).
+- **A live region is announced by its text changing, not by the event you raise.** There is no quiet
+  `SetStatus`; a message that must not be spoken must not be a status message.
+- **A disabled control is absent from the tab order, not merely inert.** A command with no binding,
+  or one whose `CanExecute` has not been re-asked since the value that enables it changed, is a
+  button nobody can reach — while its help text goes on telling them to press it.
 - **A list selects what it focuses**, or `Delete` and every other "selected entry" command is dead.
 - **A menu item's check mark needs `IsCheckable`** to exist as a state a reader can read.
 - **`Button.IsCancel` closes a modal dialog and nothing else.** Every window humcp opens is
@@ -392,10 +442,10 @@ the UI suite uses and what to set when trying a real server without keeping what
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
-- **The fixture server publishes 21 tools**, seven of them added in Phase 4 with the `result_`
-  prefix: one per shape a result can have (structured content with and without a schema, a table, a
-  wrapper that repeats its text, six kinds of content at once, three links exercising each branch of
-  `LinkPolicy`, a structure past every rendering limit, and a result with nothing in it).
+- **The fixture server publishes 28 tools.** Seven were added in Phase 4 with the `result_` prefix,
+  one per shape a result can have; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
+  round trip can have — two questions in sequence, a question with no fields, every elicitation
+  schema kind at once, request state with no question at all, sampling, roots, and url mode.
 - The fake in-process MCP server should exercise hostile input deliberately — 10,000-character
   descriptions, control characters, deeply nested schemas — since all of it is untrusted. Two of its
   fourteen tools exist for the form generator: `demo_search` has fifteen parameters, two required,
@@ -411,8 +461,18 @@ the UI suite uses and what to set when trying a real server without keeping what
   (`MainResults`/`FormResults`, `ResultHeading`/`FormResultHeading`). With a form open, a lookup
   from the main window finds the form's element, every wait times out at thirty seconds, and the
   suite looks hung rather than wrong.
+- **A test that looks a control up by name can find its `Label` instead** — §7.3 wants both to carry
+  the name. Filter to focusable elements, and for a composite take the *innermost* match: a
+  `DatePicker` and its inner text box both answer to the field's name and only one ever has focus.
+- **Drive setup through UI Automation patterns, keystrokes only for assertions about the keyboard.**
+  A shared helper that typed made every test in a file fail together whenever something else on the
+  desktop held focus.
+- **Collapse what you expand.** `ComboBox.Select` opens the drop-down, and a WPF popup left open
+  swallows `Window.Close()` — so the window stays, the call it was waiting on stays in flight, and
+  the *next* test fails on a button that never enables. The symptom is one test later than the cause.
 - Automated UIA assertions prove names exist; only manual NVDA/JAWS/Narrator testing proves the app
-  is pleasant. Do both at each phase exit. **Phase 3 found nine defects by ear that its 886
-  green tests had missed, and Phase 4 found eight that its 1,007 had — plus a ninth while
-  re-checking the fixes.** Two phases running,
-  the manual pass has out-found the suite; budget for it rather than hoping.
+  is pleasant. Do both at each phase exit. **Phase 3 found nine defects by ear that its 886 green
+  tests had missed, Phase 4 found eight that its 1,007 had — plus a ninth while re-checking the
+  fixes — and Phase 5 found ten that its 1,042 had, including the tenth while re-checking.** Three
+  phases running, the manual pass has out-found the suite and the count is going up; budget for it
+  rather than hoping.

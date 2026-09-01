@@ -46,6 +46,12 @@ public sealed record FormModel
         ? FieldTier.Direct
         : AllFields().Max(f => f.Tier);
 
+    /// <summary>
+    /// A form with nothing to fill in and no schema behind it. Not a degraded form: a question can
+    /// be only a question, and the answer to it is which button was pressed.
+    /// </summary>
+    public static readonly FormModel Empty = new() { Fields = [] };
+
     internal static FormModel ForNoArguments(JsonElement schema) => new()
     {
         Fields = [],

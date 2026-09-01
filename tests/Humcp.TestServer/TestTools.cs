@@ -46,10 +46,12 @@ internal static class TestTools
         yield return Links();
         yield return Deep();
         yield return Nothing();
+
+        foreach (var tool in MrtrTools.All()) yield return tool;
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 21;
+    public const int Count = 21 + MrtrTools.Count;
 
     // ------------------------------------------------------------------ info_
 

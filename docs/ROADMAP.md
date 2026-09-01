@@ -2,10 +2,12 @@
 
 **Generate real, native-feeling, screen-reader-first Windows UI automatically from any MCP server's published metadata.**
 
-Status: Phase 2 complete — the schema engine renders 95% of real-world parameters natively, against
-a corpus harvested from 22 published MCP servers. 813 automated tests. Phase 3 (form generation) is
-next. Findings: [`phase0-findings.md`](phase0-findings.md), [`phase1-notes.md`](phase1-notes.md),
-[`phase2-notes.md`](phase2-notes.md).
+Status: Phase 5 complete — a server can stop in the middle of a tool call and ask, and the question
+becomes a generated, screen-reader-first form like any other. 1,046 automated tests. Phase 6 (the
+shell) is next. Findings: [`phase0-findings.md`](phase0-findings.md),
+[`phase1-notes.md`](phase1-notes.md), [`phase2-notes.md`](phase2-notes.md),
+[`phase3-notes.md`](phase3-notes.md), [`phase4-notes.md`](phase4-notes.md),
+[`phase5-notes.md`](phase5-notes.md).
 
 ---
 
@@ -89,11 +91,25 @@ From `tools/list` (spec revision 2026-07-28):
 Two capabilities are better than expected:
 
 **Elicitation defines a spec-blessed easy path.** `elicitation/create`'s `requestedSchema` is
-deliberately restricted to *flat objects of primitives* — string, number, integer, boolean, enum —
-with `title`, `description`, `format` (`email`/`uri`/`date`/`date-time`), `minLength`/`maxLength`,
-`minimum`/`maximum`, and `enumNames` for display labels. The spec authors already did the
-"make schemas form-renderable" design work. Our Tier 1 renderer is exactly this subset, so it is
-guaranteed to cover 100% of elicitation requests.
+deliberately restricted to *flat objects of primitives*. The spec authors already did the
+"make schemas form-renderable" design work.
+
+In 2026-07-28 that subset is **eight** shapes, not five, and two of them are newer than this
+document was: string (with `format` `email`/`uri`/`date`/`date-time` and length limits), number,
+integer, boolean, a bare `enum`, a *titled* single-select spelled `oneOf` of `{const, title}`, a
+multi-select array of `enum`, a titled multi-select spelled `anyOf` of `{const, title}`, and the
+deprecated `enum` + `enumNames`. **Measured in Phase 5: all of it lands at Tier 1**, including the
+two spelled with composition keywords that §5 otherwise sends to a JSON editor — because
+`FormBuilder`'s constant-union promotion, written in Phase 2 for ordinary tool schemas, recognises a
+union every branch of which is one value as an enumeration (phase5-notes 3.2). The claim that Tier 1
+covers 100% of elicitation is no longer an assumption.
+
+**Elicitation has two modes.** `form` collects data in-band; `url` sends the user out to a web page
+so that the client never sees what is typed — OAuth, a payment, a credential. A client must support
+at least one. **humcp declares `form` only** (phase5-notes 3.6): url mode *is* the OAuth-shaped
+problem §11.3 defers to v3, and honouring it would mean handing a server-chosen address to a browser
+as a side effect of running a tool. A url-mode request that arrives anyway is shown, explained and
+declined.
 
 **MRTR is a GUI-shaped protocol.** In 2026-07-28, server-initiated requests were replaced by
 Multi Round-Trip Requests: a `tools/call` may return `resultType: "input_required"` carrying
@@ -234,6 +250,18 @@ Repeating a default back pins a value the server may have changed since it wrote
 turns "I did not express an opinion" into an opinion. Found on five real servers at once by a corpus
 test, not by reasoning.
 
+**The rule does not survive the wire for an elicitation answer, and the window compensates.**
+`FormState.Prepare` honours it identically for a question a server asked mid-call — and the client
+SDK then writes every schema-stated `default` back into the content before it leaves the process:
+humcp sends `{"plain": "typed"}` and `{"plain":"typed","count":7,"agreed":true,"size":"medium"}`
+arrives at the server (phase5-notes 3.3, measured from the raw JSON at the far end rather than
+inferred).
+
+That reading is defensible *for elicitation* — a prefilled box on a dialog the user pressed Accept
+on is a value they agreed to — but only if the box was on screen. So a question window has no
+optional-field toggle and hides nothing (§7.31). The rule survives where humcp controls it, and
+where it does not, the window stops relying on it.
+
 ---
 
 ## 6. Architecture
@@ -338,6 +366,30 @@ Two rules went into `Humcp.Core` rather than into the App even though both are a
 `MediaTypes` (what extension a saved file gets) and `LinkPolicy` (which links are handed to the
 shell). They are security decisions with a right answer, and a security decision that can only be
 tested by opening a window is a security decision that will not be tested.
+
+### 6.5 Layout decisions taken in Phase 5
+
+**`Elicitation.cs` is in `Humcp.Core`, and it carries a `FormModel`.** A question a server asks is a
+protocol thing on one side of that file and a form on the other: `ElicitRequestParams` goes in,
+`ElicitationRequest` — kind, message, `FormModel`, address — comes out, and `Humcp.App` still has
+never heard of the MCP SDK. The answer crosses back the same way, as an `ElicitationAnswer` that
+`ServerConnection` turns into an `ElicitResult`.
+
+**The prompter is a delegate passed per call, not a property set per connection.** The SDK's handler
+is registered once for the client, but the window a question belongs to is decided by which call
+provoked it, and one connection can have several in flight. `CallAsync` takes an
+`ElicitationPrompter` and puts it in an `AsyncLocal` for the duration (§10, Phase 5).
+
+**`FormCommandBindings` is in `Humcp.App` and is shared by all three windows that host a form** — the
+tool window, the question window and the sub-form window an object list opens. A `DataTemplate`
+raises commands and the window answers them, so a window that hosts the templates and answers
+nothing has a form whose buttons are disabled and therefore unreachable. Written once, because the
+alternative was proven: the question window was written without them and nobody noticed until a
+screen reader was pointed at it (phase5-notes 4.9).
+
+**`FieldDatePicker` is a control rather than a fix in a template.** What it does — copy the
+properties set on a composite onto the part that takes the focus — cannot be expressed in XAML,
+because the part is inside the control's own template. §7.32.
 
 ### 6.1 Portability hedges for v4 (OpenAPI)
 
@@ -560,6 +612,36 @@ itself (4.7).
 - **A menu item's check mark is not a state** unless `IsCheckable` is set: WPF draws the tick and
   exposes no toggle state, so the window you are in is the one nobody is told about (4.2).
 
+### Added by Phase 5
+
+Two more, from [`phase5-notes.md`](phase5-notes.md). Both are about the gap between what a control
+is set to and what a person hears, which is §7.24's territory — three phases on, it is still the
+richest seam in this project.
+
+31. **A field whose value will be sent whether or not it is on screen must be on screen.** Hiding a
+    field is only honest where hiding also means omitting. That holds on a tool form, where an
+    untouched optional parameter is not sent (§5) — and not on an elicitation form, where the client
+    SDK writes every schema-stated `default` back into the answer on its way to the wire. A question
+    window therefore has no optional toggle: a field the user never saw is a field the server is
+    about to be told they agreed to (phase5-notes 3.3).
+32. **A property set on a composite is not a property the part that takes focus reports.** A
+    `DatePicker` puts focus on a text box inside itself, and that box inherits the name and the help
+    text by peer fallback but not `IsRequiredForForm` and not the access key — so a required date
+    announced itself exactly like an optional one, beside a required text box that said "required"
+    (phase5-notes 4.3). Set them where the focus lands. Where a property cannot be got there at all,
+    §7.15 is the fallback: spell the keystroke out in words.
+
+Two corollaries worth stating separately, because both were tried and both failed:
+
+- **A live region is announced by its text changing, not by the event the application raises.** So
+  there is no way to write a status line without saying it, and a message that must not be spoken
+  must not be a status message (phase5-notes 4.8).
+- **A disabled control is not merely inert, it is absent from the tab order.** A button whose
+  `CanExecute` is false cannot be reached at all — and WPF re-evaluates `CanExecute` on input and on
+  idle rather than on a view-model's `PropertyChanged`, so a button enabled by the value just chosen
+  is still disabled at the instant <kbd>Tab</kbd> decides where to go. Both halves have to be fixed
+  for the button to exist (phase5-notes 4.9).
+
 ### Keyboard map
 
 | Key | Action |
@@ -576,6 +658,10 @@ itself (4.7).
 | <kbd>Ctrl+Shift+C</kbd> | Copy the value the caret is on |
 | <kbd>Esc</kbd> | Close current form / result window |
 | <kbd>Applications</kbd> | Context menu (Copy schema, Copy result, Run again) |
+
+A question window a server opened mid-call uses the same keys: <kbd>Ctrl+Enter</kbd> accepts,
+<kbd>Alt+D</kbd> declines, and <kbd>Esc</kbd>, <kbd>Ctrl+W</kbd>, the Cancel button and the title
+bar all cancel — one code path, so they cannot disagree (§10, Phase 5).
 
 ---
 
@@ -728,6 +814,17 @@ Phase 3 added three more, all three learned by chasing a failure that was not wh
 Phase 4 added four more, three of which are about scoping a lookup or a claim rather than about
 UI Automation itself:
 
+- **An `AsyncLocal` is how a per-call callback reaches a per-connection handler**, and the test for
+  it has to keep two calls outstanding at once — one after the other passes whether or not the
+  correlation exists (phase5-notes 3.1).
+- **The fixture reports the raw wire content of an input response**, not only its deserialised form.
+  phase5-notes 3.3 is invisible from either end alone: humcp sends one property and the tool
+  receives four, and only the untouched JSON says which side added them.
+- **A test that looks a control up by name can find its `Label` instead.** §7.3 wants both to carry
+  the name, so an assertion about tab order that compared positions by name passed against the label
+  and proved nothing about the control (phase5-notes 4.9). Filter to focusable elements. For a
+  composite, take the *innermost* match: a `DatePicker` and its inner text box both answer to the
+  field's name, and only one of them ever has the focus.
 - **A cycle asserted at one end is not asserted.** The <kbd>F6</kbd> test pressed the key twice and
   looked for the result pane; it passed for a whole phase while the tree had silently dropped out of
   the cycle (phase4-notes 4.1). Walk the whole ring.
@@ -880,12 +977,46 @@ media types and never from the server, and it hands only `http`/`https` to the b
 Outstanding, neither blocking: JAWS and Narrator, still carried from Phase 0, and now a picture on
 screen that no sighted pass has looked at.
 
-### Phase 5 — MRTR and elicitation (~3–4 days)
+### Phase 5 — MRTR and elicitation ✅ done
 Declare the `elicitation` capability. Handle `resultType: "input_required"`: build the form from
 `requestedSchema`, honour accept/decline/cancel, echo `requestState` verbatim, retry with a new
 JSON-RPC id. Decline sampling requests cleanly (deprecated, and no LLM in v1).
 
 **Exit:** a multi-step server tool completes through the GUI.
+
+**Exit met**, by keyboard alone with a screen reader reading every step: the fixture's `mrtr_book`
+asks two questions in two generated windows and answers with a booking that could only have been
+made from both. 1,046 tests, 70 of them over the live UIA tree.
+
+**Half the phase turned out to be the SDK's** (phase5-notes 3.1). `ModelContextProtocol.Core` 2.2.0
+resolves an `input_required` result through the client's registered handlers and retries the original
+request itself, inside one `await` — so humcp never sees the result type, never echoes the state by
+hand, and never mints the new id. What it does instead is register a handler that opens a window,
+and correlate that per-connection handler back to the window whose call provoked it, which is an
+`AsyncLocal` set inside `CallAsync` and a test that keeps two questions outstanding at once.
+
+**No second form generator was written.** An elicitation's `requestedSchema` goes through the same
+`FormBuilder` and the same templates as a tool's own — and §3's claim that Tier 1 covers the whole
+elicitation subset stopped being an assumption: all eight of the SDK's schema shapes, serialised the
+way the wire carries them, come out Tier 1 (phase5-notes 3.2).
+
+**The manual pass found ten defects and the automated suite had found none of them** — the third
+phase running, and the count is going up. Five were in code older than this phase, and two of those
+were on paths no earlier phase could reach: a `DatePicker` that never said it was required (nothing
+before Phase 5 had a required date) and a form with nothing visible on it that focused nothing
+(nothing before Phase 5 had a tool whose only parameter was optional).
+
+One of the ten is a rule found by trying the opposite: a live region is announced by its *text*
+changing rather than by the event the application raises, so there is no way to write a status line
+without saying it, and a message that must not be spoken must not be one. And re-checking the fixes
+by ear turned up the tenth, which is phase4-notes 4.9's lesson learned again by doing what it says.
+Two additions to the contract (§7.31–32), five to the testing notes (§9). Full record in
+[`phase5-notes.md`](phase5-notes.md).
+
+Two decisions worth carrying: **url-mode elicitation is declined**, shown and explained rather than
+honoured, because it is v3's OAuth problem wearing a different hat (§3, §11.3); and **a question
+window hides nothing**, because the client SDK puts schema defaults back into an answer and a field
+nobody saw would be reported as one they chose (§7.31).
 
 ### Phase 6 — The shell (~1 week)
 Settings, server add/remove/reconnect UI, config persistence,
@@ -911,6 +1042,10 @@ Three items carried in from earlier phases:
   for nothing, and a sort a screen reader user cannot tell has happened is worse than no sort
   (phase4-notes 6). The same goes for the <kbd>Applications</kbd>-key context menu the keyboard map
   promises.
+- **An announcement policy, of which Phase 5 built the first instance.** "Still running" after a
+  question is answered waits 1.2 seconds and says nothing if the call has finished, because
+  otherwise it lands on top of the completion announcement and the user never hears the result
+  (phase5-notes 4.4). Pitfall 9's rate-limited progress is the general case, and it belongs here.
 - **A way to turn MRU history off and empty it.** It is a plain-text file of things people typed,
   and although a parameter whose name reads like a credential is never recorded (phase3-notes 3.10),
   that is a heuristic and the user should have the final say. `MruHistory.Forget()` already exists.
@@ -918,7 +1053,10 @@ Three items carried in from earlier phases:
 **Exit:** the app is configurable and usable without editing files by hand.
 
 ### Phase 7 — Hardening and release (~1 week)
-Streamable HTTP transport (unauthenticated). Robust error and disconnect handling. Cancellation.
+Streamable HTTP transport (unauthenticated). Robust error and disconnect handling. Cancellation —
+which Phase 5 gave a second reason for: a multi round-trip exchange that asks for *nothing* is
+invisible to this client, so humcp cannot count those round trips and the only limit on a server
+that never finishes is the SDK's own cap of ten (phase5-notes 3.5).
 Untrusted-input hardening. Packaging and a signed installer. User documentation written for
 screen reader users.
 
@@ -961,6 +1099,13 @@ Activate the seams and finish the protocol surface, before widening scope.
 v1 ships unauthenticated Streamable HTTP. v3 adds OAuth 2.1 so hosted, real-world MCP servers
 become usable. This is also a prerequisite for v4 in practice, since most interesting APIs are
 authenticated — so the credential machinery should be built provider-neutral from the start.
+
+**url-mode elicitation belongs here too**, and nowhere earlier. A server can ask the client to send
+the user to a web page in the middle of a tool call, precisely so the client never sees what is
+typed — which is the same problem as the flow below, arriving through a different door. Phase 5
+declares form mode only and turns url mode down with an explanation (phase5-notes 3.6); this is
+where that decision is worth reopening, together with the completion notification it needs and the
+question of what humcp is prepared to hand to a browser on a server's say-so.
 
 #### The flow
 
@@ -1289,12 +1434,14 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   nothing on MCP, so §5's placement of `oneOf` at Tier 3 stands. Re-measure at v4 planning; the
   harvester makes that a re-run rather than a study. The same pass killed the typed-map dictionary
   editor: 11 of 12 free-form-object parameters accept any key at all.
-- **Where should Phase 3's effort go?** The corpus says `format: date` appears in *none* of the 785
-  real parameters — the formats that do are `uri`, `uuid`, `int32` and `json` (phase2-notes 3.4).
-  This reverses nothing: elicitation blesses `date` explicitly (§3), so Phase 5 needs a `DatePicker`
-  and Phase 0 already accepted one. It does mean the `DatePicker` and its §7.15 keystroke hint sit
-  on a path no server in the corpus takes, while the plain text box sits on a path 91% of parameters
-  take. Spend the polish accordingly.
+- ~~**Where should Phase 3's effort go?**~~ **Answered, and the bill arrived in Phase 5.** The
+  corpus says `format: date` appears in *none* of the 785 real parameters (phase2-notes 3.4), so the
+  `DatePicker` sat on a path nothing took — until an elicitation schema asked for a *required* date,
+  and it turned out not to announce that it was required at all, because focus lands on a text box
+  inside it that inherits neither `IsRequiredForForm` nor the access key (§7.32, phase5-notes 4.3).
+  Two phases of forms went past it. The lesson is not "polish the date picker": it is that a control
+  the corpus never exercises is a control nobody has listened to, and the first schema that reaches
+  it is where its defects are found.
 - **Does prism have a job at all?** Phase 1 answered the narrow question — a live region reaches
   NVDA unaided, and speaking on top of it announces everything twice (§7) — which leaves the seam
   loaded and idle. The remaining case is an event arriving while humcp is in the background, where
@@ -1305,7 +1452,9 @@ v4 should stay firmly "browse and invoke operations accessibly" and refuse the r
   only, because editing through the entry box is a mode and a mode nobody can see the state of is
   the thing this application exists to avoid (phase3-notes 3.8). If the manual pass finds re-adding
   a mistyped entry annoying, the version to build is an Edit that opens a window — a window has a
-  name, and names are announced.
+  name, and names are announced. Phase 5 was the first pass to *use* a list by ear rather than
+  assert about one, and found three separate defects in the row before it got as far as having an
+  opinion about Edit (phase5-notes 4.9, 4.10). Still open, and now on firmer ground to ask from.
 - Should Tier 3's raw JSON editor offer schema-driven completion? Valuable, but it is a text-editor
   feature and text editors are a deep well. Probably v2.
 - ~~Where does the Client ID Metadata Document live?~~ **Resolved:** a subdomain of `interfree.ca`

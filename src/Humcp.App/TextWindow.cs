@@ -28,7 +28,10 @@ internal static class TextWindow
         };
 
         AutomationProperties.SetName(box, title);
-        AutomationProperties.SetHelpText(box, "Read-only. Escape closes this window.");
+        // Not "Read-only. Escape closes this window." — the reader announces the read-only state
+        // itself, from the control, and help text that says it again is the same sentence twice
+        // (phase5-notes 4.1).
+        AutomationProperties.SetHelpText(box, "Escape closes this window.");
 
         var layout = new DockPanel();
         layout.Children.Add(box);

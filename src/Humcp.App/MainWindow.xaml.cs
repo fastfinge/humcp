@@ -167,6 +167,7 @@ public partial class MainWindow : Window
         }
 
         _callInFlight = true;
+        var questions = 0;
         UpdateRunAvailability();
         SetStatus($"Running {tool.DisplayName}.");
 
@@ -177,7 +178,25 @@ public partial class MainWindow : Window
         {
             // Nothing here blocks the UI thread: the window stays responsive, which is what the
             // fixture's two-second tool is for (ROADMAP §4, pitfall 9).
-            var outcome = await _connection.CallAsync(tool, _currentCall.Token);
+            var outcome = await _connection.CallAsync(tool, null, AskAsync, _currentCall.Token);
+
+            async Task<ElicitationAnswer> AskAsync(ElicitationRequest request, CancellationToken token)
+            {
+                // A tool with no parameters of its own can still stop to ask for some, which is
+                // most of what MRTR is for: mrtr_confirm takes no arguments and asks a question.
+                //
+                // Nothing is announced here: the window about to open announces itself, and a
+                // status line cannot be written without being spoken (phase5-notes 4.8).
+                questions++;
+
+                var title = request.Kind == ElicitationKind.WebPage
+                    ? $"A web page — {tool.DisplayName}"
+                    : questions > 1
+                        ? $"Question {questions} — {tool.DisplayName}"
+                        : $"Question — {tool.DisplayName}";
+
+                return await ElicitationWindow.AskAsync(this, title, request, _windows, token);
+            }
 
             ShowResult(tool, outcome, started);
             SetStatus(ResultFormatter.Announcement(outcome));
@@ -204,11 +223,18 @@ public partial class MainWindow : Window
         _lastTool = tool;
         _lastCallAt = started;
 
+        // Rebuilding the pane destroys whatever control the caret was in, and WPF then drops focus
+        // to the window (§7.25, phase5-notes 4.5).
+        var wasReading = MainResults.IsKeyboardFocusWithin;
+
         ResultHeading.Text = outcome.IsError
             ? $"Result — {tool.DisplayName} — error"
             : $"Result — {tool.DisplayName}";
 
         MainResults.Show(tool, outcome);
+
+        if ((wasReading || Keyboard.FocusedElement is Window) && !MainResults.IsKeyboardFocusWithin)
+            MainResults.FocusFirst();
     }
 
     /// <summary>
@@ -323,6 +349,10 @@ public partial class MainWindow : Window
     /// same string through prism as well means every completion is heard twice. prism is for text
     /// that has no on-screen representation at all — of which Phase 1 has none.
     /// </remarks>
+    /// <summary>
+    /// Puts a line in the status bar, which says it. There is no quiet version — a reader announces
+    /// a live region when its text changes, not when the event is raised (phase5-notes 4.8).
+    /// </summary>
     private void SetStatus(string text)
     {
         LiveStatus.Text = text;

@@ -191,9 +191,9 @@ internal static class ResultSections
                 TextResultBlock text => new TextSection(count == 1 ? "Result" : heading, text.Text)
                 {
                     HelpText = text.IsTruncated
-                        ? $"Read-only. This was cut short at {text.Text.Length:N0} characters; " +
+                        ? $"This was cut short at {text.Text.Length:N0} characters; " +
                           $"the server sent {text.OriginalLength:N0}."
-                        : "Read-only. Arrow keys review the text line by line.",
+                        : "Arrow keys review the text line by line.",
                 },
 
                 MediaResultBlock media => new MediaSection(heading, media),
@@ -202,7 +202,7 @@ internal static class ResultSections
 
                 ResourceTextResultBlock resource => new TextSection(heading, resource.Text, resource.Uri)
                 {
-                    HelpText = "Read-only. Arrow keys review the text line by line.",
+                    HelpText = "Arrow keys review the text line by line.",
                 },
 
                 UnknownResultBlock unknown => new TextSection(heading, unknown.Json)
