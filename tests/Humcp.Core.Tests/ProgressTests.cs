@@ -80,6 +80,16 @@ public class ProgressTests
 
         Assert.False(outcome.IsError);
 
+        // Progress is a notification, delivered on its own schedule, and on a loaded machine it can
+        // land a moment after the answer — found when a CI runner took ten seconds over a two-and-a-
+        // half-second call. Waited for, not assumed.
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (DateTime.UtcNow < deadline)
+        {
+            lock (reports) if (reports.Count > 0) break;
+            await Task.Delay(100, TestContext.Current.CancellationToken);
+        }
+
         lock (reports)
         {
             Assert.NotEmpty(reports);
