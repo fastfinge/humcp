@@ -46,6 +46,16 @@ internal static class Program
                 "A fixture server for humcp's own tests. Nothing here touches anything outside this process.",
         };
 
+        // Every progress notification the fixture sends is noted on stderr, which the client keeps in
+        // its diagnostics — so a test that receives none can say whether any were sent (issue #1).
+        options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
+        {
+            if (context.JsonRpcMessage is JsonRpcNotification { Method: NotificationMethods.ProgressNotification })
+                Console.Error.WriteLine("fixture sent notifications/progress");
+
+            await next(context, cancellationToken);
+        });
+
         // `--http <port>` serves the same tools over Streamable HTTP on loopback (Phase 7), so the
         // client's HTTP transport is tested against a real server over a real socket.
         if (args is ["--http", var portText] && int.TryParse(portText, out var port))
