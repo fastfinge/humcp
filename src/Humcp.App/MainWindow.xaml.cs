@@ -58,6 +58,12 @@ public partial class MainWindow : Window
     /// </summary>
     private ServerConnection? _removing;
 
+    /// <summary>
+    /// A destructive tool whose first Enter has warned (ROADMAP §3). The second runs it; moving away
+    /// is changing your mind, the same as <see cref="_removing"/>.
+    /// </summary>
+    private ToolInfo? _confirming;
+
     /// <summary>What is in the result pane, for the details window (F1) to write out in full.</summary>
     private ToolInfo? _lastTool;
     private DateTimeOffset _lastCallAt;
@@ -107,6 +113,16 @@ public partial class MainWindow : Window
         Splitter.DragCompleted += (_, _) => RememberPaneWidth();
 
         SizeChanged += (_, _) => FitPanesSoon();
+
+        // Escape stops a call run from the tree. The main window has nothing else for it to do: it
+        // is the one window Escape does not close (§8).
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape || !_callInFlight || Keyboard.Modifiers != ModifierKeys.None) return;
+
+            e.Handled = true;
+            _currentCall?.Cancel();
+        };
 
         Tree.ItemsSource = _roots;
         // Present before it is asked for, for the reason the result grid's is (phase6-notes).
@@ -682,7 +698,7 @@ public partial class MainWindow : Window
 
             if (wasSelectedHere) Reselect(replacement, selected!, hadFocus);
 
-            if (_shown.TryGetValue(connection, out var before) && ListChanged(before, snapshot) is { Length: > 0 } change)
+            if (_shown.TryGetValue(connection, out var before) && Unprompted(before, snapshot) is { Length: > 0 } change)
             {
                 changes.Add(change);
                 TellForms(connection, snapshot);
@@ -704,17 +720,28 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// A server that was connected and still is, with a different list: <c>tools/list_changed</c>.
-    /// A reconnect goes through Connecting and is announced by whoever asked for it instead.
+    /// What changed that nobody asked for: a connected server whose list changed
+    /// (<c>tools/list_changed</c>), or one that stopped on its own (Phase 7). A reconnect goes through
+    /// Connecting, so it is neither, and is announced by whoever asked for it instead.
     /// </summary>
-    private static string ListChanged(ServerSnapshot before, ServerSnapshot after)
-        => before.State == ServerConnectionState.Connected && after.State == ServerConnectionState.Connected
-            ? ServerAnnouncements.ToolsChanged(after.DisplayName, before.Tools, after.Tools)
-            : "";
+    private static string Unprompted(ServerSnapshot before, ServerSnapshot after)
+    {
+        if (before.State != ServerConnectionState.Connected) return "";
+
+        return after.State switch
+        {
+            ServerConnectionState.Connected => ServerAnnouncements.ToolsChanged(after.DisplayName, before.Tools, after.Tools),
+            ServerConnectionState.Failed => ServerAnnouncements.Stopped(after),
+            _ => "",
+        };
+    }
 
     /// <summary>An open form whose tool the server has stopped publishing says so, in its own status line.</summary>
     private void TellForms(ServerConnection connection, ServerSnapshot snapshot)
     {
+        // A server that stopped has withdrawn nothing; its forms find out when they run.
+        if (snapshot.State != ServerConnectionState.Connected) return;
+
         var published = snapshot.Tools.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
 
         foreach (var form in _forms.Where(f => ReferenceEquals(f.Connection, connection) && !published.Contains(f.ToolName)))
@@ -819,10 +846,18 @@ public partial class MainWindow : Window
 
         if (_callInFlight)
         {
-            SetStatus("A tool call is already running.");
+            SetStatus("A tool call is already running. Escape stops it.");
             return;
         }
 
+        if (tool.Safety.IsDestructive == true && !ReferenceEquals(_confirming, tool))
+        {
+            _confirming = tool;
+            SetStatus(ServerAnnouncements.Destructive(tool, "Enter"));
+            return;
+        }
+
+        _confirming = null;
         _callInFlight = true;
         var questions = 0;
         UpdateRunAvailability();
@@ -868,9 +903,13 @@ public partial class MainWindow : Window
             SetStatus(ResultFormatter.Announcement(outcome));
             SpeakIfAway($"{tool.DisplayName}: {ResultFormatter.Announcement(outcome)}");
         }
+        catch (OperationCanceledException) when (!_shutdown.IsCancellationRequested)
+        {
+            SetStatus($"Stopped {tool.DisplayName}. The server was told; anything it had already done stays done.");
+        }
         catch (OperationCanceledException)
         {
-            SetStatus("Tool call cancelled.");
+            // humcp is closing.
         }
         finally
         {
@@ -1144,8 +1183,10 @@ public partial class MainWindow : Window
         // node; speaking here would double every arrow press (§7).
         UpdateRunAvailability();
 
-        // Moving away is changing your mind: the next Delete is a first Delete again.
+        // Moving away is changing your mind: the next Delete is a first Delete again, and the next
+        // Enter on a destructive tool warns again.
         if (!ReferenceEquals(_removing, SelectedServer())) _removing = null;
+        if (!ReferenceEquals(_confirming, SelectedTool())) _confirming = null;
     }
 
     private void OnTreeKeyDown(object sender, KeyEventArgs e)
@@ -1186,6 +1227,32 @@ public partial class MainWindow : Window
     private void OnCopyServer(object sender, RoutedEventArgs e) => CopyServerConfiguration();
 
     private void OnCopySchema(object sender, RoutedEventArgs e) => CopyToolSchema();
+
+    /// <summary>
+    /// The user guide, in the same read-only window as everything else humcp shows, so it is read the
+    /// same way. Shipped beside the executable as user-guide.md.
+    /// </summary>
+    private void OnUserGuide(object sender, RoutedEventArgs e)
+    {
+        var path = System.IO.Path.Combine(AppContext.BaseDirectory, "user-guide.md");
+
+        string text;
+        try
+        {
+            text = System.IO.File.ReadAllText(path);
+        }
+        catch (Exception ex) when (ex is System.IO.IOException or UnauthorizedAccessException)
+        {
+            text = $"The user guide could not be read from {path}. It is also at https://github.com/fastfinge/humcp/blob/main/docs/user-guide.md";
+        }
+
+        // Read here as plain text, so the Markdown heading marks go: "number sign number sign" before
+        // every heading is the file's syntax, not the guide's words.
+        text = string.Join(Environment.NewLine,
+            text.Split('\n').Select(line => line.TrimEnd('\r').TrimStart('#').TrimStart()));
+
+        TextWindow.Show(this, "humcp user guide", text, _windows);
+    }
 
     private void OnKeyboardHelp(object sender, RoutedEventArgs e)
         => TextWindow.Show(this, "Keyboard shortcuts", KeyboardHelp.Text, _windows);
@@ -1273,6 +1340,10 @@ public partial class MainWindow : Window
         var configuration = _registry.Configuration;
         var text = new StringBuilder()
             .AppendLine($"Configuration: {configuration.FilePath ?? "(held in memory only)"}")
+            .AppendLine($"Error log:     {CrashLog.Path}")
+            .AppendLine(ChildProcessJob.Problem is { } job
+                ? $"Server processes: not tied to humcp ({job}), so a crash can leave them running."
+                : "Server processes: end when humcp ends, however it ends.")
             .AppendLine($"Servers:       {_registry.Connections.Count}");
 
         if (configuration.LastError is { } error) text.AppendLine($"Problem:       {error}");

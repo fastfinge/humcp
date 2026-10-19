@@ -178,12 +178,12 @@ public sealed class ServerConnection : IAsyncDisposable
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         _tools = [];
+        _lastServerLine = null;
 
-        if (Descriptor.Url is { Length: > 0 })
+        if (Transport() is not { } transport)
         {
-            // Read from the file and kept in it, so a pasted configuration survives a save; not
-            // connected to, because the Streamable HTTP transport is Phase 7's (ROADMAP §10).
-            FailureReason = "humcp cannot connect to a server by web address yet, only to one it starts itself.";
+            // A refusal rather than an attempt: an address humcp will not use is said in a
+            // sentence, and nothing is sent anywhere.
             _state = ServerConnectionState.Failed;
             RaiseChanged();
             return;
@@ -193,24 +193,12 @@ public sealed class ServerConnection : IAsyncDisposable
 
         try
         {
-            var transport = new StdioClientTransport(new StdioClientTransportOptions
-            {
-                Name = Descriptor.DisplayName,
-                Command = Descriptor.Command,
-                Arguments = [.. Descriptor.Arguments],
-                WorkingDirectory = Descriptor.WorkingDirectory,
-                EnvironmentVariables = Descriptor.Environment.ToDictionary(e => e.Key, e => (string?)e.Value),
-                ShutdownTimeout = TimeSpan.FromSeconds(5),
-                StandardErrorLines = RecordDiagnostic,
-            });
-
             _client = await McpClient.CreateAsync(transport, ClientOptions(), cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
-            var tools = await _client.ListToolsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
-
-            _tools = [.. tools.Select(Map)];
+            _tools = await ListToolsAsync(_client, cancellationToken).ConfigureAwait(false);
             Listen(_client);
+            Watch(_client);
             NegotiatedProtocolVersion = _client.NegotiatedProtocolVersion;
             ServerTitle = TextSanitizer.Clean(_client.ServerInfo?.Title ?? _client.ServerInfo?.Name,
                 TextSanitizer.NameLength);
@@ -236,6 +224,163 @@ public sealed class ServerConnection : IAsyncDisposable
     }
 
     private void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
+
+    /// <summary>
+    /// How to reach the server: a process humcp starts, or an address over Streamable HTTP
+    /// (ROADMAP §10, Phase 7). Null, with <see cref="FailureReason"/> set, for an address humcp will
+    /// not use.
+    /// </summary>
+    /// <remarks>
+    /// Unauthenticated HTTP only: OAuth is v3 (§11), and the SDK's OAuth options are left unset on
+    /// purpose, so a server that wants a sign-in is told no rather than sent to a browser. Two schemes
+    /// and nothing else — a server address is something a person pasted, possibly from somewhere they
+    /// should not have, and <c>file:</c> or <c>ms-settings:</c> are not ways to reach an MCP server.
+    /// </remarks>
+    private IClientTransport? Transport()
+    {
+        if (Descriptor.Url is not { Length: > 0 } url)
+        {
+            return new StdioClientTransport(new StdioClientTransportOptions
+            {
+                Name = Descriptor.DisplayName,
+                Command = Descriptor.Command,
+                Arguments = [.. Descriptor.Arguments],
+                WorkingDirectory = Descriptor.WorkingDirectory,
+                EnvironmentVariables = Descriptor.Environment.ToDictionary(e => e.Key, e => (string?)e.Value),
+                ShutdownTimeout = TimeSpan.FromSeconds(5),
+                StandardErrorLines = RecordServerLine,
+            });
+        }
+
+        if (!Uri.TryCreate(url, UriKind.Absolute, out var endpoint)
+            || endpoint.Scheme is not ("http" or "https"))
+        {
+            FailureReason = "That address is not a web address humcp can connect to. It has to start with https:// or http://.";
+            return null;
+        }
+
+        return new HttpClientTransport(new HttpClientTransportOptions
+        {
+            Name = Descriptor.DisplayName,
+            Endpoint = endpoint,
+            TransportMode = HttpTransportMode.AutoDetect,
+            ConnectionTimeout = TimeSpan.FromSeconds(30),
+        });
+    }
+
+    /// <summary>
+    /// Notices a session that ends without humcp ending it — a server process that crashed or was
+    /// killed, an HTTP server that went away — and says so in the tree, rather than leaving a node that
+    /// claims to be connected to nothing (ROADMAP §10, Phase 7).
+    /// </summary>
+    private void Watch(McpClient client)
+    {
+        _ = Task.Run(async () =>
+        {
+            ClientCompletionDetails details;
+
+            try
+            {
+                details = await client.Completion.ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                details = new ClientCompletionDetails { Exception = ex };
+            }
+
+            // Ended by humcp: a reconnect, an edit, a removal, closing the app. Not news.
+            if (!ReferenceEquals(Volatile.Read(ref _client), client)) return;
+
+            Interlocked.CompareExchange(ref _client, null, client);
+
+            FailureReason = Stopped(details);
+            _tools = [];
+            NegotiatedProtocolVersion = null;
+            State = ServerConnectionState.Failed;
+
+            try { await client.DisposeAsync().ConfigureAwait(false); }
+            catch (Exception ex) { RecordDiagnostic("Disconnect: " + ex.Message); }
+        });
+    }
+
+    private string Stopped(ClientCompletionDetails details)
+    {
+        var how = details is StdioClientCompletionDetails { ExitCode: { } code }
+            ? $"It exited with code {code}."
+            : "Its connection ended.";
+
+        var lastWords = _lastServerLine;
+        var cleaned = TextSanitizer.Clean(how, TextSanitizer.HelpLength);
+
+        return string.IsNullOrWhiteSpace(lastWords) ? cleaned : $"{cleaned} Server said: {lastWords}";
+    }
+
+    /// <summary>
+    /// Every tool the server publishes, or as many as can be read. The SDK reads the whole listing
+    /// as one document and throws if any one tool's input schema is not an object schema — which is
+    /// how nine usable GitLab tools became a failed server (phase2-notes 3.1). When it throws, the
+    /// listing is asked for again as plain JSON and each tool is read on its own: a malformed schema
+    /// is a Tier 3 field like any other schema humcp cannot draw, never a reason to lose the rest.
+    /// </summary>
+    private async Task<IReadOnlyList<ToolInfo>> ListToolsAsync(McpClient client, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var tools = await client.ListToolsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            return Limit([.. tools.Select(Map)]);
+        }
+        catch (Exception ex) when (ex is JsonException or ArgumentException
+                                      || ex.InnerException is JsonException or ArgumentException)
+        {
+            RecordDiagnostic("The SDK could not read this server's tool list as a whole (" + ex.Message +
+                             "), so each tool was read on its own.");
+        }
+
+        var read = new List<ToolInfo>();
+        string? cursor = null;
+
+        for (var page = 0; page < MaxListPages; page++)
+        {
+            var request = new JsonRpcRequest
+            {
+                Method = RequestMethods.ToolsList,
+                Params = cursor is null ? new JsonObject() : new JsonObject { ["cursor"] = cursor },
+            };
+
+            var response = await client.SendRequestAsync(request, cancellationToken).ConfigureAwait(false);
+            if (response.Result is not JsonObject result) break;
+
+            foreach (var node in (result["tools"] as JsonArray ?? []).OfType<JsonObject>())
+            {
+                if (MapRaw(node) is { } tool) read.Add(tool);
+            }
+
+            cursor = (result["nextCursor"] as JsonValue)?.GetValueKind() == JsonValueKind.String
+                ? result["nextCursor"]!.GetValue<string>()
+                : null;
+
+            if (string.IsNullOrEmpty(cursor) || read.Count >= MaxTools) break;
+        }
+
+        return Limit(read);
+    }
+
+    /// <summary>
+    /// A ceiling on the tools one server can put in the tree. Every one is a form built and a tree
+    /// node realised, with virtualization off (§7.6), so a hostile server publishing a hundred
+    /// thousand would make the app unusable rather than merely long. Far above any real server.
+    /// </summary>
+    public const int MaxTools = 2000;
+
+    private const int MaxListPages = 100;
+
+    private IReadOnlyList<ToolInfo> Limit(IReadOnlyList<ToolInfo> tools)
+    {
+        if (tools.Count <= MaxTools) return tools;
+
+        RecordDiagnostic($"The server published {tools.Count} tools; humcp shows the first {MaxTools}.");
+        return [.. tools.Take(MaxTools)];
+    }
 
     /// <summary>Calls a tool with no arguments at all.</summary>
     public Task<ToolCallOutcome> CallAsync(ToolInfo tool, CancellationToken cancellationToken = default)
@@ -459,10 +604,16 @@ public sealed class ServerConnection : IAsyncDisposable
             {
                 // The connection closing, which is the only ordinary way this ends.
             }
-            catch (Exception ex)
+            catch (Exception ex) when (!client.Completion.IsCompleted)
             {
+                // Only while the session is alive. A session that ends fails this request too, and
+                // saying so then is the session ending in other words (phase7-notes).
                 RecordDiagnostic("The server would not keep a subscription open, so humcp will not hear when its tools change: " +
                                  ex.Message);
+            }
+            catch (Exception)
+            {
+                // The session ended, which Watch reports.
             }
         });
     }
@@ -480,8 +631,7 @@ public sealed class ServerConnection : IAsyncDisposable
             {
                 if (_client is not { } client || State != ServerConnectionState.Connected) return;
 
-                var tools = await client.ListToolsAsync().ConfigureAwait(false);
-                _tools = [.. tools.Select(Map)];
+                _tools = await ListToolsAsync(client, CancellationToken.None).ConfigureAwait(false);
 
                 RecordDiagnostic($"The server said its tools changed. It now publishes {_tools.Count}.");
                 RaiseChanged();
@@ -590,6 +740,19 @@ public sealed class ServerConnection : IAsyncDisposable
         return values;
     }
 
+    /// <summary>
+    /// The last line the server itself wrote to standard error — quoted as "Server said" — kept apart
+    /// from humcp's own diagnostics, so humcp's words are never attributed to the server.
+    /// </summary>
+    private volatile string? _lastServerLine;
+
+    private void RecordServerLine(string line)
+    {
+        var cleaned = TextSanitizer.Clean(line, TextSanitizer.HelpLength);
+        if (cleaned.Length > 0) _lastServerLine = cleaned;
+        RecordDiagnostic(line);
+    }
+
     private void RecordDiagnostic(string line)
     {
         _diagnostics.Enqueue(TextSanitizer.Clean(line, TextSanitizer.HelpLength));
@@ -601,13 +764,14 @@ public sealed class ServerConnection : IAsyncDisposable
         var message = exception switch
         {
             _ when RunawayRoundTrips(exception) => RunawayMessage,
+            _ when WantsSignIn(exception) => SignInMessage,
             McpProtocolException protocol => $"{protocol.Message} ({protocol.ErrorCode})",
             McpException mcp => mcp.Message,
             _ => exception.Message,
         };
 
         var cleaned = TextSanitizer.Clean(message, TextSanitizer.HelpLength);
-        var lastDiagnostic = _diagnostics.LastOrDefault();
+        var lastDiagnostic = _lastServerLine;
 
         // The child's own last words are usually the real explanation — "command not found",
         // "missing module" — and the transport exception is only the symptom.
@@ -634,6 +798,43 @@ public sealed class ServerConnection : IAsyncDisposable
             // Carried, not interpreted. What a result means needs the value as well, and the two
             // meet in the renderer rather than here (ROADMAP §6.1, hedge 5).
             OutputSchema: tool.ProtocolTool.OutputSchema);
+    }
+
+    /// <summary>
+    /// One tool read straight from the JSON, for a listing the SDK could not read whole. Nothing here
+    /// can fail: a missing name drops the tool, and anything else that is missing is empty.
+    /// </summary>
+    private static ToolInfo? MapRaw(JsonObject tool)
+    {
+        if (Text(tool["name"]) is not { Length: > 0 } name) return null;
+
+        var title = Text(tool["title"]) ?? Text(tool["annotations"]?["title"]);
+        var description = Text(tool["description"]);
+
+        return new ToolInfo(
+            Name: TextSanitizer.Clean(name, TextSanitizer.NameLength),
+            DisplayName: NameHumanizer.DisplayName(title, name),
+            Summary: TextSanitizer.FirstSentence(description),
+            FullDescription: TextSanitizer.CleanMultiline(description),
+            Safety: tool["annotations"] is JsonObject annotations
+                ? new OperationSafety(Flag(annotations["readOnlyHint"]), Flag(annotations["destructiveHint"]),
+                    Flag(annotations["idempotentHint"]))
+                : OperationSafety.Unstated,
+            Form: FormBuilder.Build(Element(tool["inputSchema"])),
+            OutputSchema: tool["outputSchema"] is JsonObject output ? Element(output) : null);
+
+        static string? Text(JsonNode? node)
+            => node is JsonValue value && value.GetValueKind() == JsonValueKind.String ? value.GetValue<string>() : null;
+
+        static bool? Flag(JsonNode? node) => (node as JsonValue)?.GetValueKind() switch
+        {
+            JsonValueKind.True => true,
+            JsonValueKind.False => false,
+            _ => null,
+        };
+
+        static JsonElement Element(JsonNode? node)
+            => node is null ? default : JsonSerializer.SerializeToElement(node);
     }
 
     private static OperationSafety Map(ToolAnnotations? annotations)
@@ -756,6 +957,29 @@ public sealed class ServerConnection : IAsyncDisposable
             : null;
 
     private static string Mime(string? mimeType) => TextSanitizer.Clean(mimeType, 60);
+
+    private const string SignInMessage =
+        "This server wants you to sign in. humcp cannot do that yet: signing in arrives in version 3.";
+
+    /// <summary>
+    /// A 401 or 403 from an HTTP server, however deep the SDK wrapped it. OAuth is v3's (ROADMAP §11),
+    /// and saying so in a sentence beats an HTTP status code read aloud.
+    /// </summary>
+    private static bool WantsSignIn(Exception exception)
+    {
+        for (var e = exception; e is not null; e = e.InnerException)
+        {
+            if (e is System.Net.Http.HttpRequestException
+                {
+                    StatusCode: System.Net.HttpStatusCode.Unauthorized or System.Net.HttpStatusCode.Forbidden,
+                })
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
 
     private const string RunawayMessage =
         "The server kept asking for more input without ever finishing, and humcp stopped after ten rounds.";

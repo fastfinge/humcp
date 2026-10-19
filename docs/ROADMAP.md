@@ -1073,7 +1073,7 @@ honoured, because it is v3's OAuth problem wearing a different hat (§3, §11.3)
 window hides nothing**, because the client SDK puts schema defaults back into an answer and a field
 nobody saw would be reported as one they chose (§7.31).
 
-### Phase 6 — The shell (~1 week) — built, awaiting a person's manual pass
+### Phase 6 — The shell (~1 week) ✅ done
 
 **Status:** built and green; the first manual pass was driven through NVDA by the screen reader
 bridge and found seven defects the suite had not, all fixed and re-heard. A pass by a person —
@@ -1112,7 +1112,11 @@ Three items carried in from earlier phases:
 
 **Exit:** the app is configurable and usable without editing files by hand.
 
-### Phase 7 — Hardening and release (~1 week)
+### Phase 7 — Hardening and release (~1 week) ✅ done, released as 1.0.0
+
+**Status:** HTTP, a server dying, cancellation, the destructive confirmation, the malformed-schema
+fallback, a job object that ends every server with humcp, a last-chance error log, an MSI, CI and a
+tag-driven release, and a user guide. Record in [`phase7-notes.md`](phase7-notes.md).
 Streamable HTTP transport (unauthenticated). Robust error and disconnect handling. Cancellation —
 which Phase 5 gave a second reason for: a multi round-trip exchange that asks for *nothing* is
 invisible to this client, so humcp cannot count those round trips and the only limit on a server

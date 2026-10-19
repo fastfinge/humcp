@@ -13,4 +13,14 @@
     <WarningsAsErrors>nullable</WarningsAsErrors>
   </PropertyGroup>
 
+  <!-- The release version. CI overrides it from the tag (v1.2.3 -> 1.2.3); this is what a local
+       build says it is. 1.x is bug fixes from user reports; 2.0 and 3.0 are the roadmap's (§11). -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <Product>humcp</Product>
+    <Authors>Samuel Proulx</Authors>
+    <Copyright>Copyright (c) 2026 Samuel Proulx</Copyright>
+    <Description>An accessible, screen-reader-first client for Model Context Protocol servers.</Description>
+  </PropertyGroup>
+
 </Project>

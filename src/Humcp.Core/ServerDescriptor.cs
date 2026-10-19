@@ -28,9 +28,8 @@ public sealed record ServerDescriptor(
         new Dictionary<string, string>(StringComparer.Ordinal);
 
     /// <summary>
-    /// The address of a server reached over HTTP rather than started as a process. Read and kept so
-    /// that a pasted configuration survives being saved again, but not connected to until the
-    /// Streamable HTTP transport arrives (ROADMAP §10, Phase 7).
+    /// The address of a server reached over Streamable HTTP rather than started as a process
+    /// (ROADMAP §10, Phase 7). Unauthenticated only: a server that wants a sign-in is v3's (§11).
     /// </summary>
     public string? Url { get; init; }
 

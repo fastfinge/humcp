@@ -9,6 +9,7 @@
        wrapped behind IAnnouncer with a working no-op fallback. -->
   <ItemGroup>
     <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
+    <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
     <PackageVersion Include="Prismatoid" Version="0.4.0" />
   </ItemGroup>
 

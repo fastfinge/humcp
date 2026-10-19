@@ -1,3 +1,9 @@
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Hosting;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
+using System.Text.Json.Nodes;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -11,7 +17,7 @@ namespace Humcp.TestServer;
 /// </summary>
 internal static class Program
 {
-    private static async Task<int> Main()
+    private static async Task<int> Main(string[] args)
     {
         // stdout is the transport. Anything written to it that is not a JSON-RPC message corrupts
         // the session, so diagnostics go to stderr — which the client captures (§8's per-server
@@ -40,6 +46,42 @@ internal static class Program
                 "A fixture server for humcp's own tests. Nothing here touches anything outside this process.",
         };
 
+        // `--http <port>` serves the same tools over Streamable HTTP on loopback (Phase 7), so the
+        // client's HTTP transport is tested against a real server over a real socket.
+        if (args is ["--http", var portText] && int.TryParse(portText, out var port))
+            return await ServeHttpAsync(options, port);
+
+        // `--malformed` publishes one more tool and then rewrites its input schema, on the way out,
+        // into one that is not an object — which the SDK refuses to build, so it has to be done to
+        // the message. It is how nine usable GitLab tools became one failed server (phase2-notes 3.1).
+        if (args.Contains("--malformed"))
+        {
+            tools.Add(McpServerTool.Create(() => "Called anyway.", new McpServerToolCreateOptions
+            {
+                Name = MalformedName,
+                Title = "A tool with a broken schema",
+                Description = "Its input schema is a string schema, which the protocol does not allow.",
+            }));
+
+            options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
+            {
+                if (context.JsonRpcMessage is JsonRpcResponse { Result: JsonObject result }
+                    && result["tools"] is JsonArray listed)
+                {
+                    foreach (var tool in listed.OfType<JsonObject>())
+                        if ((string?)tool["name"] == MalformedName)
+                            tool["inputSchema"] = new JsonObject { ["type"] = "string" };
+                }
+
+                await next(context, cancellationToken);
+            });
+        }
+
+        // `--exit-after <ms>` dies on its own, so the client's handling of a server that goes away
+        // mid-session is tested against a process that really did (Phase 7).
+        if (args is [.., "--exit-after", var delayText] && int.TryParse(delayText, out var delay))
+            _ = Task.Run(async () => { await Task.Delay(delay); Environment.Exit(3); });
+
         try
         {
             await using var transport = new StdioServerTransport(options);
@@ -57,6 +99,33 @@ internal static class Program
             return 1;
         }
     }
+
+    private static async Task<int> ServeHttpAsync(McpServerOptions options, int port)
+    {
+        var builder = Microsoft.AspNetCore.Builder.WebApplication.CreateBuilder();
+        builder.Logging.ClearProviders();
+        builder.WebHost.UseUrls($"http://127.0.0.1:{port}");
+
+        builder.Services
+            .AddMcpServer(configured =>
+            {
+                configured.ServerInfo = options.ServerInfo;
+                configured.Capabilities = options.Capabilities;
+                configured.ToolCollection = options.ToolCollection;
+                configured.ServerInstructions = options.ServerInstructions;
+            })
+            .WithHttpTransport();
+
+        var app = builder.Build();
+        app.MapMcp("/mcp");
+
+        await app.StartAsync();
+        Console.Error.WriteLine($"humcp test server listening on http://127.0.0.1:{port}/mcp");
+        await app.WaitForShutdownAsync();
+        return 0;
+    }
+
+    public const string MalformedName = "broken_schema";
 
     private static string ThisAssemblyVersion =>
         typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";

@@ -29,6 +29,7 @@ public static class ServerForm
 {
     public const string NameField = "name";
     public const string CommandField = "command";
+    public const string AddressField = "address";
     public const string ArgumentsField = "arguments";
     public const string DirectoryField = "directory";
     public const string EnvironmentField = "environment";
@@ -53,8 +54,12 @@ public static class ServerForm
               "description": "What the tree calls this server."
             },
             "command": {
-              "type": "string", "title": "Command", "minLength": 1,
-              "description": "The program that starts the server, such as npx, uvx or the full path to an executable."
+              "type": "string", "title": "Command",
+              "description": "The program that starts the server, such as npx, uvx or the full path to an executable, or empty for a server reached by address."
+            },
+            "address": {
+              "type": "string", "title": "Address",
+              "description": "Instead of a command, the web address of a server reached over HTTP, starting with https://."
             },
             "arguments": {
               "type": "string", "title": "Arguments",
@@ -74,7 +79,7 @@ public static class ServerForm
               "description": "Untick to keep the server in the list without starting it."
             }
           },
-          "required": ["name", "command"]
+          "required": ["name"]
         }
         """));
 
@@ -102,6 +107,7 @@ public static class ServerForm
 
         SetText(state, NameField, current?.DisplayName);
         SetText(state, CommandField, current?.Command);
+        SetText(state, AddressField, current?.Url);
         SetText(state, ArgumentsField, current is null ? null : ServerDescriptor.JoinArguments(current.Arguments));
         SetText(state, DirectoryField, current?.WorkingDirectory);
 
@@ -138,9 +144,24 @@ public static class ServerForm
             return null;
         }
 
-        if (command.Length == 0 && current?.Url is not { Length: > 0 })
+        var address = Text(state, AddressField);
+
+        if (command.Length == 0 && address.Length == 0)
         {
-            problem = "Command: the server needs a command to start it.";
+            problem = "Command: the server needs a command to start it, or an address to reach it at.";
+            return null;
+        }
+
+        if (command.Length > 0 && address.Length > 0)
+        {
+            problem = "Address: a server is started by a command or reached at an address, not both. Empty one of them.";
+            return null;
+        }
+
+        if (address.Length > 0
+            && (!Uri.TryCreate(address, UriKind.Absolute, out var endpoint) || endpoint.Scheme is not ("http" or "https")))
+        {
+            problem = "Address: this has to be a web address starting with https:// or http://.";
             return null;
         }
 
@@ -172,7 +193,7 @@ public static class ServerForm
             WorkingDirectory: directory.Length == 0 ? null : directory)
         {
             Environment = environment,
-            Url = command.Length == 0 ? current?.Url : null,
+            Url = address.Length > 0 ? address : null,
             Enabled = state.Find(EnabledField) is BooleanFieldState { Value: true },
         };
     }

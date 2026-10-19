@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      # The schema engine against the 213-schema corpus and its golden transcripts.
+      - name: Schema tests
+        run: dotnet test tests/Humcp.Schema.Tests --configuration Release --no-build --logger "trx;LogFileName=schema.trx" --results-directory test-results
+
+      # The protocol, over a real pipe and a real socket to the fixture server.
+      - name: Core tests
+        run: dotnet test tests/Humcp.Core.Tests --configuration Release --no-build --logger "trx;LogFileName=core.trx" --results-directory test-results
+
+      # Humcp.App.UiTests is deliberately not run here: it drives the real application with real
+      # keystrokes and needs a desktop nobody else is using. It is a local gate before each release.
+
+      - name: Keep test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: test-results

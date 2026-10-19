@@ -132,18 +132,6 @@ public sealed class ServerRegistryTests : IDisposable
         Assert.False(string.IsNullOrWhiteSpace(seen[^1].Item2));
     }
 
-    [Fact]
-    public async Task A_web_address_fails_with_a_sentence_rather_than_an_attempt()
-    {
-        var remote = new ServerDescriptor("remote", "remote", "", []) { Url = "https://example.com/mcp" };
-        await using var registry = new ServerRegistry(ServerConfiguration.InMemory(remote));
-
-        await registry.ConnectAllAsync(TestContext.Current.CancellationToken);
-
-        var snapshot = Assert.Single(registry.Snapshots());
-        Assert.Equal(ServerConnectionState.Failed, snapshot.State);
-        Assert.Contains("by web address", snapshot.FailureReason);
-    }
 }
 
 public class ServerAnnouncementsTests

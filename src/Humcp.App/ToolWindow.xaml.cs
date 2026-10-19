@@ -51,6 +51,15 @@ public partial class ToolWindow : Window
     private readonly WindowManager _windows;
     private readonly FormState _state;
     private readonly CancellationTokenSource _closing = new();
+
+    /// <summary>The call in flight, cancelled by Stop or Escape without closing the window (Phase 7).</summary>
+    private CancellationTokenSource? _call;
+
+    /// <summary>
+    /// Set by the first Run of a tool that says it is destructive, which only warns; the second runs
+    /// it. Cleared after every run, so each one is asked about (ROADMAP §3).
+    /// </summary>
+    private bool _destructiveConfirmed;
     private readonly Action<string> _speakIfAway;
 
     private string? _warnedAbout;
@@ -146,6 +155,17 @@ public partial class ToolWindow : Window
         // of a list's own buttons pressed the button instead of running the tool — which on an
         // object list meant it silently added another empty row (phase3-notes 4.7). The keyboard map
         // says Ctrl+Enter submits, with no exceptions for where the caret happens to be.
+        // While a call runs, Escape stops it rather than closing the window: closing would stop the
+        // call too, and take the form and its result pane with it. A second Escape, with nothing
+        // running, closes the window as it always has (Phase 7).
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.Escape || !_callInFlight || Keyboard.Modifiers != ModifierKeys.None) return;
+
+            e.Handled = true;
+            Stop();
+        };
+
         PreviewKeyDown += (_, e) =>
         {
             if (e.Key is not (Key.Enter or Key.Return)) return;
@@ -184,6 +204,7 @@ public partial class ToolWindow : Window
     {
         Add(FormCommands.Submit, (_, _) => _ = RunAsync(), (_, e) => e.CanExecute = !_callInFlight);
         Add(FormCommands.Details, (_, _) => ShowDetails());
+        Add(FormCommands.Stop, (_, _) => Stop(), (_, e) => e.CanExecute = _callInFlight);
         Add(FormCommands.NextPane, (_, _) => CyclePane(+1));
         Add(FormCommands.PreviousPane, (_, _) => CyclePane(-1));
         Add(FormCommands.ToggleOptional, (_, _) => ToggleOptional(), (_, e) => e.CanExecute = _state.HasOptional);
@@ -278,7 +299,26 @@ public partial class ToolWindow : Window
             return;
         }
 
+        if (_tool.Safety.IsDestructive == true && !_destructiveConfirmed)
+        {
+            _destructiveConfirmed = true;
+            SetStatus(ServerAnnouncements.Destructive(_tool, "Control plus Enter"));
+            return;
+        }
+
+        _destructiveConfirmed = false;
         await SendAsync(submission);
+    }
+
+    /// <summary>
+    /// Stops the running call. The server is told (the SDK sends <c>notifications/cancelled</c>), and
+    /// the window stays: what was typed into it is still the user's.
+    /// </summary>
+    private void Stop()
+    {
+        if (_call is not { IsCancellationRequested: false } call) return;
+
+        call.Cancel();
     }
 
     private async Task SendAsync(FormSubmission submission)
@@ -301,7 +341,8 @@ public partial class ToolWindow : Window
 
         try
         {
-            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, progress, _closing.Token);
+            _call = CancellationTokenSource.CreateLinkedTokenSource(_closing.Token);
+            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, progress, _call.Token);
             throttle.Finish();
 
             ShowResult(outcome, started);
@@ -310,14 +351,25 @@ public partial class ToolWindow : Window
 
             if (!outcome.IsError) Remember();
         }
+        catch (OperationCanceledException) when (!_closing.IsCancellationRequested)
+        {
+            throttle.Finish();
+            SetStatus($"Stopped {_tool.DisplayName}. The server was told; anything it had already done stays done.");
+        }
         catch (OperationCanceledException)
         {
-            SetStatus("Tool call cancelled.");
+            // The window is closing, and there is nobody left to tell.
         }
         finally
         {
+            _call?.Dispose();
+            _call = null;
             _callInFlight = false;
             CommandManager.InvalidateRequerySuggested();
+
+            // Stop is about to be disabled, and a disabled control that has the focus loses it to
+            // the window (§7.25). Run is where the caret would go next anyway.
+            if (FormStopButton.IsKeyboardFocused) FormRunButton.Focus();
         }
     }
 

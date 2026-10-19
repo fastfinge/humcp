@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Per user, no administrator rights: installs into %LOCALAPPDATA%\Programs\humcp, with Start menu
+  shortcuts, and appears in Settings, Apps. A screen reader user meeting a UAC prompt is a round
+  trip to the secure desktop for nothing, and humcp writes only to the user's own profile.
+
+  The Windows Installer dialogs are standard Win32 controls, which every screen reader reads, and
+  msiexec /qn installs or removes it silently for anyone deploying it to many machines.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <!-- The UpgradeCode is fixed for the life of the product: it is how 1.0.1 finds 1.0.0. -->
+  <Package Name="humcp"
+           Manufacturer="Samuel Proulx"
+           Version="$(Version)"
+           UpgradeCode="6C1F3B2E-8E2D-4C4B-9C0E-3E7B9A1D5F42"
+           Scope="perUser"
+           Compressed="yes">
+
+    <SummaryInformation Description="humcp, an accessible client for Model Context Protocol servers" />
+
+    <MajorUpgrade DowngradeErrorMessage="A newer version of humcp is already installed." />
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <Property Id="ARPURLINFOABOUT" Value="https://github.com/fastfinge/humcp" />
+    <Property Id="ARPHELPLINK" Value="https://github.com/fastfinge/humcp/issues" />
+    <Property Id="ARPURLUPDATEINFO" Value="https://github.com/fastfinge/humcp/releases" />
+    <Property Id="ARPPRODUCTICON" Value="HumcpIcon" />
+    <Icon Id="HumcpIcon" SourceFile="$(PublishDir)Humcp.App.exe" />
+
+    <!-- The licence page, then install: the fewest dialogs Windows Installer offers with a licence. -->
+    <WixVariable Id="WixUILicenseRtf" Value="$(RepoRoot)installer\License.rtf" />
+    <ui:WixUI Id="WixUI_Minimal" />
+
+    <StandardDirectory Id="LocalAppDataFolder">
+      <Directory Id="ProgramsFolder" Name="Programs">
+        <Directory Id="INSTALLFOLDER" Name="humcp">
+          <Directory Id="LicensesFolder" Name="licenses" />
+        </Directory>
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="HumcpMenuFolder" Name="humcp" />
+    </StandardDirectory>
+
+    <Feature Id="Main" Title="humcp">
+      <!-- Everything the publish produced, the runtime included. -->
+      <Files Directory="INSTALLFOLDER" Include="$(PublishDir)**" />
+      <ComponentRef Id="Shortcuts" />
+      <ComponentRef Id="Folders" />
+    </Feature>
+
+    <!-- The folders, removed on uninstall once their files are gone (see ICE64 in the .wixproj). -->
+    <DirectoryRef Id="INSTALLFOLDER">
+      <Component Id="Folders" Guid="3D7B2A91-5C4E-4F06-A8B2-1E9C6D0F4A57">
+        <RemoveFolder Id="RemoveLicensesFolder" Directory="LicensesFolder" On="uninstall" />
+        <RemoveFolder Id="RemoveInstallFolder" Directory="INSTALLFOLDER" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\humcp" Name="folders" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+    <DirectoryRef Id="HumcpMenuFolder">
+      <!-- A per-user shortcut needs a per-user key path; the registry value is that and nothing more. -->
+      <Component Id="Shortcuts" Guid="9A4E1C2D-7B3F-4E58-8D61-2C0F5B7A9E13">
+        <Shortcut Id="HumcpShortcut" Name="humcp" Description="An accessible client for MCP servers"
+                  Target="[INSTALLFOLDER]Humcp.App.exe" WorkingDirectory="INSTALLFOLDER" />
+        <!-- Notepad, not the file: what opens .md varies from machine to machine and is often nothing. -->
+        <Shortcut Id="GuideShortcut" Name="humcp user guide" Description="How to use humcp"
+                  Target="[SystemFolder]notepad.exe" Arguments="&quot;[INSTALLFOLDER]user-guide.md&quot;" />
+        <RemoveFolder Id="RemoveHumcpMenuFolder" On="uninstall" />
+        <RegistryValue Root="HKCU" Key="Software\humcp" Name="installed" Type="integer" Value="1" KeyPath="yes" />
+      </Component>
+    </DirectoryRef>
+
+  </Package>
+</Wix>

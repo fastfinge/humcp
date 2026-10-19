@@ -88,11 +88,13 @@ public class ShellTests(AppFixture fixture, ITestOutputHelper output)
             Assert.DoesNotContain(UiaTree.Descendants(fields), e => UiaTree.Safe(() => e.ControlType) == ControlType.DataItem);
 
             // Nothing hidden: every field here is saved, so every field is on screen (§7.31).
-            foreach (var label in new[] { "Name", "Command", "Arguments", "Working directory", "Environment variables", "Start this server" })
+            foreach (var label in new[] { "Name", "Command", "Address", "Arguments", "Working directory", "Environment variables", "Start this server" })
                 Assert.True(Control(form, label) is not null, $"No control named {label}.");
 
             Assert.True(Control(form, "Name")!.Properties.IsRequiredForForm.ValueOrDefault);
-            Assert.True(Control(form, "Command")!.Properties.IsRequiredForForm.ValueOrDefault);
+            // Command or Address, one of the two — which a schema's "required" cannot say, so neither
+            // is marked, and the save says which is missing (ServerForm.Read).
+            Assert.False(Control(form, "Command")!.Properties.IsRequiredForForm.ValueOrDefault);
             Assert.False(Control(form, "Arguments")!.Properties.IsRequiredForForm.ValueOrDefault);
 
             // The caret starts on the first field, not on the window.
@@ -302,6 +304,59 @@ public class ShellTests(AppFixture fixture, ITestOutputHelper output)
             try { again.Close(); } catch { /* closed by saving */ }
         }
     }
+
+    // ------------------------------------------------------------------ Phase 7: asking first, and stopping
+
+    [Fact]
+    public void A_tool_that_says_it_is_destructive_asks_before_it_runs()
+    {
+        var tool = TreeItem("Delete everything");
+
+        Input.EnsureForeground(Main, fixture.Automation);
+        tool.Patterns.SelectionItem.Pattern.Select();
+        tool.Focus();
+        Input.Settle(200);
+
+        Input.Press(VirtualKeyShort.RETURN);
+        var warning = WaitFor(() => Status().Contains("says it may delete", StringComparison.Ordinal) ? Status() : null,
+            "the first Enter to warn");
+        output.WriteLine(warning);
+
+        // Nothing ran: the result pane is still whatever it was.
+        Assert.NotEqual("Result — Delete everything", Heading());
+
+        Input.Press(VirtualKeyShort.RETURN);
+        WaitFor(() => Heading() == "Result — Delete everything" ? "ran" : null, "the second Enter to run it");
+    }
+
+    [Fact]
+    public void Escape_stops_a_running_call_from_the_tree()
+    {
+        var tool = TreeItem("Slow tool");
+
+        Input.EnsureForeground(Main, fixture.Automation);
+        tool.Patterns.SelectionItem.Pattern.Select();
+        tool.Focus();
+        Input.Settle(200);
+
+        Input.Press(VirtualKeyShort.RETURN);
+        WaitFor(() => Status().StartsWith("Running Slow tool", StringComparison.Ordinal) ? Status() : null, "the call to start");
+        Input.Press(VirtualKeyShort.ESCAPE);
+
+        var stopped = WaitFor(() => Status().StartsWith("Stopped Slow tool", StringComparison.Ordinal) ? Status() : null,
+            "Escape to stop the call");
+        output.WriteLine(stopped);
+
+        // And the call did not finish behind the user's back two seconds later.
+        Thread.Sleep(2500);
+        Assert.NotEqual("Result — Slow tool", Heading());
+    }
+
+    private AutomationElement TreeItem(string label) =>
+        Tree().FindAllDescendants(cf => cf.ByControlType(ControlType.TreeItem))
+            .First(i => (UiaTree.Safe(() => i.Name) ?? "").StartsWith(label, StringComparison.Ordinal));
+
+    private string Heading() => Main.FindFirstDescendant(cf => cf.ByAutomationId("ResultHeading"))?.Name ?? "";
 
     // ------------------------------------------------------------------ helpers
 

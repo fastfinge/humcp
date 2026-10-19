@@ -248,6 +248,28 @@ public static class ServerAnnouncements
                $"{Count(after.Count, "tool", "tools")} now.";
     }
 
+    /// <summary>
+    /// A server that stopped without being asked to — crashed, killed, or an HTTP server gone away.
+    /// Said unprompted, so it says what to do about it as well as what happened.
+    /// </summary>
+    public static string Stopped(ServerSnapshot server)
+    {
+        ArgumentNullException.ThrowIfNull(server);
+        return $"{Name(server)} stopped. {TextSanitizer.Clean(server.FailureReason, TextSanitizer.HelpLength)} F5 starts it again.";
+    }
+
+    /// <summary>
+    /// What is said before running a tool that declares <c>destructiveHint</c> (ROADMAP §3), and how to
+    /// run it anyway. The hint is the server's own claim and never proof either way (§4, pitfall 5), so
+    /// the sentence says whose claim it is.
+    /// </summary>
+    public static string Destructive(ToolInfo tool, string keystroke)
+    {
+        ArgumentNullException.ThrowIfNull(tool);
+        return $"{TextSanitizer.Clean(tool.DisplayName, TextSanitizer.NameLength)} says it may delete or change things " +
+               $"that cannot be put back. Press {keystroke} again to run it.";
+    }
+
     private static string Name(ServerSnapshot server) => TextSanitizer.Clean(server.DisplayName, TextSanitizer.NameLength);
 
     /// <summary>"a", "a and b", "a, b and c".</summary>

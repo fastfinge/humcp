@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0–5 complete, Phase 6 built and awaiting its manual pass
+## Project status: v1.0.0 released; 1.x is fixes, v2 is next (§11)
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -72,7 +72,7 @@ could reach; re-checking the fixes by ear found the tenth. Record in **`docs/pha
 findings are now §3's two elicitation modes, §5's elicitation exception, §6.5, §7.31–32, §9 and the
 keyboard map.
 
-**Phase 6 is built and awaiting a person's manual pass**: the shell. No built-in server —
+**Phase 6 is complete**: the shell. No built-in server —
 `servers.json` in the `mcpServers` shape, edited through Add server (Ctrl+N), Import, Server
 settings (Alt+Enter), Reconnect (F5) and Remove (Delete twice); settings, menus, `tools/list_changed`
 through a raw `subscriptions/listen` (the SDK has no client call, and on 2026-07-28 nothing arrives
@@ -82,7 +82,19 @@ read back from the field states because the omission rule cannot tell "cleared" 
 The first manual pass was driven through NVDA by the screen reader bridge and found seven defects
 the suite had not. Record in **`docs/phase6-notes.md`**; proposed rules §7.33–36.
 
-The next unit of work after that pass is **Phase 7** (§10): hardening and release.
+**Phase 7 is complete, and humcp 1.0.0 is released** (github.com/fastfinge/humcp): Streamable
+HTTP (unauthenticated), a server that dies is reported, Escape stops a call, a destructive tool
+confirms, a malformed schema costs one tool its form rather than the server its tools, every server
+ends with humcp (a job object), and unexpected errors go to `%LOCALAPPDATA%\humcp\errors.log`.
+Released as a per-user MSI (WiX 7, `installer/`) and portable zips by `.github/workflows/release.yml`
+on a `v*` tag; CI (`ci.yml`) builds and runs Schema and Core. Record in **`docs/phase7-notes.md`**.
+
+**Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. To release:
+add a section to `CHANGELOG.md`, run the UI suite and an NVDA pass locally, then tag `vX.Y.Z` and
+push the tag. The release workflow refuses a tag with no changelog section.
+
+**Licence:** 0BSD for humcp's own code; `THIRD-PARTY-NOTICES.md` and `licenses/` for what it ships.
+Code signing is not set up yet (SignPath Foundation, then MSIX through the Microsoft Store).
 
 **Manual testing is NVDA only from Phase 6 on** — the developer's call: JAWS and Narrator agree with
 NVDA nearly always. The NVDA pass can be driven through the screen reader MCP bridge (`user`

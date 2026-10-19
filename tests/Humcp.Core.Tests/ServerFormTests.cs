@@ -95,7 +95,7 @@ public class ServerFormTests
     }
 
     [Fact]
-    public void An_address_survives_an_edit_that_could_not_show_it()
+    public void A_server_reached_by_address_is_added_with_no_command()
     {
         var remote = new ServerDescriptor("r", "Remote", "", []) { Url = "https://example.com/mcp" };
 
@@ -103,5 +103,21 @@ public class ServerFormTests
 
         Assert.Null(problem);
         Assert.Equal("https://example.com/mcp", read!.Url);
+        Assert.Equal("", read.Command);
+    }
+
+    [Theory]
+    [InlineData("npx", "https://example.com/mcp", "not both")]
+    [InlineData("", "ms-settings:privacy", "https://")]
+    [InlineData("", "", "or an address")]
+    public void Command_and_address_are_one_or_the_other(string command, string address, string said)
+    {
+        var state = Filled(null);
+        ((TextFieldState)state.Find(ServerForm.NameField)!).Text = "x";
+        ((TextFieldState)state.Find(ServerForm.CommandField)!).Text = command;
+        ((TextFieldState)state.Find(ServerForm.AddressField)!).Text = address;
+
+        Assert.Null(ServerForm.Read(state, "x", null, out var problem));
+        Assert.Contains(said, problem);
     }
 }

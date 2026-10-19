@@ -1,0 +1,143 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing tag to build a release from, such as v1.0.0
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.TAG }}
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+
+      - name: Version from the tag
+        shell: pwsh
+        run: |
+          $version = $env:TAG.TrimStart('v')
+          if ($version -notmatch '^\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$') { throw "Tag $env:TAG is not v<major>.<minor>.<patch>." }
+          "VERSION=$version" >> $env:GITHUB_ENV
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore -p:Version=${{ env.VERSION }}
+
+      - name: Schema tests
+        run: dotnet test tests/Humcp.Schema.Tests --configuration Release --no-build
+
+      - name: Core tests
+        run: dotnet test tests/Humcp.Core.Tests --configuration Release --no-build
+
+      - name: Publish
+        shell: pwsh
+        run: |
+          foreach ($rid in 'win-x64', 'win-arm64') {
+            dotnet publish src/Humcp.App --configuration Release --runtime $rid --self-contained true `
+              -p:Version=$env:VERSION -p:DebugType=none -o "artifacts/publish/$rid"
+            if ($LASTEXITCODE -ne 0) { throw "Publishing $rid failed." }
+          }
+
+      # The built application, started the way a user starts it, with an empty configuration of its
+      # own. It must still be running after ten seconds: a release that cannot start is not one.
+      - name: Smoke test the x64 build
+        shell: pwsh
+        run: |
+          $scratch = Join-Path $env:RUNNER_TEMP 'humcp-smoke'
+          New-Item -ItemType Directory -Force $scratch | Out-Null
+          $env:HUMCP_CONFIG = Join-Path $scratch 'servers.json'
+          $env:HUMCP_SETTINGS = Join-Path $scratch 'settings.json'
+          $env:HUMCP_HISTORY = Join-Path $scratch 'history.json'
+          $app = Start-Process artifacts/publish/win-x64/Humcp.App.exe -PassThru
+          Start-Sleep -Seconds 10
+          if ($app.HasExited) { throw "humcp exited during start-up with code $($app.ExitCode)." }
+          Stop-Process -Id $app.Id -Force
+          $log = Join-Path $env:LOCALAPPDATA 'humcp\errors.log'
+          if (Test-Path $log) { Get-Content $log; throw 'humcp wrote to its error log during start-up.' }
+
+      - name: Zip
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force artifacts/release | Out-Null
+          foreach ($rid in 'win-x64', 'win-arm64') {
+            Compress-Archive -Path "artifacts/publish/$rid/*" -DestinationPath "artifacts/release/humcp-$rid.zip"
+          }
+
+      # The MSI, built with the WiX Toolset as an MSBuild SDK project (installer/). Windows Installer
+      # versions are numbers only, so a prerelease suffix is left off the MSI's own version.
+      - name: Installer
+        shell: pwsh
+        run: |
+          $msiVersion = $env:VERSION -replace '-.*$', ''
+          dotnet build installer/Humcp.Installer.wixproj --configuration Release `
+            "-p:Version=$msiVersion" "-p:PublishDir=$PWD\artifacts\publish\win-x64\"
+          if ($LASTEXITCODE -ne 0) { throw 'The installer did not build.' }
+          Copy-Item installer/bin/x64/Release/humcp-x64.msi artifacts/release/humcp-x64.msi
+
+      # Installed silently, checked, and uninstalled: the installer is tested, not just built.
+      - name: Test the installer
+        shell: pwsh
+        run: |
+          $msi = (Resolve-Path artifacts/release/humcp-x64.msi).Path
+          $target = Join-Path $env:LOCALAPPDATA 'Programs\humcp'
+          $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /norestart" -Wait -PassThru
+          if ($install.ExitCode -ne 0) { throw "Install exited with $($install.ExitCode)." }
+          foreach ($file in 'Humcp.App.exe', 'prism.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md', 'user-guide.md') {
+            if (-not (Test-Path (Join-Path $target $file))) { throw "The installer did not install $file." }
+          }
+          $uninstall = Start-Process msiexec -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru
+          if ($uninstall.ExitCode -ne 0) { throw "Uninstall exited with $($uninstall.ExitCode)." }
+          if (Test-Path $target) { throw 'Uninstall left the install folder behind.' }
+
+      - name: Checksums
+        shell: pwsh
+        run: |
+          Get-ChildItem artifacts/release -File | Where-Object Name -ne 'SHA256SUMS.txt' | ForEach-Object {
+            "{0}  {1}" -f (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant(), $_.Name
+          } | Set-Content artifacts/release/SHA256SUMS.txt -Encoding ascii
+          Get-Content artifacts/release/SHA256SUMS.txt
+
+      # The notes are this version's section of CHANGELOG.md, followed by the checksums.
+      - name: Release notes
+        shell: pwsh
+        run: |
+          $lines = Get-Content CHANGELOG.md
+          $start = ($lines | Select-String -Pattern "^## $([regex]::Escape($env:VERSION))\b").LineNumber
+          if (-not $start) { throw "CHANGELOG.md has no section for $env:VERSION." }
+          $section = $lines[$start..($lines.Count - 1)] | ForEach-Object -Begin { $done = $false } -Process {
+            if (-not $done) { if ($_ -match '^## ') { $done = $true } else { $_ } }
+          }
+          $notes = @($section) + '' + '## Checksums (SHA-256)' + '' + '```' + (Get-Content artifacts/release/SHA256SUMS.txt) + '```' + '' +
+                   'Not code-signed: SmartScreen may warn. Choose More info, then Run anyway.'
+          $notes | Set-Content artifacts/release-notes.md -Encoding utf8
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $arguments = @('release', 'create', $env:TAG, '--title', "humcp $env:VERSION",
+                         '--notes-file', 'artifacts/release-notes.md', '--verify-tag')
+          if ($env:VERSION -match '-') { $arguments += '--prerelease' }
+          $arguments += (Get-ChildItem artifacts/release -File).FullName
+          gh @arguments
+          if ($LASTEXITCODE -ne 0) { throw 'The release could not be published.' }

@@ -25,6 +25,9 @@ public static class FormCommands
     public static readonly RoutedUICommand Submit = new("", nameof(Submit), typeof(FormCommands),
         new InputGestureCollection { new KeyGesture(Key.Enter, ModifierKeys.Control) });
 
+    /// <summary>Stops the call that is running. Escape does the same while one is.</summary>
+    public static readonly RoutedUICommand Stop = new("", nameof(Stop), typeof(FormCommands));
+
     public static readonly RoutedUICommand Details = new("", nameof(Details), typeof(FormCommands),
         new InputGestureCollection { new KeyGesture(Key.F1) });
 

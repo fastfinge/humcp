@@ -1,0 +1,36 @@
+<!--
+  The humcp MSI, built with the WiX Toolset from a self-contained publish of Humcp.App. The release
+  workflow (.github/workflows/release.yml) shows the two commands: publish src/Humcp.App for win-x64,
+  self-contained, then build this project with Version and PublishDir set.
+
+  Not part of Humcp.slnx: it packages a publish rather than building one, so an ordinary
+  `dotnet build` has nothing for it to package. The release workflow builds it explicitly.
+-->
+<Project Sdk="WixToolset.Sdk/7.0.0">
+
+  <PropertyGroup>
+    <OutputName>humcp-x64</OutputName>
+    <Platform>x64</Platform>
+    <Version Condition="'$(Version)' == ''">1.0.0</Version>
+    <PublishDir Condition="'$(PublishDir)' == ''">$(MSBuildThisFileDirectory)..\artifacts\publish\win-x64\</PublishDir>
+    <DefineConstants>Version=$(Version);PublishDir=$(PublishDir);RepoRoot=$(MSBuildThisFileDirectory)..\</DefineConstants>
+    <SuppressValidation>false</SuppressValidation>
+    <!-- ICE38, ICE64 and ICE91 are about roaming profiles: they want every file installed under the
+         profile keyed to the registry. humcp installs into %LOCALAPPDATA%\Programs, which does not
+         roam, as every per-user MSI that installs there does; Package.wxs removes its folders on
+         uninstall itself, which is what ICE64 is protecting. -->
+    <SuppressIces>ICE38;ICE64;ICE91</SuppressIces>
+    <!-- The solution pins versions centrally; the WiX SDK and its extension are this project's alone. -->
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+    <!-- WiX v7's Open Source Maintenance Fee EULA, accepted by the project owner on 2026-10-19
+         (https://docs.firegiant.com/wix/osmf/). The fee applies only to revenue-generating use by
+         organisations with US$10,000 or more in annual revenue; the MSI WiX produces carries no
+         conditions of its own. Anyone building for such an organisation should read it first. -->
+    <AcceptEula>wix7</AcceptEula>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="WixToolset.UI.wixext" Version="7.0.0" />
+  </ItemGroup>
+
+</Project>

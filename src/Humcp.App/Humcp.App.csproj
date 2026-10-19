@@ -7,11 +7,22 @@
     <RootNamespace>Humcp.App</RootNamespace>
     <AssemblyName>Humcp.App</AssemblyName>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <!-- humcp's own words are English only, so the framework's translated resources are not shipped. -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Humcp.Core\Humcp.Core.csproj" />
     <ProjectReference Include="..\Humcp.Speech\Humcp.Speech.csproj" />
+  </ItemGroup>
+
+  <!-- What every copy of humcp carries: its own licence, the notices for what it ships, the full
+       text of each of those licences, and the user guide. -->
+  <ItemGroup>
+    <None Include="..\..\LICENSE" Link="LICENSE.txt" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\THIRD-PARTY-NOTICES.md" Link="THIRD-PARTY-NOTICES.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\licenses\*.txt" Link="licenses\%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <None Include="..\..\docs\user-guide.md" Link="user-guide.md" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
   </ItemGroup>
 
 </Project>

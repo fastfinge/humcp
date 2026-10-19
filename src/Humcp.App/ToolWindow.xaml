@@ -131,6 +131,13 @@
                         Command="{x:Static local:FormCommands.Submit}"
                         AutomationProperties.AcceleratorKey="Control plus Enter"
                         AutomationProperties.HelpText="Runs the tool with what is on this form. Control plus Enter does the same." />
+                <!-- Enabled only while a call runs, and so in the tab order only then (§7's
+                     corollary on disabled controls). No access key: its letter would have to be
+                     taken from every generated form's labels, and Escape already does it. -->
+                <Button x:Name="FormStopButton" Content="Stop" Padding="14,4" Margin="0,0,8,0"
+                        Command="{x:Static local:FormCommands.Stop}"
+                        AutomationProperties.AcceleratorKey="Escape"
+                        AutomationProperties.HelpText="Stops the call that is running. Escape does the same while one is." />
                 <!-- Command, not IsCancel. IsCancel closes a *modal* dialog and does nothing at all
                      on a window shown with Show() — which is what this button did for a whole
                      manual pass (phase3-notes 4.2). -->

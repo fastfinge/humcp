@@ -49,6 +49,7 @@
             </MenuItem>
             <MenuItem x:Name="WindowMenu" Header="_Window" />
             <MenuItem Header="_Help">
+                <MenuItem Header="_User guide" Click="OnUserGuide" />
                 <MenuItem Header="_Keyboard shortcuts…" Click="OnKeyboardHelp" />
                 <MenuItem Header="_Speech diagnostics…" Click="OnSpeechDiagnostics" />
                 <MenuItem Header="_Connection diagnostics…" Click="OnConnectionDiagnostics" />
