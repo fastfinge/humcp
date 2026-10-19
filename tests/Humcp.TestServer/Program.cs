@@ -50,8 +50,8 @@ internal static class Program
         // its diagnostics — so a test that receives none can say whether any were sent (issue #1).
         options.Filters.Message.OutgoingFilters.Add(next => async (context, cancellationToken) =>
         {
-            if (context.JsonRpcMessage is JsonRpcNotification { Method: NotificationMethods.ProgressNotification })
-                Console.Error.WriteLine("fixture sent notifications/progress");
+            if (context.JsonRpcMessage is JsonRpcNotification { Method: NotificationMethods.ProgressNotification } sent)
+                Console.Error.WriteLine($"fixture sent progress for {sent.Params?["progressToken"]?.ToJsonString()} meta {sent.Params?["_meta"]?.ToJsonString()}");
 
             await next(context, cancellationToken);
         });

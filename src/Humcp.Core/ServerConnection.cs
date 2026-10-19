@@ -492,8 +492,14 @@ public sealed class ServerConnection : IAsyncDisposable
         {
             var value = notification.Params?.Deserialize<ProgressNotificationParams>(McpJsonUtilities.DefaultOptions);
 
-            if (value?.ProgressToken.Token is { } token
-                && _progress.TryGetValue(token.ToString() ?? "", out var progress))
+            var token = value?.ProgressToken.Token?.ToString() ?? "";
+            var known = _progress.TryGetValue(token, out var progress);
+
+            // Kept in the diagnostics until issue #1 is closed: which reports arrived, and whether
+            // they belonged to a call humcp was waiting on.
+            RecordDiagnostic($"Progress arrived for {token} ({(known ? "a call in flight" : "no call humcp knows")}).");
+
+            if (known && value is not null && progress is not null)
             {
                 progress.Report(new ToolProgress(
                     value.Progress.Progress, value.Progress.Total,
