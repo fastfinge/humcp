@@ -20,6 +20,7 @@ internal static class Program
 
         var tools = new McpServerPrimitiveCollection<McpServerTool>();
         foreach (var tool in TestTools.All()) tools.Add(tool);
+        ListChangeTools.Collection = tools;
 
         var options = new McpServerOptions
         {
@@ -31,7 +32,8 @@ internal static class Program
             },
             Capabilities = new ServerCapabilities
             {
-                Tools = new ToolsCapability { ListChanged = false },
+                // True since Phase 6: tools_toggle changes the list, and the client is told.
+                Tools = new ToolsCapability { ListChanged = true },
             },
             ToolCollection = tools,
             ServerInstructions =

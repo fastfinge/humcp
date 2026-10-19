@@ -14,6 +14,12 @@ public enum CatalogueNodeKind
 
     /// <summary>An invocable tool.</summary>
     Tool,
+
+    /// <summary>
+    /// A sentence where nodes would be — "No servers are configured" — because an empty tree cannot
+    /// take focus at all, and a pane the caret cannot enter is a pane that says nothing.
+    /// </summary>
+    Message,
 }
 
 /// <summary>
@@ -27,9 +33,11 @@ public sealed class CatalogueNode
         string accessibleName,
         IReadOnlyList<CatalogueNode>? children = null,
         ToolInfo? tool = null,
-        string? helpText = null)
+        string? helpText = null,
+        string? serverId = null)
     {
         Kind = kind;
+        ServerId = serverId;
         AccessibleName = accessibleName;
         Children = children ?? [];
         Tool = tool;
@@ -46,6 +54,12 @@ public sealed class CatalogueNode
 
     /// <summary>First sentence of a tool's description, for <c>AutomationProperties.HelpText</c>.</summary>
     public string HelpText { get; }
+
+    /// <summary>
+    /// The configuration key of the server this node belongs to — set on the server's own node and
+    /// on everything under it, so a command run from any node knows which connection it is about.
+    /// </summary>
+    public string? ServerId { get; }
 
     /// <summary>Set on <see cref="CatalogueNodeKind.Tool"/> nodes only.</summary>
     public ToolInfo? Tool { get; }

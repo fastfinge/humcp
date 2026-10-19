@@ -62,14 +62,25 @@ public sealed class AppFixture : IAsyncLifetime
     public string HistoryPath { get; } = Path.Combine(
         Path.GetTempPath(), "humcp-uitests", Guid.NewGuid().ToString("n"), "history.json");
 
+    /// <summary>
+    /// The configuration the app under test reads: the fixture server and nothing else. Beside the
+    /// history, in the same temporary directory, for the same reason.
+    /// </summary>
+    public string ConfigurationPath => Path.Combine(Path.GetDirectoryName(HistoryPath)!, "servers.json");
+
     public ValueTask InitializeAsync()
     {
         var executable = LocateApplication();
 
+        WriteConfiguration();
+
         // Inherited by the child process. The suite runs real tools from real forms, and MRU
         // history is written to disk on a successful call (§4, pitfall 3) — into a temporary
         // directory here, so a test run never leaves anything in the profile of whoever ran it.
+        // The same goes for the server list, which the suite must neither read nor write.
         Environment.SetEnvironmentVariable("HUMCP_HISTORY", HistoryPath);
+        Environment.SetEnvironmentVariable("HUMCP_CONFIG", ConfigurationPath);
+        Environment.SetEnvironmentVariable("HUMCP_SETTINGS", Path.Combine(Path.GetDirectoryName(HistoryPath)!, "settings.json"));
 
         _app = Application.Launch(executable);
 
@@ -119,6 +130,33 @@ public sealed class AppFixture : IAsyncLifetime
         throw new InvalidOperationException(
             "The tree never filled with tools. Status line says: " +
             (Window.FindFirstDescendant(cf => cf.ByAutomationId("LiveStatus"))?.Name ?? "(no status)"));
+    }
+
+    /// <summary>
+    /// Names the fixture server the way a user's own file would name theirs. Since Phase 6 the app
+    /// has no built-in server at all, so this file is the only reason it connects to anything.
+    /// </summary>
+    private void WriteConfiguration()
+    {
+        var located = Humcp.Tests.TestServerLocator.Locate(AppContext.BaseDirectory)
+                      ?? throw new InvalidOperationException("The fixture server is not built.");
+
+        var configuration = new System.Text.Json.Nodes.JsonObject
+        {
+            ["mcpServers"] = new System.Text.Json.Nodes.JsonObject
+            {
+                ["humcp-test-server"] = new System.Text.Json.Nodes.JsonObject
+                {
+                    ["command"] = located.Command,
+                    ["args"] = new System.Text.Json.Nodes.JsonArray(
+                        [.. located.Arguments.Select(a => (System.Text.Json.Nodes.JsonNode?)a)]),
+                    ["title"] = "humcp test server",
+                },
+            },
+        };
+
+        Directory.CreateDirectory(Path.GetDirectoryName(ConfigurationPath)!);
+        File.WriteAllText(ConfigurationPath, configuration.ToJsonString());
     }
 
     private static string LocateApplication()

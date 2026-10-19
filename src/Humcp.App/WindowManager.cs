@@ -63,6 +63,15 @@ public sealed class WindowManager
         ArgumentNullException.ThrowIfNull(window);
 
         window.ShowInTaskbar = false;
+
+        // Never bigger than the screen it opens on (PaneLayout.OtherWindow): a tool form asks for
+        // 800 high, and a laptop's work area is often less, which would put Run below the bottom.
+        if (!double.IsNaN(window.Width) && !double.IsNaN(window.Height))
+        {
+            var area = SystemParameters.WorkArea;
+            (window.Width, window.Height) = Humcp.Core.PaneLayout.OtherWindow(window.Width, window.Height, area.Width, area.Height);
+        }
+
         _windows.Add(window);
         window.Closed += (_, _) => _windows.Remove(window);
     }

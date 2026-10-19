@@ -51,6 +51,7 @@ public partial class ToolWindow : Window
     private readonly WindowManager _windows;
     private readonly FormState _state;
     private readonly CancellationTokenSource _closing = new();
+    private readonly Action<string> _speakIfAway;
 
     private string? _warnedAbout;
     private bool _callInFlight;
@@ -62,8 +63,18 @@ public partial class ToolWindow : Window
     /// <summary>When the result on screen was asked for, for the details window (F1).</summary>
     private DateTimeOffset _lastOutcomeAt;
 
+    /// <param name="showOptional">
+    /// Whether the optional parameters start out showing — the user's setting, off unless they
+    /// changed it (§4, pitfall 4).
+    /// </param>
+    /// <param name="speakIfAway">
+    /// Says something through the screen reader when no humcp window is in front and the user has
+    /// asked for that (ROADMAP §13). A completion in a window nobody is looking at is otherwise
+    /// silent, because a live region is read only in the window that has the focus.
+    /// </param>
     public ToolWindow(
-        Window owner, ToolInfo tool, ServerConnection connection, MruHistory history, WindowManager windows)
+        Window owner, ToolInfo tool, ServerConnection connection, MruHistory history, WindowManager windows,
+        bool showOptional = false, Action<string>? speakIfAway = null)
     {
         ArgumentNullException.ThrowIfNull(tool);
         ArgumentNullException.ThrowIfNull(connection);
@@ -76,7 +87,9 @@ public partial class ToolWindow : Window
         _connection = connection;
         _history = history;
         _windows = windows;
+        _speakIfAway = speakIfAway ?? (_ => { });
         _state = FormState.Create(tool.Form);
+        _state.ShowOptional = showOptional;
 
         ApplyHistory();
 
@@ -147,6 +160,23 @@ public partial class ToolWindow : Window
 
     /// <summary>The tool this window is a form for. Used by the window manager to avoid opening two.</summary>
     public string ToolName => _tool.Name;
+
+    /// <summary>The server this form calls, so the main window can find a form already open for a tool.</summary>
+    public ServerConnection Connection => _connection;
+
+    /// <summary>
+    /// The server has stopped publishing this tool (<c>tools/list_changed</c>). The form stays — what
+    /// is typed into it is the user's — and says so, in the title as well as the status line, because
+    /// a status line is said once and a title is there every time the window is switched to.
+    /// </summary>
+    public void Withdrawn()
+    {
+        if (Title.EndsWith(" — withdrawn", StringComparison.Ordinal)) return;
+
+        Title += " — withdrawn";
+        AutomationProperties.SetName(this, Title);
+        SetStatus($"{_connection.Descriptor.DisplayName} no longer publishes {_tool.DisplayName}. Running it will probably fail.");
+    }
 
     // ------------------------------------------------------------------ commands
 
@@ -241,7 +271,7 @@ public partial class ToolWindow : Window
             _warnedAbout = signature;
 
             SetStatus($"{Count(submission.Report.Issues.Count, "problem", "problems")} found. " +
-                      $"{submission.Report.Issues[0].Announcement} " +
+                      $"{_state.LeadProblem(submission)} " +
                       "Press Control plus Enter again to run it anyway.");
 
             FocusField(_state.FirstProblem);
@@ -262,12 +292,21 @@ public partial class ToolWindow : Window
             ? $"Running {_tool.DisplayName}."
             : $"Running {_tool.DisplayName}. {submission.Report.Summary}");
 
+        // Created on the UI thread, so each report is posted back to it (§4, pitfall 9).
+        var throttle = new ProgressThrottle();
+        var progress = new Progress<ToolProgress>(report =>
+        {
+            if (_callInFlight && throttle.Offer(_tool.DisplayName, report) is { } line) SetStatus(line);
+        });
+
         try
         {
-            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, _closing.Token);
+            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, progress, _closing.Token);
+            throttle.Finish();
 
             ShowResult(outcome, started);
             SetStatus(ResultFormatter.Announcement(outcome));
+            _speakIfAway($"{_tool.DisplayName}: {ResultFormatter.Announcement(outcome)}");
 
             if (!outcome.IsError) Remember();
         }
@@ -306,6 +345,10 @@ public partial class ToolWindow : Window
             : $"Question — {_tool.DisplayName}";
 
         if (request.Kind == ElicitationKind.WebPage) title = $"A web page — {_tool.DisplayName}";
+
+        // Windows does not always let a window come to the front by itself, so a question asked
+        // while the user is in another program can open behind it, unannounced.
+        await Dispatcher.InvokeAsync(() => _speakIfAway($"{_tool.DisplayName} is asking a question."));
 
         var answer = await ElicitationWindow.AskAsync(this, title, request, _windows, cancellationToken);
 

@@ -441,7 +441,7 @@ internal sealed class ElicitationWindow : Window
             _warnedAbout = signature;
 
             SetStatus($"{Count(submission.Report.Issues.Count, "problem", "problems")} found. " +
-                      $"{submission.Report.Issues[0].Announcement} " +
+                      $"{_state.LeadProblem(submission)} " +
                       "Press Control plus Enter again to answer anyway.");
 
             Focus(_state.FirstProblem);

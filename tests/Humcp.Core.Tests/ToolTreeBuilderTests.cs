@@ -128,6 +128,27 @@ public class ToolTreeBuilderTests
         Assert.True(tool.RunsWithoutArguments);
     }
 
+    [Fact]
+    public void No_servers_is_a_sentence_the_caret_can_land_on()
+    {
+        var node = Assert.Single(ToolTreeBuilder.BuildForest([], "No servers are configured."));
+
+        Assert.Equal(CatalogueNodeKind.Message, node.Kind);
+        Assert.Equal("No servers are configured.", node.AccessibleName);
+    }
+
+    [Fact]
+    public void Every_node_under_a_server_knows_which_server_it_is_under()
+    {
+        var forest = ToolTreeBuilder.BuildForest([
+            Connected(Tools("a_one", "a_two", "b_one", "b_two", "c_one", "c_two", "d_one", "d_two")) with { Id = "first" },
+            Connected(Tools("x")) with { Id = "second" },
+        ], "");
+
+        Assert.All(forest[0].SelfAndDescendants(), n => Assert.Equal("first", n.ServerId));
+        Assert.All(forest[1].SelfAndDescendants(), n => Assert.Equal("second", n.ServerId));
+    }
+
     // ------------------------------------------------------------------ helpers
 
     private static int Depth(CatalogueNode node)
@@ -138,7 +159,7 @@ public class ToolTreeBuilderTests
 
     private static IReadOnlyList<ToolInfo> Tools(params string[] names) => [.. names.Select(n => Tool(n))];
 
-    private static ToolInfo Tool(
+    internal static ToolInfo Tool(
         string name, int parameters = 0, int required = 0, OperationSafety? safety = null)
         => new(
             Name: name,

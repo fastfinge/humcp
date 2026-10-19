@@ -118,6 +118,26 @@ public sealed class FormState : INotifyPropertyChanged
     /// </summary>
     public FieldState? FirstProblem => AllFields().FirstOrDefault(f => f.HasProblem);
 
+    /// <summary>
+    /// The one problem to say when a submit is refused or warned about: the one the caret is about to
+    /// land on (<see cref="FirstProblem"/>, in tab order) — not the report's first, which is sorted
+    /// alphabetically within a depth. Saying "Command is required" and then putting the caret in
+    /// Name is two facts that disagree, and the user hears both (phase6-notes).
+    /// </summary>
+    public string? LeadProblem(FormSubmission submission)
+    {
+        ArgumentNullException.ThrowIfNull(submission);
+
+        if (FirstProblem is { } field)
+        {
+            var issue = submission.Report.Issues.FirstOrDefault(i => i.FieldPath == field.Path)
+                        ?? submission.Report.Issues.FirstOrDefault(i => i.FieldPath.StartsWith(field.Path + "/", StringComparison.Ordinal));
+            if (issue is not null) return issue.Announcement;
+        }
+
+        return submission.Report.Issues.FirstOrDefault()?.Announcement;
+    }
+
     /// <summary>Every field state, nesting included.</summary>
     public IEnumerable<FieldState> AllFields() => Fields.SelectMany(f => f.SelfAndDescendants());
 

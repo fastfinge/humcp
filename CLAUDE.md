@@ -2,7 +2,7 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project status: Phases 0–5 complete, Phase 6 next
+## Project status: Phases 0–5 complete, Phase 6 built and awaiting its manual pass
 
 **`docs/ROADMAP.md`** is the specification. Read it before doing anything. Section references
 below (§) point into it.
@@ -72,10 +72,22 @@ could reach; re-checking the fixes by ear found the tenth. Record in **`docs/pha
 findings are now §3's two elicitation modes, §5's elicitation exception, §6.5, §7.31–32, §9 and the
 keyboard map.
 
-The next unit of work is **Phase 6** (§10): the shell.
+**Phase 6 is built and awaiting a person's manual pass**: the shell. No built-in server —
+`servers.json` in the `mcpServers` shape, edited through Add server (Ctrl+N), Import, Server
+settings (Alt+Enter), Reconnect (F5) and Remove (Delete twice); settings, menus, `tools/list_changed`
+through a raw `subscriptions/listen` (the SDK has no client call, and on 2026-07-28 nothing arrives
+without it), rate-limited progress, grid sorting, panes fitted to the screen and the content.
+**humcp's own forms are JSON Schemas rendered by `FormBuilder`** into `OwnFormWindow`, filled and
+read back from the field states because the omission rule cannot tell "cleared" from "untouched".
+The first manual pass was driven through NVDA by the screen reader bridge and found seven defects
+the suite had not. Record in **`docs/phase6-notes.md`**; proposed rules §7.33–36.
 
-Still outstanding and non-blocking: JAWS and Narrator have seen none of the Phase 3, 4 or 5 fixes,
-and the picture Phase 4 puts on screen has had no sighted pass.
+The next unit of work after that pass is **Phase 7** (§10): hardening and release.
+
+**Manual testing is NVDA only from Phase 6 on** — the developer's call: JAWS and Narrator agree with
+NVDA nearly always. The NVDA pass can be driven through the screen reader MCP bridge (`user`
+stance), which is how Phase 6's was done. Still outstanding: the picture Phase 4 puts on screen has
+had no sighted pass.
 
 ## What humcp is
 
@@ -419,17 +431,22 @@ foreground. Keystrokes are for the assertions that are about the keyboard. It al
 from real forms, so `HUMCP_HISTORY` points MRU history at a temporary directory — a test run must
 never write into the profile of whoever ran it.
 
-Phase 1's server is hard-coded to the in-repo fixture. To point the app at a real server instead,
-without a code edit:
+Since Phase 6 the app has **no built-in server**: it connects to whatever `%APPDATA%\humcp\servers.json`
+names, in the `mcpServers` shape every other client uses. A first run shows an empty tree that says
+so. Add servers with <kbd>Ctrl+N</kbd>, or paste another client's block into File, Import servers.
+To try a real server without touching your own list, point the app at a scratch file:
 
 ```bash
-set HUMCP_STDIO_COMMAND=npx.cmd
-set HUMCP_STDIO_ARGS=-y @modelcontextprotocol/server-everything
+set HUMCP_CONFIG=%TEMP%\humcp-try\servers.json
+set HUMCP_SETTINGS=%TEMP%\humcp-try\settings.json
+set HUMCP_HISTORY=%TEMP%\humcp-try\history.json
 dotnet run --project src/Humcp.App
 ```
 
-`HUMCP_HISTORY` moves the MRU history file off its default path in `%APPDATA%\humcp\`, which is what
-the UI suite uses and what to set when trying a real server without keeping what you type.
+All three files live in `%APPDATA%\humcp\` by default, and the UI suite redirects all three into a
+temporary directory: a test run must neither read nor write the profile of whoever ran it. The
+in-repo fixture is found by `tests/Shared/TestServerLocator.cs`, which both test projects compile
+in; nothing under `src/` knows it exists.
 
 ## Testing notes
 
@@ -442,10 +459,11 @@ the UI suite uses and what to set when trying a real server without keeping what
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
-- **The fixture server publishes 28 tools.** Seven were added in Phase 4 with the `result_` prefix,
+- **The fixture server publishes 30 tools.** Seven were added in Phase 4 with the `result_` prefix,
   one per shape a result can have; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
-  round trip can have — two questions in sequence, a question with no fields, every elicitation
-  schema kind at once, request state with no question at all, sampling, roots, and url mode.
+  round trip can have; and in Phase 6 `tools_toggle`, which adds or removes `tools_appeared` so the
+  client is told its list changed, and `demo_progress`, which reports progress five times. A test
+  that calls `tools_toggle` on a shared server must call it again before it finishes.
 - The fake in-process MCP server should exercise hostile input deliberately — 10,000-character
   descriptions, control characters, deeply nested schemas — since all of it is untrusted. Two of its
   fourteen tools exist for the form generator: `demo_search` has fifteen parameters, two required,
@@ -470,7 +488,7 @@ the UI suite uses and what to set when trying a real server without keeping what
 - **Collapse what you expand.** `ComboBox.Select` opens the drop-down, and a WPF popup left open
   swallows `Window.Close()` — so the window stays, the call it was waiting on stays in flight, and
   the *next* test fails on a button that never enables. The symptom is one test later than the cause.
-- Automated UIA assertions prove names exist; only manual NVDA/JAWS/Narrator testing proves the app
+- Automated UIA assertions prove names exist; only manual NVDA testing proves the app
   is pleasant. Do both at each phase exit. **Phase 3 found nine defects by ear that its 886 green
   tests had missed, Phase 4 found eight that its 1,007 had — plus a ninth while re-checking the
   fixes — and Phase 5 found ten that its 1,042 had, including the tenth while re-checking.** Three

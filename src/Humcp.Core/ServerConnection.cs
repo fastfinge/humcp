@@ -25,7 +25,14 @@ public sealed record ServerSnapshot(
     ServerConnectionState State,
     IReadOnlyList<ToolInfo> Tools,
     string? NegotiatedProtocolVersion = null,
-    string? FailureReason = null);
+    string? FailureReason = null)
+{
+    /// <summary>The configuration key the tree files the server's node under. Never spoken.</summary>
+    public string Id { get; init; } = DisplayName;
+
+    /// <summary>False for a server the configuration marks disabled, which is not started at all.</summary>
+    public bool Enabled { get; init; } = true;
+}
 
 /// <summary>
 /// One live connection to one MCP server, and the only place in the app that knows the protocol
@@ -64,15 +71,48 @@ public sealed class ServerConnection : IAsyncDisposable
     private McpClient? _client;
     private IReadOnlyList<ToolInfo> _tools = [];
 
+    /// <summary>The held-open <c>subscriptions/listen</c> request, cancelled on disconnect.</summary>
+    private CancellationTokenSource? _listening;
+
+    /// <summary>
+    /// Re-listing after <c>tools/list_changed</c>: one at a time, and a notification that arrives
+    /// while one is running asks for one more rather than for one each — a server adding ten tools
+    /// in a loop is one new list, not ten.
+    /// </summary>
+    private readonly SemaphoreSlim _relisting = new(1, 1);
+    private int _relistWanted;
+
     public ServerConnection(ServerDescriptor descriptor)
     {
         ArgumentNullException.ThrowIfNull(descriptor);
         Descriptor = descriptor;
     }
 
-    public ServerDescriptor Descriptor { get; }
+    /// <summary>
+    /// What this connection starts. Replaced by <see cref="ReconfigureAsync"/> rather than by making
+    /// a new connection, so that every window holding this one — a tool form part filled in, say —
+    /// goes on working against the edited server instead of a stale one.
+    /// </summary>
+    public ServerDescriptor Descriptor { get; private set; }
 
-    public ServerConnectionState State { get; private set; } = ServerConnectionState.NotConnected;
+    public ServerConnectionState State
+    {
+        get => _state;
+        private set
+        {
+            if (_state == value) return;
+            _state = value;
+            RaiseChanged();
+        }
+    }
+
+    private ServerConnectionState _state = ServerConnectionState.NotConnected;
+
+    /// <summary>
+    /// Raised when anything a <see cref="Snapshot"/> carries has changed — state, tools, failure.
+    /// On whatever thread the change happened on, which is usually not the UI's.
+    /// </summary>
+    public event EventHandler? Changed;
 
     public string? FailureReason { get; private set; }
 
@@ -84,7 +124,42 @@ public sealed class ServerConnection : IAsyncDisposable
     public IReadOnlyList<ToolInfo> Tools => _tools;
 
     public ServerSnapshot Snapshot() => new(
-        Descriptor.DisplayName, State, _tools, NegotiatedProtocolVersion, FailureReason);
+        Descriptor.DisplayName, State, _tools, NegotiatedProtocolVersion, FailureReason)
+    {
+        Id = Descriptor.Id,
+        Enabled = Descriptor.Enabled,
+    };
+
+    /// <summary>
+    /// Points this connection at an edited configuration entry. Disconnects first; reconnecting is
+    /// the caller's decision, because a server just disabled must not be started.
+    /// </summary>
+    public async Task ReconfigureAsync(ServerDescriptor descriptor)
+    {
+        ArgumentNullException.ThrowIfNull(descriptor);
+
+        await DisconnectAsync().ConfigureAwait(false);
+
+        Descriptor = descriptor;
+        _tools = [];
+        FailureReason = null;
+        NegotiatedProtocolVersion = null;
+        ServerTitle = null;
+        _state = ServerConnectionState.NotConnected;
+        RaiseChanged();
+    }
+
+    /// <summary>Stops the server process, and says so in the tree.</summary>
+    public async Task StopAsync()
+    {
+        await DisconnectAsync().ConfigureAwait(false);
+
+        _tools = [];
+        FailureReason = null;
+        NegotiatedProtocolVersion = null;
+        _state = ServerConnectionState.NotConnected;
+        RaiseChanged();
+    }
 
     /// <summary>
     /// Standard error from the child process, newest last. §8 shows a server's failure on its tree
@@ -100,9 +175,21 @@ public sealed class ServerConnection : IAsyncDisposable
     {
         await DisconnectAsync().ConfigureAwait(false);
 
-        State = ServerConnectionState.Connecting;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
+        _tools = [];
+
+        if (Descriptor.Url is { Length: > 0 })
+        {
+            // Read from the file and kept in it, so a pasted configuration survives a save; not
+            // connected to, because the Streamable HTTP transport is Phase 7's (ROADMAP §10).
+            FailureReason = "humcp cannot connect to a server by web address yet, only to one it starts itself.";
+            _state = ServerConnectionState.Failed;
+            RaiseChanged();
+            return;
+        }
+
+        State = ServerConnectionState.Connecting;
 
         try
         {
@@ -112,6 +199,7 @@ public sealed class ServerConnection : IAsyncDisposable
                 Command = Descriptor.Command,
                 Arguments = [.. Descriptor.Arguments],
                 WorkingDirectory = Descriptor.WorkingDirectory,
+                EnvironmentVariables = Descriptor.Environment.ToDictionary(e => e.Key, e => (string?)e.Value),
                 ShutdownTimeout = TimeSpan.FromSeconds(5),
                 StandardErrorLines = RecordDiagnostic,
             });
@@ -122,6 +210,7 @@ public sealed class ServerConnection : IAsyncDisposable
             var tools = await _client.ListToolsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
 
             _tools = [.. tools.Select(Map)];
+            Listen(_client);
             NegotiatedProtocolVersion = _client.NegotiatedProtocolVersion;
             ServerTitle = TextSanitizer.Clean(_client.ServerInfo?.Title ?? _client.ServerInfo?.Name,
                 TextSanitizer.NameLength);
@@ -130,17 +219,23 @@ public sealed class ServerConnection : IAsyncDisposable
         catch (OperationCanceledException)
         {
             await DisconnectAsync().ConfigureAwait(false);
+            _tools = [];
             State = ServerConnectionState.NotConnected;
             throw;
         }
         catch (Exception ex)
         {
             await DisconnectAsync().ConfigureAwait(false);
-            State = ServerConnectionState.Failed;
+
+            // Set before the state, which is what raises Changed: a listener must never see Failed
+            // without the reason.
             FailureReason = Describe(ex);
             _tools = [];
+            State = ServerConnectionState.Failed;
         }
     }
+
+    private void RaiseChanged() => Changed?.Invoke(this, EventArgs.Empty);
 
     /// <summary>Calls a tool with no arguments at all.</summary>
     public Task<ToolCallOutcome> CallAsync(ToolInfo tool, CancellationToken cancellationToken = default)
@@ -157,10 +252,22 @@ public sealed class ServerConnection : IAsyncDisposable
     /// nothing here second-guesses it, because the schema engine has already decided what a filled
     /// in form means and the server is the authority on the rest.
     /// </summary>
+    public Task<ToolCallOutcome> CallAsync(
+        ToolInfo tool,
+        JsonObject? arguments,
+        ElicitationPrompter? elicit,
+        CancellationToken cancellationToken = default)
+        => CallAsync(tool, arguments, elicit, null, cancellationToken);
+
+    /// <summary>
+    /// The whole call: arguments, a window to ask questions in, and somewhere to report progress
+    /// (§4, pitfall 9). Progress arrives on whatever thread the SDK read it on.
+    /// </summary>
     public async Task<ToolCallOutcome> CallAsync(
         ToolInfo tool,
         JsonObject? arguments,
         ElicitationPrompter? elicit,
+        IProgress<ToolProgress>? progress,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tool);
@@ -179,7 +286,7 @@ public sealed class ServerConnection : IAsyncDisposable
             // @modelcontextprotocol/server-everything, which answers a zero-argument call with
             // "expected object, received undefined" if the member is omitted.
             var result = await _client
-                .CallToolAsync(tool.Name, Marshal(arguments), cancellationToken: cancellationToken)
+                .CallToolAsync(tool.Name, Marshal(arguments), Progress(progress), cancellationToken: cancellationToken)
                 .ConfigureAwait(false);
 
             return MapResult(result);
@@ -207,8 +314,31 @@ public sealed class ServerConnection : IAsyncDisposable
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
 
+    /// <summary>The SDK's progress, as the neutral record the App sees, its message sanitised on the way.</summary>
+    private static IProgress<ProgressNotificationValue>? Progress(IProgress<ToolProgress>? progress)
+        => progress is null
+            ? null
+            : new SynchronousProgress(value => progress.Report(new ToolProgress(
+                value.Progress, value.Total, TextSanitizer.Clean(value.Message, TextSanitizer.HelpLength))));
+
+    /// <summary>
+    /// Forwards on the reporting thread. <see cref="Progress{T}"/> would post to whatever
+    /// synchronisation context built it, which here is none, and the App marshals for itself anyway.
+    /// </summary>
+    private sealed class SynchronousProgress(Action<ProgressNotificationValue> report) : IProgress<ProgressNotificationValue>
+    {
+        public void Report(ProgressNotificationValue value) => report(value);
+    }
+
     private async Task DisconnectAsync()
     {
+        var listening = Interlocked.Exchange(ref _listening, null);
+        if (listening is not null)
+        {
+            await listening.CancelAsync().ConfigureAwait(false);
+            listening.Dispose();
+        }
+
         var client = Interlocked.Exchange(ref _client, null);
         if (client is null) return;
 
@@ -268,6 +398,17 @@ public sealed class ServerConnection : IAsyncDisposable
 #pragma warning disable MCP9005
         Handlers = new McpClientHandlers
         {
+            // A server on an older revision sends this unprompted; one on 2026-07-28 sends it down
+            // the subscriptions/listen stream opened in Listen. The same handler hears both.
+            NotificationHandlers =
+            [
+                new(NotificationMethods.ToolListChangedNotification, (_, _) =>
+                {
+                    _ = RelistAsync();
+                    return ValueTask.CompletedTask;
+                }),
+            ],
+
             ElicitationHandler = OnElicitAsync,
             SamplingHandler = (_, _, _) => throw new UnsupportedInputRequestException("a language model"),
             RootsHandler = (_, _) => throw new UnsupportedInputRequestException(
@@ -275,6 +416,90 @@ public sealed class ServerConnection : IAsyncDisposable
         },
 #pragma warning restore MCP9005
     };
+
+    // ------------------------------------------------------------------ the tool list changing
+
+    /// <summary>
+    /// Asks a 2026-07-28 server to say when its tool list changes. That revision removed the
+    /// unsolicited channel older ones used (SEP-2575): a notification arrives only down the response
+    /// stream of a <c>subscriptions/listen</c> request, held open for the life of the connection.
+    /// </summary>
+    /// <remarks>
+    /// The SDK has no client call for this, so it is sent as a plain request whose answer never
+    /// comes; it ends when the connection does. Only sent to a server that both speaks the revision
+    /// and says it publishes list changes, because asking anything else is an error in the
+    /// diagnostics for nothing.
+    /// </remarks>
+    private void Listen(McpClient client)
+    {
+        if (client.ServerCapabilities?.Tools?.ListChanged != true) return;
+        if (string.CompareOrdinal(client.NegotiatedProtocolVersion, "2026-07-28") < 0) return;
+
+        var listening = new CancellationTokenSource();
+        _listening = listening;
+
+        var request = new JsonRpcRequest
+        {
+            Method = RequestMethods.SubscriptionsListen,
+            Params = JsonSerializer.SerializeToNode(
+                new SubscriptionsListenRequestParams
+                {
+                    Notifications = new SubscriptionsListenNotifications { ToolsListChanged = true },
+                },
+                McpJsonUtilities.DefaultOptions),
+        };
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                await client.SendRequestAsync(request, listening.Token).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException)
+            {
+                // The connection closing, which is the only ordinary way this ends.
+            }
+            catch (Exception ex)
+            {
+                RecordDiagnostic("The server would not keep a subscription open, so humcp will not hear when its tools change: " +
+                                 ex.Message);
+            }
+        });
+    }
+
+    /// <summary>Lists the tools again, coalescing a burst of notifications into one listing.</summary>
+    private async Task RelistAsync()
+    {
+        Interlocked.Exchange(ref _relistWanted, 1);
+
+        if (!await _relisting.WaitAsync(0).ConfigureAwait(false)) return;
+
+        try
+        {
+            while (Interlocked.Exchange(ref _relistWanted, 0) == 1)
+            {
+                if (_client is not { } client || State != ServerConnectionState.Connected) return;
+
+                var tools = await client.ListToolsAsync().ConfigureAwait(false);
+                _tools = [.. tools.Select(Map)];
+
+                RecordDiagnostic($"The server said its tools changed. It now publishes {_tools.Count}.");
+                RaiseChanged();
+            }
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            RecordDiagnostic("The server said its tools changed, and listing them again failed: " + ex.Message);
+        }
+        finally
+        {
+            _relisting.Release();
+        }
+
+        // A notification that landed between the last check and the release would otherwise wait
+        // for the next one to be noticed.
+        if (Volatile.Read(ref _relistWanted) == 1) await RelistAsync().ConfigureAwait(false);
+    }
 
     // ------------------------------------------------------------------ being asked something
 

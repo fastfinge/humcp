@@ -647,6 +647,23 @@ public class FormStateTests
 
     // ------------------------------------------------------------------ helpers
 
+    [Fact]
+    public void The_problem_announced_is_the_one_the_caret_lands_on()
+    {
+        // Name comes first on the form and Command first in the alphabet. Found by ear: the add-server
+        // form said "Command: This one is required" and put the caret in Name (phase6-notes).
+        var state = State("""
+            { "type": "object",
+              "properties": { "name": { "type": "string" }, "command": { "type": "string" } },
+              "required": ["name", "command"] }
+            """);
+
+        var submission = state.Prepare();
+
+        Assert.Equal("name", state.FirstProblem!.Path);
+        Assert.StartsWith("Name:", state.LeadProblem(submission));
+    }
+
     private static FormState State(string schema) =>
         FormState.Create(FormBuilder.Build(JsonDocument.Parse(schema).RootElement));
 

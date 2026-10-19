@@ -231,7 +231,10 @@ internal static class ResultSections
         }
 
         if (sections.Count == 0)
-            sections.Add(new TextSection("Result", "The tool returned no content."));
+            sections.Add(new TextSection("Result", "The tool returned no content.")
+            {
+                HelpText = "The call finished and sent nothing back to show.",
+            });
 
         // §7.24: a fact that is only on screen is a fact somebody has not been told. An error is
         // announced when the call finishes and written into the window's heading, and it also goes

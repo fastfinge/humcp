@@ -11,6 +11,9 @@
         <KeyBinding Key="F6" Modifiers="Shift" Command="{x:Static local:MainWindow.PreviousPaneCommand}" />
         <KeyBinding Key="F1" Command="{x:Static local:MainWindow.DetailsCommand}" />
         <KeyBinding Key="F5" Command="{x:Static local:MainWindow.ReconnectCommand}" />
+        <KeyBinding Key="N" Modifiers="Control" Command="{x:Static local:MainWindow.AddServerCommand}" />
+        <KeyBinding Key="Enter" Modifiers="Alt" Command="{x:Static local:MainWindow.EditServerCommand}" />
+        <KeyBinding Key="OemComma" Modifiers="Control" Command="{x:Static local:MainWindow.SettingsCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -21,9 +24,24 @@
               Focusable="False" IsTabStop="False"
               KeyboardNavigation.TabNavigation="None">
             <MenuItem Header="_File">
+                <MenuItem Header="_Add server…" InputGestureText="Ctrl+N" Click="OnAddServer" />
+                <MenuItem Header="_Import servers…" Click="OnImportServers" />
+                <MenuItem Header="Server _settings…" InputGestureText="Alt+Enter" Click="OnEditServer" />
                 <MenuItem Header="_Reconnect server" InputGestureText="F5" Click="OnReconnect" />
+                <MenuItem Header="Re_move server" InputGestureText="Delete" Click="OnRemoveServer" />
+                <Separator />
+                <MenuItem Header="Se_ttings…" InputGestureText="Ctrl+Comma" Click="OnSettings" />
                 <Separator />
                 <MenuItem Header="E_xit" Click="OnExit" />
+            </MenuItem>
+            <MenuItem Header="_Edit">
+                <MenuItem Header="Copy server _configuration" Click="OnCopyServer" />
+                <MenuItem Header="Copy tool _schema" Click="OnCopySchema" />
+                <Separator />
+                <MenuItem Header="Clear parameter _history" Click="OnClearHistory" />
+            </MenuItem>
+            <MenuItem Header="_View">
+                <MenuItem Header="Servers pane _width…" Click="OnPaneWidth" />
             </MenuItem>
             <MenuItem Header="_Tool">
                 <MenuItem x:Name="RunMenuItem" Header="_Run" InputGestureText="Enter" Click="OnRun" />
@@ -31,8 +49,11 @@
             </MenuItem>
             <MenuItem x:Name="WindowMenu" Header="_Window" />
             <MenuItem Header="_Help">
+                <MenuItem Header="_Keyboard shortcuts…" Click="OnKeyboardHelp" />
                 <MenuItem Header="_Speech diagnostics…" Click="OnSpeechDiagnostics" />
                 <MenuItem Header="_Connection diagnostics…" Click="OnConnectionDiagnostics" />
+                <Separator />
+                <MenuItem Header="_About humcp" Click="OnAbout" />
             </MenuItem>
         </Menu>
 
@@ -54,9 +75,9 @@
 
         <Grid Margin="8">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" MinWidth="260" />
+                <ColumnDefinition x:Name="TreeColumn" Width="420" MinWidth="260" />
                 <ColumnDefinition Width="6" />
-                <ColumnDefinition Width="*" MinWidth="320" />
+                <ColumnDefinition x:Name="ResultColumn" Width="*" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
             <!-- ================================================== pane 1: servers and tools -->
@@ -69,7 +90,7 @@
                             Padding="12,4" Margin="0,0,8,0" IsEnabled="False"
                             AutomationProperties.HelpText="Runs the selected tool. A tool with parameters opens a form first. Enter does the same from the tree." />
                     <Button Content="Re_connect" Click="OnReconnect" Padding="12,4"
-                            AutomationProperties.HelpText="Restarts the server process and lists its tools again. F5." />
+                            AutomationProperties.HelpText="Restarts the selected server and lists its tools again. F5." />
                 </StackPanel>
 
                 <local:TypeAheadTreeView x:Name="Tree"
@@ -95,11 +116,11 @@
                 </local:TypeAheadTreeView>
             </DockPanel>
 
-            <!-- IsTabStop, not Focusable: the splitter stays programmatically focusable so a
-                 Phase 6 "resize this pane" command can hand it the arrow keys, but Tab walks past
-                 it (§7.14, and phase0-findings 2.4). -->
-            <GridSplitter Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
-                          IsTabStop="False"
+            <!-- For the mouse only. The keyboard route §7.14 requires is View, Servers pane width,
+                 a generated form with a number in it: a focused GridSplitter never receives an
+                 arrow key at all (phase6-notes), so handing it the caret was a route to nowhere. -->
+            <GridSplitter x:Name="Splitter" Grid.Column="1" Width="6" HorizontalAlignment="Stretch"
+                          Focusable="False" IsTabStop="False"
                           AutomationProperties.Name="Resize servers pane" />
 
             <!-- ================================================== pane 2: the result -->

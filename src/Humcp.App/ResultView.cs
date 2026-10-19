@@ -87,7 +87,9 @@ public sealed class ResultView : ContentControl
     public void ShowMessage(string heading, string text)
     {
         _outcome = null;
-        _parts.ItemsSource = new[] { new TextSection(heading, text) };
+        // Help text even here: a box with neither help nor a label is one a reader announces as a bare
+        // name, and this is the first thing F6 lands on in a window that has run nothing yet.
+        _parts.ItemsSource = new[] { new TextSection(heading, text) { HelpText = "Results appear here when a tool runs." } };
     }
 
     /// <summary>

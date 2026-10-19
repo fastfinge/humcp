@@ -15,11 +15,21 @@ public sealed class TestServerFixture : IAsyncLifetime
 
     public async ValueTask InitializeAsync()
     {
-        Connection = new ServerConnection(BuiltInServers.TestServer(AppContext.BaseDirectory));
+        Connection = new ServerConnection(TestServer());
         await Connection.ConnectAsync(new CancellationTokenSource(TimeSpan.FromSeconds(60)).Token);
     }
 
     public async ValueTask DisposeAsync() => await Connection.DisposeAsync();
+
+    /// <summary>The in-repo fixture as a configuration entry. Fails loudly when it has not been built.</summary>
+    public static ServerDescriptor TestServer()
+    {
+        var located = Humcp.Tests.TestServerLocator.Locate(AppContext.BaseDirectory)
+                      ?? throw new InvalidOperationException(
+                          "The fixture server is not built. Build tests/Humcp.TestServer first.");
+
+        return new ServerDescriptor("humcp-test-server", "humcp test server", located.Command, located.Arguments);
+    }
 }
 
 /// <summary>
@@ -50,7 +60,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
     [Fact]
     public void Lists_every_published_tool()
     {
-        Assert.Equal(28, Connection.Tools.Count);
+        Assert.Equal(30, Connection.Tools.Count);
     }
 
     [Fact]
@@ -308,7 +318,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var server = ToolTreeBuilder.BuildServerNode(Connection.Snapshot());
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
-        Assert.Equal(28, tools.Count);
+        Assert.Equal(30, tools.Count);
         Assert.Contains(server.Children.Single().Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 

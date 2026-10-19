@@ -20,6 +20,20 @@ public static class ToolTreeBuilder
     /// <summary>At least this many prefixes must qualify, or the split is not a pattern.</summary>
     public const int MinimumGroupCount = 2;
 
+    /// <summary>
+    /// The whole tree: one node per configured server, in configuration order, or a single message
+    /// node when there are none — an empty tree cannot take the focus, so it could not even say
+    /// that it is empty.
+    /// </summary>
+    public static IReadOnlyList<CatalogueNode> BuildForest(IReadOnlyList<ServerSnapshot> servers, string emptyMessage)
+    {
+        ArgumentNullException.ThrowIfNull(servers);
+
+        return servers.Count == 0
+            ? [new CatalogueNode(CatalogueNodeKind.Message, emptyMessage)]
+            : [.. servers.Select(BuildServerNode)];
+    }
+
     public static CatalogueNode BuildServerNode(ServerSnapshot server)
     {
         ArgumentNullException.ThrowIfNull(server);
@@ -27,9 +41,9 @@ public static class ToolTreeBuilder
         var children = new List<CatalogueNode>();
 
         // §8: category nodes appear only when non-empty. Prompts and Resources arrive in v2.
-        if (server.Tools.Count > 0) children.Add(BuildToolsCategory(server.Tools));
+        if (server.Tools.Count > 0) children.Add(BuildToolsCategory(server.Id, server.Tools));
 
-        return new CatalogueNode(CatalogueNodeKind.Server, DescribeServer(server), children);
+        return new CatalogueNode(CatalogueNodeKind.Server, DescribeServer(server), children, serverId: server.Id);
     }
 
     /// <summary>
@@ -53,6 +67,8 @@ public static class ToolTreeBuilder
             ServerConnectionState.Failed =>
                 $"{name}, error: {TextSanitizer.Clean(server.FailureReason, TextSanitizer.NameLength)}",
 
+            _ when !server.Enabled => $"{name}, disabled",
+
             _ => $"{name}, not connected",
         };
     }
@@ -64,11 +80,11 @@ public static class ToolTreeBuilder
             // server misbehaves, so it is on the node rather than in a log.
             : $", protocol {TextSanitizer.Clean(server.NegotiatedProtocolVersion, 40)}";
 
-    private static CatalogueNode BuildToolsCategory(IReadOnlyList<ToolInfo> tools)
+    private static CatalogueNode BuildToolsCategory(string serverId, IReadOnlyList<ToolInfo> tools)
     {
-        var children = Group(tools);
+        var children = Group(tools, serverId);
         var label = $"Tools, {tools.Count} item{(tools.Count == 1 ? "" : "s")}";
-        return new CatalogueNode(CatalogueNodeKind.Category, label, children);
+        return new CatalogueNode(CatalogueNodeKind.Category, label, children, serverId: serverId);
     }
 
     /// <summary>
@@ -76,8 +92,11 @@ public static class ToolTreeBuilder
     /// heuristic as a guess to revisit against the harvested corpus; it is deliberately conservative
     /// so that a server which does not namespace consistently gets a flat list instead of noise.
     /// </summary>
-    public static IReadOnlyList<CatalogueNode> Group(IReadOnlyList<ToolInfo> tools)
+    public static IReadOnlyList<CatalogueNode> Group(IReadOnlyList<ToolInfo> tools, string? serverId = null)
     {
+        CatalogueNode ToolNode(ToolInfo tool)
+            => new(CatalogueNodeKind.Tool, tool.AccessibleName, tool: tool, helpText: tool.Summary, serverId: serverId);
+
         var byPrefix = tools
             .GroupBy(PrefixOf, StringComparer.OrdinalIgnoreCase)
             .ToList();
@@ -97,7 +116,7 @@ public static class ToolTreeBuilder
         {
             var members = group.OrderBy(ToolSortKey, StringComparer.CurrentCultureIgnoreCase).Select(ToolNode).ToList();
             var label = $"{NameHumanizer.Humanize(group.Key)}, {members.Count} item{(members.Count == 1 ? "" : "s")}";
-            nodes.Add(new CatalogueNode(CatalogueNodeKind.Group, label, members));
+            nodes.Add(new CatalogueNode(CatalogueNodeKind.Group, label, members, serverId: serverId));
         }
 
         // Tools whose prefix did not earn a group sit beside the groups rather than in a
@@ -109,9 +128,6 @@ public static class ToolTreeBuilder
 
         return nodes;
     }
-
-    private static CatalogueNode ToolNode(ToolInfo tool)
-        => new(CatalogueNodeKind.Tool, tool.AccessibleName, tool: tool, helpText: tool.Summary);
 
     private static string ToolSortKey(ToolInfo tool) => tool.DisplayName;
 

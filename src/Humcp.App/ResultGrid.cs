@@ -1,8 +1,10 @@
 using System.Windows;
 using System.Windows.Automation;
+using System.Windows.Automation.Peers;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using System.Windows.Media;
 using Humcp.Schema;
 
 namespace Humcp.App;
@@ -47,6 +49,145 @@ public class ResultDataGrid : DataGrid
         var rows = new Style(typeof(DataGridRow));
         rows.Setters.Add(new Setter(AutomationProperties.NameProperty, new Binding(nameof(ResultRow.Summary))));
         RowStyle = rows;
+
+        // A header click sorts by our rule rather than WPF's text comparison, and says so.
+        Sorting += (_, e) =>
+        {
+            e.Handled = true;
+            var index = Columns.IndexOf(e.Column);
+            if (index >= 0) SortBy(index, ascending: _sort?.Column != index || !_sort.Ascending);
+        };
+
+        // A menu that exists before it is asked for, filled in when it opens. Without one, WPF did
+        // not open anything for the grid, and Shift+F10 fell through to the window's system menu —
+        // "Restore, Move, Size" where sorting was promised (phase6-notes).
+        ContextMenu = new ContextMenu();
+        ContextMenuOpening += OnContextMenuOpening;
+
+        // The result view's status line, found once the grid is in it. A grid in a window of its
+        // own has none, and falls back to a notification (see Say).
+        Loaded += (_, _) => Announce ??= FindAncestor<ResultView>(this)?.Announce;
+    }
+
+    private ResultSort? _sort;
+
+    /// <summary>
+    /// Says what a sort did. Set by the result view to its own status line; a grid with nowhere to
+    /// say it raises a UI Automation notification instead, so a sort is never silent (phase4-notes 6).
+    /// </summary>
+    public Action<string>? Announce { get; set; }
+
+    /// <summary>
+    /// Sorts the rows by one column, puts the caret at the top of that column, and says so — in the
+    /// status line once, and in the column's header for as long as it is true (§7.24).
+    /// </summary>
+    public void SortBy(int column, bool ascending)
+    {
+        if (Table is not { } table || column < 0 || column >= Columns.Count) return;
+
+        // New rows in the new order, rather than the same rows re-sorted in a view. Found by ear
+        // (phase6-notes): after an in-place sort, Up and Down moved the caret and NVDA said nothing
+        // at all, while Left and Right still spoke — the grid's automation peers went on describing
+        // rows that had moved. A freshly bound grid is the state that is known to read correctly.
+        _sort = new ResultSort(column, ascending);
+        ItemsSource = table.Rows.Order(_sort).ToList();
+
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            Columns[i].SortDirection = i == column
+                ? ascending ? System.ComponentModel.ListSortDirection.Ascending : System.ComponentModel.ListSortDirection.Descending
+                : null;
+            Columns[i].Header = ResultSort.Header(table.Columns[i].Label, i == column ? ascending : null);
+        }
+
+        MoveToTop(column);
+        Say(ResultSort.Describe(table.Columns[column].Label, ascending));
+    }
+
+    /// <summary>Puts the rows back in the order the server sent them.</summary>
+    public void ClearSort()
+    {
+        if (Table is not { } table) return;
+
+        _sort = null;
+        ItemsSource = table.Rows;
+
+        for (var i = 0; i < Columns.Count; i++)
+        {
+            Columns[i].SortDirection = null;
+            Columns[i].Header = table.Columns[i].Label;
+        }
+
+        MoveToTop(CurrentColumn is { } current ? Columns.IndexOf(current) : 0);
+        Say("Back in the order the server sent.");
+    }
+
+    private void MoveToTop(int column)
+    {
+        if (Items.Count == 0 || column < 0) return;
+
+        var item = Items[0];
+        CurrentCell = new DataGridCellInfo(item, Columns[column]);
+        SelectedCells.Clear();
+        SelectedCells.Add(CurrentCell);
+        ScrollIntoView(item, Columns[column]);
+
+        // The rows were just rebuilt, so the cell the caret was in no longer exists; put it on the
+        // new one, or WPF leaves it nowhere (§7.25).
+        UpdateLayout();
+        if (Columns[column].GetCellContent(item)?.Parent is DataGridCell cell) cell.Focus();
+    }
+
+    private void Say(string text)
+    {
+        if (Announce is { } announce)
+        {
+            announce(text);
+            return;
+        }
+
+        var peer = UIElementAutomationPeer.FromElement(this) ?? UIElementAutomationPeer.CreatePeerForElement(this);
+        peer?.RaiseNotificationEvent(AutomationNotificationKind.ActionCompleted,
+            AutomationNotificationProcessing.ImportantMostRecent, text, "humcp.sort");
+    }
+
+    /// <summary>
+    /// The <kbd>Applications</kbd> key's menu, built for the column the caret is in: sorting is the
+    /// thing a header click does and the keyboard has no header to click.
+    /// </summary>
+    private void OnContextMenuOpening(object sender, ContextMenuEventArgs e)
+    {
+        if (Table is not { } table || Columns.Count == 0)
+        {
+            e.Handled = true;
+            return;
+        }
+
+        var index = CurrentColumn is { } current ? Columns.IndexOf(current) : 0;
+        if (index < 0) index = 0;
+
+        var label = table.Columns[index].Label;
+        var menu = ContextMenu ??= new ContextMenu();
+        menu.Items.Clear();
+
+        menu.Items.Add(Item($"Sort by {label}, _ascending", () => SortBy(index, ascending: true)));
+        menu.Items.Add(Item($"Sort by {label}, _descending", () => SortBy(index, ascending: false)));
+
+        if (_sort is not null) menu.Items.Add(Item("_Original order", ClearSort));
+    }
+
+    private static MenuItem Item(string header, Action action)
+    {
+        var item = new MenuItem { Header = header };
+        item.Click += (_, _) => action();
+        return item;
+    }
+
+    private static T? FindAncestor<T>(DependencyObject start) where T : DependencyObject
+    {
+        for (var node = VisualTreeHelper.GetParent(start); node is not null; node = VisualTreeHelper.GetParent(node))
+            if (node is T found) return found;
+        return null;
     }
 
     /// <summary>
@@ -86,6 +227,7 @@ public class ResultDataGrid : DataGrid
     {
         Columns.Clear();
         ItemsSource = null;
+        _sort = null;
 
         if (table is null) return;
 
@@ -124,6 +266,8 @@ public class ResultDataGrid : DataGrid
 
         if (table.Rows.Any(r => r.Cells.Any(c => c.HasDetail)))
             parts.Add("A cell that says how many fields or items it holds opens in a window with Enter.");
+
+        if (table.Rows.Count > 1) parts.Add("The Applications key sorts by the column the caret is in.");
 
         return string.Join(" ", parts);
     }

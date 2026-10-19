@@ -19,6 +19,15 @@
          does not link against the app. -->
     <ProjectReference Include="..\..\src\Humcp.App\Humcp.App.csproj"
                       ReferenceOutputAssembly="false" Private="false" />
+
+    <!-- Build order only, and since Phase 6 here rather than on the app: the app connects to
+         whatever its configuration names, and the suite writes a configuration naming this. -->
+    <ProjectReference Include="..\Humcp.TestServer\Humcp.TestServer.csproj"
+                      ReferenceOutputAssembly="false" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\TestServerLocator.cs" Link="Shared\TestServerLocator.cs" />
   </ItemGroup>
 
   <ItemGroup>
