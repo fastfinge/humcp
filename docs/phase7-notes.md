@@ -86,7 +86,18 @@ hands the caret to Run when it disables itself (§7.25).
 same idiom a submit and a server removal use — and the sentence says whose claim it is: *"Delete
 everything says it may delete or change things that cannot be put back."*
 
-### 2.7 Licensing
+### 2.7 Progress arrives after the answer, under load
+
+Found by the release workflow, not by a person: on GitHub's runners, about one run in three, a call
+received none of its progress. Traced on both sides — the fixture logging every notification it sent,
+the client every one it received — the five notifications arrived with the right token, *after* the
+answer that ended the call, though they came first on the wire. The SDK's per-call progress handler is
+gone by then, and so was humcp's first replacement for it. Progress is now received by a handler
+registered once per connection and routed by a token humcp generates, kept for thirty seconds after
+the call. Late reports reach the call; the App speaks none of them once the answer is in. Six
+parallel CI runs green afterwards. Never once reproduced locally, even pinned to two cores.
+
+### 2.8 Licensing
 
 Nothing humcp depends on restricts the licence of humcp's own code: Apache-2.0 (the MCP SDK), MIT
 (.NET, WPF, Humanizer, json-everything's source), MPL-2.0 (Prismatoid, used unmodified, file-scoped).
