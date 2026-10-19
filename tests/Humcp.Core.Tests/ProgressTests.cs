@@ -68,8 +68,11 @@ public class ProgressTests
     [Fact]
     public async Task Progress_from_a_real_server_arrives_as_neutral_reports()
     {
+        var clock = System.Diagnostics.Stopwatch.StartNew();
+
         await using var connection = new ServerConnection(TestServerFixture.TestServer());
         await connection.ConnectAsync(TestContext.Current.CancellationToken);
+        var connected = clock.Elapsed;
 
         var reports = new List<ToolProgress>();
         var progress = new Recorder(reports);
@@ -77,6 +80,7 @@ public class ProgressTests
         var outcome = await connection.CallAsync(
             connection.Tools.Single(t => t.Name == "demo_progress"), null, null, progress,
             TestContext.Current.CancellationToken);
+        var called = clock.Elapsed;
 
         Assert.False(outcome.IsError);
 
@@ -92,7 +96,12 @@ public class ProgressTests
 
         lock (reports)
         {
-            Assert.NotEmpty(reports);
+            // Said in full when it fails, because it has failed only on a release runner so far.
+            Assert.True(reports.Count > 0,
+                $"No progress arrived. Connected after {connected.TotalSeconds:F1} s, answered after " +
+                $"{called.TotalSeconds:F1} s, protocol {connection.NegotiatedProtocolVersion}. Answer: " +
+                string.Join(" ", outcome.Blocks.OfType<TextResultBlock>().Select(b => b.Text)) +
+                " | Diagnostics: " + string.Join(" | ", connection.Diagnostics));
             Assert.All(reports, r => Assert.Equal(5, r.Total));
             Assert.StartsWith("Step ", reports[0].Message);
         }
