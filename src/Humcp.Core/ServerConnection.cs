@@ -423,6 +423,7 @@ public sealed class ServerConnection : IAsyncDisposable
         // Set before the await, so that it flows into whatever thread the SDK resolves an input
         // request on and no further: two windows calling one server each get their own.
         _prompter.Value = elicit;
+        string? token = null;
 
         try
         {
@@ -431,7 +432,8 @@ public sealed class ServerConnection : IAsyncDisposable
             // @modelcontextprotocol/server-everything, which answers a zero-argument call with
             // "expected object, received undefined" if the member is omitted.
             var result = await _client
-                .CallToolAsync(tool.Name, Marshal(arguments), Progress(progress), cancellationToken: cancellationToken)
+                .CallToolAsync(tool.Name, Marshal(arguments), progress: null, Track(progress, out token),
+                    cancellationToken)
                 .ConfigureAwait(false);
 
             return MapResult(result);
@@ -454,25 +456,57 @@ public sealed class ServerConnection : IAsyncDisposable
         finally
         {
             _prompter.Value = null;
+            if (token is not null) _progress.TryRemove(token, out _);
         }
     }
 
     public async ValueTask DisposeAsync() => await DisconnectAsync().ConfigureAwait(false);
 
-    /// <summary>The SDK's progress, as the neutral record the App sees, its message sanitised on the way.</summary>
-    private static IProgress<ProgressNotificationValue>? Progress(IProgress<ToolProgress>? progress)
-        => progress is null
-            ? null
-            : new SynchronousProgress(value => progress.Report(new ToolProgress(
-                value.Progress, value.Total, TextSanitizer.Clean(value.Message, TextSanitizer.HelpLength))));
+    /// <summary>Calls in flight that asked for progress, by the token humcp gave them.</summary>
+    private readonly ConcurrentDictionary<string, IProgress<ToolProgress>> _progress = new(StringComparer.Ordinal);
 
     /// <summary>
-    /// Forwards on the reporting thread. <see cref="Progress{T}"/> would post to whatever
-    /// synchronisation context built it, which here is none, and the App marshals for itself anyway.
+    /// The request options for a call: a progress token of humcp's own when the caller wants
+    /// progress, filed so the connection's own handler can find the call (<see cref="OnProgress"/>).
     /// </summary>
-    private sealed class SynchronousProgress(Action<ProgressNotificationValue> report) : IProgress<ProgressNotificationValue>
+    /// <remarks>
+    /// Not the SDK's <c>IProgress</c> parameter, which on a loaded machine lost every notification
+    /// of a call while the server provably sent all five (issue #1, phase7-notes): the per-call
+    /// handler it registers is the part that loses them. A handler registered once with the client,
+    /// like the <c>list_changed</c> one beside it, has never missed one.
+    /// </remarks>
+    private RequestOptions? Track(IProgress<ToolProgress>? progress, out string? token)
     {
-        public void Report(ProgressNotificationValue value) => report(value);
+        token = null;
+        if (progress is null) return null;
+
+        token = "humcp-" + Guid.NewGuid().ToString("n");
+        _progress[token] = progress;
+        return new RequestOptions { ProgressToken = new ProgressToken(token) };
+    }
+
+    /// <summary>One <c>notifications/progress</c>, handed to the call it belongs to, sanitised on the way.</summary>
+    private ValueTask OnProgress(JsonRpcNotification notification)
+    {
+        try
+        {
+            var value = notification.Params?.Deserialize<ProgressNotificationParams>(McpJsonUtilities.DefaultOptions);
+
+            if (value?.ProgressToken.Token is { } token
+                && _progress.TryGetValue(token.ToString() ?? "", out var progress))
+            {
+                progress.Report(new ToolProgress(
+                    value.Progress.Progress, value.Progress.Total,
+                    TextSanitizer.Clean(value.Progress.Message, TextSanitizer.HelpLength)));
+            }
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException or InvalidOperationException)
+        {
+            // A malformed progress report is not worth stopping anything for; it is simply not said.
+            RecordDiagnostic("A progress report could not be read: " + ex.Message);
+        }
+
+        return ValueTask.CompletedTask;
     }
 
     private async Task DisconnectAsync()
@@ -552,6 +586,9 @@ public sealed class ServerConnection : IAsyncDisposable
                     _ = RelistAsync();
                     return ValueTask.CompletedTask;
                 }),
+
+                // Progress for every call on this connection, routed by humcp's own token (Track).
+                new(NotificationMethods.ProgressNotification, (notification, _) => OnProgress(notification)),
             ],
 
             ElicitationHandler = OnElicitAsync,
