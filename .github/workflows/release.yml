@@ -42,11 +42,9 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore -p:Version=${{ env.VERSION }}
 
-      # The commit being released must have passed CI, which runs the Schema and Core suites. Not run
-      # again here: on the release runner, and only there, one Core test has never received the
-      # fixture's progress notifications, while the same commit passes in CI and locally
-      # (issue #1). The release still cannot be cut from a commit
-      # CI has not passed.
+      # The commit being released must have passed CI, which runs the Schema and Core suites on
+      # exactly this commit; they are not run a second time here. A release cannot be cut from a
+      # commit CI has not passed.
       - name: CI passed for this commit
         shell: pwsh
         env:

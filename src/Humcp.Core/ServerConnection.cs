@@ -456,7 +456,10 @@ public sealed class ServerConnection : IAsyncDisposable
         finally
         {
             _prompter.Value = null;
-            if (token is not null) _progress.TryRemove(token, out _);
+            // Not forgotten yet: under load the SDK hands humcp a call's progress notifications after
+            // the answer that ended it, though they came first on the wire (issue #1). Late reports
+            // are still delivered; the App says none of them once the answer is in.
+            if (token is not null) ForgetLater(token);
         }
     }
 
@@ -471,9 +474,10 @@ public sealed class ServerConnection : IAsyncDisposable
     /// </summary>
     /// <remarks>
     /// Not the SDK's <c>IProgress</c> parameter, which on a loaded machine lost every notification
-    /// of a call while the server provably sent all five (issue #1, phase7-notes): the per-call
-    /// handler it registers is the part that loses them. A handler registered once with the client,
-    /// like the <c>list_changed</c> one beside it, has never missed one.
+    /// of a call while the server provably sent all five (issue #1, phase7-notes). Traced on both
+    /// sides: the notifications arrive, with the right token, after the answer that ended the call —
+    /// by which time the SDK's per-call handler is gone. A handler registered once with the client,
+    /// and a token kept for <see cref="ProgressGrace"/> after the call, receive them all.
     /// </remarks>
     private RequestOptions? Track(IProgress<ToolProgress>? progress, out string? token)
     {
@@ -485,6 +489,13 @@ public sealed class ServerConnection : IAsyncDisposable
         return new RequestOptions { ProgressToken = new ProgressToken(token) };
     }
 
+    /// <summary>How long a finished call's progress is still accepted, for notifications processed late.</summary>
+    private static readonly TimeSpan ProgressGrace = TimeSpan.FromSeconds(30);
+
+    private void ForgetLater(string token)
+        => _ = Task.Delay(ProgressGrace).ContinueWith(_ => _progress.TryRemove(token, out IProgress<ToolProgress>? _),
+            TaskScheduler.Default);
+
     /// <summary>One <c>notifications/progress</c>, handed to the call it belongs to, sanitised on the way.</summary>
     private ValueTask OnProgress(JsonRpcNotification notification)
     {
@@ -495,9 +506,7 @@ public sealed class ServerConnection : IAsyncDisposable
             var token = value?.ProgressToken.Token?.ToString() ?? "";
             var known = _progress.TryGetValue(token, out var progress);
 
-            // Kept in the diagnostics until issue #1 is closed: which reports arrived, and whether
-            // they belonged to a call humcp was waiting on.
-            RecordDiagnostic($"Progress arrived for {token} ({(known ? "a call in flight" : "no call humcp knows")}).");
+            if (!known) RecordDiagnostic($"Progress arrived for {token}, which belongs to no call humcp made recently.");
 
             if (known && value is not null && progress is not null)
             {
