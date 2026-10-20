@@ -38,7 +38,7 @@ two goals conflict, accessibility wins.
 | UI framework | **WPF** | Mature UIA implementation, ~20 years of screen-reader hardening; strong dynamic-UI story via `DataTemplateSelector`. See §2.1. **Confirmed by the Phase 0 spike** |
 | Speech | **prism** via the `prismatoid` NuGet package | Announcements with nowhere on screen to live — a narrower job than it first looked, see §7. Phase 1 measured a live region covering everything visible, leaving prism idle for now |
 | Transports (v1) | stdio + **unauthenticated** Streamable HTTP | OAuth deferred; keeps v1 shippable |
-| LLM | **None in v1**, seam preserved | Human is the intelligence; `IResultSummarizer` / `IToolSuggester` interfaces ship as null implementations |
+| LLM | **None in v1**, seam preserved. **v2: local only, through Windows ML** | Human is the intelligence; `IResultSummarizer` / `IToolSuggester` interfaces ship as null implementations. v2 runs models on the user's own machine through ONNX Runtime GenAI on Windows ML — no API keys, nothing sent anywhere. See §11.0 |
 | Protocol SDK | `ModelContextProtocol.Core` 2.2.0 | Implements spec 2026-07-28, negotiates back to older servers |
 | JSON Schema validation | `JsonSchema.Net` 9.4.0 | The one package `Humcp.Schema` references. Assertion semantics are a conformance surface and a hand-rolled subset would disagree with the server about what is valid; the *messages* are all ours, because they are spoken. See phase2-notes 3.6 |
 
@@ -310,6 +310,10 @@ restructuring:
 
 - `IResultSummarizer` — summarise a large result; generate image alt text
 - `IToolSuggester` — natural-language "what do you want to do?" → ranked tool list
+
+Neither interface was ever written in v1 — two comments name `IResultSummarizer` as the place a
+description would come from, and that is the whole of the seam in code. v2 defines both in
+`Humcp.Core`, taking `Microsoft.Extensions.AI`'s `IChatClient` underneath (§11.0).
 
 ### 6.0 Layout decisions taken in Phase 1
 
@@ -1160,9 +1164,10 @@ Two items carried in from earlier phases:
 
 Activate the seams and finish the protocol surface, before widening scope.
 
-- **LLM integration** through the existing `IResultSummarizer` / `IToolSuggester` interfaces:
+- **LLM integration** through the `IResultSummarizer` / `IToolSuggester` interfaces:
   natural-language tool search, summarisation of large results, and — the highest-value one for
-  this audience — **generated alt text for returned images**, which closes pitfall #6.
+  this audience — **generated alt text for returned images**, which closes pitfall #6. Runtime,
+  model tiers and the spike that decides them: §11.0–11.1.
 - **Prompts and Resources as first-class UI.** v1 lists them; v2 makes them usable. Prompts get the
   same generated-form treatment, and they are the *only* place `completion/complete` works, so
   prompt arguments get real autocomplete that tool arguments cannot have (pitfall #3).
@@ -1172,6 +1177,84 @@ Activate the seams and finish the protocol surface, before widening scope.
   the path works — `Braille()` is accepted through the NVDA backend — but not yet whether a
   separate braille presentation policy is *wanted*; that needs a session with a display connected
   (§13).
+
+#### 11.0 The model runs on the user's machine
+
+**Decision (2026-10-20): local inference only, through ONNX Runtime GenAI on Windows ML.** No API
+keys, no provider, nothing leaves the machine. For this audience that is not only a privacy
+position: a user who cannot see a settings screen's fine print cannot easily tell what a cloud
+summariser was sent, and creating an API key is a setup task we would otherwise have to make
+accessible.
+
+Considered and set aside:
+
+- **SharpMind** (pure managed C#, GGUF, has an `IChatClient` adapter). Attractive because it is
+  native C# with no native runtime — but it has **no vision support**, which rules out alt text,
+  the highest-value feature here; it is CPU-only; and it is young, with one main maintainer.
+- **DirectML.** In maintenance mode: no new features, security fixes only, and its README points
+  at Windows ML. `Microsoft.ML.OnnxRuntimeGenAI.DirectML` stopped at 0.14.1 while the other
+  variants are at 0.18.0.
+
+What Windows ML gives: Microsoft's maintained copy of ONNX Runtime, CPU on every supported Windows
+version, and NPU/GPU execution providers that Windows downloads and keeps current (24H2 and later).
+ONNX Runtime GenAI runs chat models on top of it (`Microsoft.ML.OnnxRuntimeGenAI.WinML`), ships an
+`IChatClient` (`OnnxRuntimeGenAIChatClient`, text only), and has a `MultiModalProcessor` for
+vision models. **Windows 10 is not supported in v2** — the developer's call, and it costs nothing
+technically that Windows 11 does not also have.
+
+What it costs: a native dependency shipped through NuGet, the same kind as prismatoid; models in
+ONNX format, not GGUF; image description needs a small adapter of our own over
+`MultiModalProcessor`, since the `IChatClient` is text-only; and the Windows App SDK runtime
+alongside an unpackaged per-user MSI, which has to be checked against the WiX installer.
+
+**Three model tiers**, chosen in settings, **CPU-only by default**:
+
+| Tier | For | Default? |
+|---|---|---|
+| CPU only | Any machine humcp runs on | Yes |
+| Low-end GPU | Integrated graphics, a small discrete card, an NPU | No — the user upgrades |
+| High-end GPU | A discrete card with 8 GB or more | No — the user upgrades |
+
+A tier is a pinned model, not a model browser: one download with a stated size, licence and
+SHA-256, checked before the file is loaded — a model from a hub is a third-party file, like a
+server's schema. Download progress is announced. Models live in `%LOCALAPPDATA%\humcp\models`.
+
+**Everything a model writes is announced as generated**, and the source is one keystroke away. A
+user who cannot see an image cannot check its description, so a guess must not arrive with the
+authority of data the server sent. That is a §7 rule in waiting.
+
+**Tool search works with no model at all.** Lexical ranking over names and descriptions is the
+baseline; a model re-ranks. Search then works before any download, on a slow machine, and when the
+model is wrong — and the spike can measure whether the model adds anything over the baseline.
+
+#### 11.1 The spike decides whether the tiers exist
+
+Two questions, and either answer could be no:
+
+1. **Is the CPU tier worth having?** If a CPU-sized model's summaries and alt text are too slow to
+   wait for or too wrong to trust, the default tier is "no model", and the features are for
+   machines with a GPU.
+2. **Is the step from low-end to high-end GPU worth a tier?** If the larger model is not
+   noticeably better on these tasks, there are two tiers, not three.
+
+Measured on the development machine, which happens to span all three: a Ryzen AI 9 HX 370 (CPU
+tier, with intra-op threads capped at 4 to approximate an ordinary laptop, and uncapped for
+comparison), its Radeon 890M integrated GPU (low-end), and an RTX 5070 Laptop GPU with 8 GB (high
+end). Its XDNA 2 NPU is measured where an execution provider supports the model.
+
+Three tasks, each on real material:
+
+- **Alt text** — images real MCP servers returned, captured under the corpus rule (never drawn
+  for the test). Judged for accuracy: anything the description asserts that the picture does not
+  show is a failure, not a style point.
+- **Summaries** — the large results in `tests/fixtures/results/`. Time to first word and to the
+  end; every claim checked against the source.
+- **Tool search** — natural-language requests against the 213 tools of the schema corpus, scored
+  as the right tool in the top three, against the lexical baseline.
+
+For each tier and task: load time, time to first token, tokens per second, peak memory, download
+size, and the quality judgement. The record goes in `docs/v2-llm-spike.md`; the spike's code is
+throwaway and lives in `spikes/llm/`, outside the solution, as Phase 0's did.
 
 ---
 

@@ -93,6 +93,10 @@ on a `v*` tag; CI (`ci.yml`) builds and runs Schema and Core. Record in **`docs/
 returns focus to humcp when one of its windows closes. NVDA pass and its two defects in
 **`docs/v1.1-notes.md`**.
 
+**2.0 has started on `main`** (2026-10-20); `release/1.x` was cut from it carrying 1.1, which is
+waiting on a SignPath certificate before it is tagged there. First piece of v2: the local-LLM
+spike, §11.0–11.1.
+
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
 does not is a patch. Something unusable with a screen reader is a defect, not a missing feature,
@@ -174,6 +178,10 @@ without saying so is not.
   primary navigation. Phase 0 confirmed WPF keeps all four levels; WinForms is no longer a fallback.
 - **No LLM in v1.** Seams exist (`IResultSummarizer`, `IToolSuggester`) as null implementations;
   they get filled in v2.
+- **v2's LLM is local, through ONNX Runtime GenAI on Windows ML** (§11.0), not SharpMind (no
+  vision) and not DirectML (maintenance mode). No API keys, nothing leaves the machine. Three
+  pinned model tiers — CPU only (the default), low-end GPU, high-end GPU — and the §11.1 spike
+  decides whether each one earns its place. Windows 10 is not supported from v2.
 - **v1 transports: stdio + *unauthenticated* Streamable HTTP.** OAuth is v3 (§11).
 - **Do not build `ICapabilityProvider` before v4** (§12). Two implementations before an
   abstraction; extracting an interface from one implementation is guessing at the joints.
