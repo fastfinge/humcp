@@ -534,7 +534,7 @@ public sealed class ListFieldState : FieldState
 
     internal ListFieldState(FieldModel field) : base(field, composeHelp: true)
     {
-        Draft = Create(field.ItemField ?? field with { Kind = FieldKind.Text, Tier = FieldTier.Direct });
+        Draft = Create(Entry(field));
         Draft.PropertyChanged += (_, _) => Raise(nameof(CanAdd));
 
         Items.CollectionChanged += (_, e) =>
@@ -625,10 +625,29 @@ public sealed class ListFieldState : FieldState
         return array;
     }
 
+    /// <summary>
+    /// What one entry is, named for the list it is in. An item schema has no name of its own, so
+    /// FormBuilder calls it "Item" — and an entry opened on its own to be edited (1.1) was announced
+    /// as "Item edit", in a window titled "Environment variables, entry 1", with none of the list's
+    /// help. Heard in the 1.1 NVDA pass.
+    /// </summary>
+    private static FieldModel Entry(FieldModel list)
+    {
+        var item = list.ItemField ?? list with { Kind = FieldKind.Text, Tier = FieldTier.Direct };
+
+        return item with
+        {
+            Label = list.Label,
+            HelpText = item.HelpText.Length > 0 ? item.HelpText : list.HelpText,
+        };
+    }
+
     private static IEnumerable<FieldState> Seed(FieldModel field)
     {
         if (field.Default is not { ValueKind: JsonValueKind.Array } stated) yield break;
-        if (field.ItemField is not { } template) yield break;
+        if (field.ItemField is null) yield break;
+
+        var template = Entry(field);
 
         foreach (var value in stated.EnumerateArray())
         {

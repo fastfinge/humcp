@@ -89,6 +89,10 @@ ends with humcp (a job object), and unexpected errors go to `%LOCALAPPDATA%\humc
 Released as a per-user MSI (WiX 7, `installer/`) and portable zips by `.github/workflows/release.yml`
 on a `v*` tag; CI (`ci.yml`) builds and runs Schema and Core. Record in **`docs/phase7-notes.md`**.
 
+**1.1** reads JSON sent as text as the structure it is, edits a list entry in place with F2, and
+returns focus to humcp when one of its windows closes. NVDA pass and its two defects in
+**`docs/v1.1-notes.md`**.
+
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
 does not is a patch. Something unusable with a screen reader is a defect, not a missing feature,

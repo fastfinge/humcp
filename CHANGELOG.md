@@ -30,6 +30,9 @@ Also fixed:
   but to change a variable's value you had to remove it and add it again. Select an entry and press
   F2, or the new Edit button. It opens in a small window of its own, and Enter closes it with the
   change kept. This works for every list of values in every form, not just environment variables.
+- Closing a humcp window, such as a form or a server's settings, no longer sometimes moves you into
+  whatever application was in front before humcp. You now return to the humcp window it was opened
+  from.
 
 ## 1.0.0 — 2026-10-19
 

@@ -74,6 +74,16 @@ public sealed class WindowManager
 
         _windows.Add(window);
         window.Closed += (_, _) => _windows.Remove(window);
+
+        // Handed back before the window goes, not after. Left to Windows, closing the window in
+        // front activates whatever was in front before humcp — in the 1.1 NVDA pass, a terminal —
+        // so a user who saved a server's settings heard nothing, and was in another application.
+        // While this window is still active, humcp may activate its own owner; once it has gone,
+        // the foreground is no longer humcp's to give.
+        window.Closing += (_, e) =>
+        {
+            if (!e.Cancel && window.IsActive && window.Owner is { } owner) owner.Activate();
+        };
     }
 
     /// <summary>
