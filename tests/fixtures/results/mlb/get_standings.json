@@ -1,0 +1,15 @@
+{
+  "server": "mlb",
+  "package": "@jerrysv/mlb-mcp-server",
+  "tool": "get_standings",
+  "arguments": {},
+  "captured": "2026-10-19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "MLB Standings 2026:\n--- Unknown Division ---\nRays — 98W-64L .605 GB: - Streak: L1\nYankees — 93W-68L .578 GB: 4.5 Streak: W1\nRed Sox — 87W-75L .537 GB: 11.0 Streak: L1\nOrioles — 79W-82L .491 GB: 18.5 Streak: L1\nBlue Jays — 79W-83L .488 GB: 19.0 Streak: W1\n\n--- Unknown Division ---\nGuardians — 85W-77L .525 GB: - Streak: L1\nWhite Sox — 84W-78L .519 GB: 1.0 Streak: W1\nTwins — 77W-85L .475 GB: 8.0 Streak: W1\nTigers — 76W-86L .469 GB: 9.0 Streak: L1\nRoyals — 69W-93L .426 GB: 16.0 Streak: W1\n\n--- Unknown Division ---\nAstros — 81W-81L .500 GB: - Streak: W2\nRangers — 80W-82L .494 GB: 1.0 Streak: L1\nMariners — 76W-86L .469 GB: 5.0 Streak: W2\nAthletics — 64W-98L .395 GB: 17.0 Streak: L2\nAngels — 62W-100L .383 GB: 19.0 Streak: L2\n\n--- Unknown Division ---\nBraves — 94W-68L .580 GB: - Streak: L1\nPhillies — 88W-74L .543 GB: 6.0 Streak: W1\nMarlins — 80W-82L .494 GB: 14.0 Streak: W1\nNationals — 77W-85L .475 GB: 17.0 Streak: W1\nMets — 74W-88L .457 GB: 20.0 Streak: L1\n\n--- Unknown Division ---\nBrewers — 103W-59L .636 GB: - Streak: W5\nCubs — 89W-73L .549 GB: 14.0 Streak: W1\nPirates — 82W-80L .506 GB: 21.0 Streak: W1\nCardinals — 77W-85L .475 GB: 26.0 Streak: L4\nReds — 75W-87L .463 GB: 28.0 Streak: L1\n\n--- Unknown Division ---\nDodgers — 100W-62L .617 GB: - Streak: W3\nPadres — 91W-71L .562 GB: 9.0 Streak: W2\nD-backs — 86W-76L .531 GB: 14.0 Streak: L2\nGiants — 65W-97L .401 GB: 35.0 Streak: L5\nRockies — 58W-104L .358 GB: 42.0 Streak: L1"
+      }
+    ]
+  }
+}

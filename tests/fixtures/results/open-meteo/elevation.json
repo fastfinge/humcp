@@ -1,0 +1,18 @@
+{
+  "server": "open-meteo",
+  "package": "open-meteo-mcp-server",
+  "tool": "elevation",
+  "arguments": {
+    "latitude": 43.65,
+    "longitude": -79.38
+  },
+  "captured": "2026-10-19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"elevation\":[87]}"
+      }
+    ]
+  }
+}

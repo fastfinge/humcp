@@ -1,0 +1,17 @@
+{
+  "server": "mlb",
+  "package": "@jerrysv/mlb-mcp-server",
+  "tool": "get_team_roster",
+  "arguments": {
+    "team_id": 141
+  },
+  "captured": "2026-10-19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Roster for team 141 (39 players):\n\nAlejandro Kirk #30 C Active (ID: 672386)\nAndrés Giménez #0 SS Active (ID: 665926)\nBrandon Valenzuela #59 C Active (ID: 678218)\nBraydon Fisher #63 P Active (ID: 680755)\nBrendan Cellucci #70 P Active (ID: 676454)\nBrendon Little #54 P Active (ID: 663893)\nBrett Bateman #21 CF Active (ID: 703520)\nCJ Van Eyk #58 P Active (ID: 669310)\nChad Dallas #37 P Active (ID: 689149)\nCharles McAdoo #26 2B Active (ID: 807727)\nChase Lee #52 P Active (ID: 695445)\nDavis Schneider #36 LF Active (ID: 676914)\nDylan Cease #84 P Active (ID: 656302)\nErnie Clement #22 2B Active (ID: 676391)\nGeorge Springer #4 DH Active (ID: 543807)\nJameson Taillon #56 P Active (ID: 592791)\nJohn Klein #65 P Active (ID: 804619)\nJosé Rodríguez #64 P Active (ID: 692064)\nJosé Soriano #40 P Active (ID: 667755)\nJosh Smith #9 2B Active (ID: 669701)\nKazuma Okamoto #7 3B Active (ID: 672960)\nLouis Varland #77 P Active (ID: 686973)\nLuis Urías #48 2B Active (ID: 649966)\nMason Fluharty #68 P Active (ID: 689254)\nMax Scherzer #31 P Active (ID: 453286)\nMyles Straw #3 CF Active (ID: 664702)\nNathan Lukes #38 RF Active (ID: 664770)\nPaul Sewald #43 P Active (ID: 623149)\nRicky Tiedemann #33 P Active (ID: 694357)\nRudy Martin Jr. #1 RF Active (ID: 657675)\nSean Keys #20 DH Active (ID: 815873)\nShane Bieber #57 P Active (ID: 669456)\nShawn Ross  C Active (ID: 676566)\nSpencer Arrighetti #45 P Active (ID: 681293)\nSpencer Miles #62 P Active (ID: 693686)\nTrey Yesavage #39 P Active (ID: 702056)\nTyler Rogers #71 P Active (ID: 643511)\nVladimir Guerrero Jr. #27 1B Active (ID: 665489)\nYohendrick Piñango #24 LF Active (ID: 682818)"
+      }
+    ]
+  }
+}

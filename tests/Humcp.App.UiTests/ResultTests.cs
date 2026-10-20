@@ -150,6 +150,31 @@ public class ResultTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     [Fact]
+    public void Json_sent_as_text_is_shown_as_the_structure_it_is()
+    {
+        // humcp 1.1. Open-Meteo's shape: no structured content, the whole forecast as one line of
+        // JSON in a text part. 1.0 put that line in a text box, where the 3rd hour and the 3rd
+        // temperature were 300 characters apart and nothing said they belonged together.
+        using var form = OpenForm("Forecast as JSON text", "Forecast as JSON text — humcp test server");
+        form.Run();
+
+        var tree = WaitFor(
+            () => UiaTree.Descendants(form.Window)
+                .FirstOrDefault(e => UiaTree.Safe(() => e.ControlType) == ControlType.Tree),
+            "a result tree in the form's result pane");
+
+        var names = UiaTree.Descendants(tree).Select(e => UiaTree.Safe(() => e.Name) ?? "").ToList();
+        output.WriteLine(string.Join(" | ", names));
+
+        Assert.Contains("Hourly, table, 6 rows, 2 columns", names);
+
+        // Shown once: no text box holding the same JSON beside it.
+        Assert.DoesNotContain(UiaTree.Descendants(form.Window), e =>
+            UiaTree.Safe(() => e.ControlType) == ControlType.Edit
+            && (UiaTree.Safe(() => e.AsTextBox().Text) ?? "").StartsWith("{\"latitude\"", StringComparison.Ordinal));
+    }
+
+    [Fact]
     public void A_table_inside_a_structure_opens_as_a_grid_of_its_own()
     {
         Run("Awkward structure", "Awkward structure");

@@ -1,0 +1,15 @@
+{
+  "server": "mlb",
+  "package": "@jerrysv/mlb-mcp-server",
+  "tool": "get_tracked_teams",
+  "arguments": {},
+  "captured": "2026-10-19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Tracked Teams\n\n[\n  {\n    \"key\": \"TOR\",\n    \"teamId\": 141,\n    \"sportId\": 1,\n    \"name\": \"Toronto Blue Jays\",\n    \"league\": \"MLB\",\n    \"division\": \"American League East\",\n    \"city\": \"Toronto\",\n    \"aliases\": [\n      \"toronto blue jays\",\n      \"toronto\",\n      \"blue jays\",\n      \"tor\"\n    ]\n  }\n]"
+      }
+    ]
+  }
+}

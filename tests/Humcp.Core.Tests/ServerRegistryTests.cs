@@ -34,7 +34,7 @@ public sealed class ServerRegistryTests : IDisposable
         Assert.Equal(ServerConnectionState.Connected, snapshots[0].State);
         Assert.Equal(ServerConnectionState.Failed, snapshots[1].State);
 
-        Assert.Equal("Connected to 1 of 2 servers, 30 tools. Could not connect to broken.",
+        Assert.Equal("Connected to 1 of 2 servers, 31 tools. Could not connect to broken.",
             ServerAnnouncements.Startup(snapshots));
     }
 

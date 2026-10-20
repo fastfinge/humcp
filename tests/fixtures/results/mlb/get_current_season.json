@@ -1,0 +1,15 @@
+{
+  "server": "mlb",
+  "package": "@jerrysv/mlb-mcp-server",
+  "tool": "get_current_season",
+  "arguments": {},
+  "captured": "2026-10-19",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "Season 2026\n\n{\n  \"copyright\": \"Copyright 2026 MLB Advanced Media, L.P.  Use of any content on this page acknowledges agreement to the terms posted here http://gdx.mlb.com/components/copyright.txt\",\n  \"seasons\": [\n    {\n      \"seasonId\": \"2026\",\n      \"hasWildcard\": true,\n      \"preSeasonStartDate\": \"2026-01-01\",\n      \"preSeasonEndDate\": \"2026-02-19\",\n      \"seasonStartDate\": \"2026-02-20\",\n      \"springStartDate\": \"2026-02-20\",\n      \"springEndDate\": \"2026-03-24\",\n      \"regularSeasonStartDate\": \"2026-03-25\",\n      \"lastDate1stHalf\": \"2026-07-12\",\n      \"allStarDate\": \"2026-07-14\",\n      \"firstDate2ndHalf\": \"2026-07-16\",\n      \"regularSeasonEndDate\": \"2026-09-27\",\n      \"postSeasonStartDate\": \"2026-09-28\",\n      \"postSeasonEndDate\": \"2026-10-31\",\n      \"seasonEndDate\": \"2026-10-31\",\n      \"offseasonStartDate\": \"2026-11-01\",\n      \"offSeasonEndDate\": \"2026-12-31\",\n      \"seasonLevelGamedayType\": \"P\",\n      \"gameLevelGamedayType\": \"P\",\n      \"qualifierPlateAppearances\": 3.1,\n      \"qualifierOutsPitched\": 3\n    }\n  ]\n}"
+      }
+    ]
+  }
+}

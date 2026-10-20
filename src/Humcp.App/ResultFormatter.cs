@@ -72,7 +72,7 @@ internal static class ResultFormatter
         if (outcome.Structured is { } structured)
         {
             sb.AppendLine(outcome.StructuredRepeatsText
-                ? "Structured content (the same text again, in the wrapper the output schema asks for):"
+                ? "Structured content (the same as the text, in the shape the output schema asks for):"
                 : "Structured content:");
 
             sb.AppendLine(Pretty(structured));
@@ -141,6 +141,10 @@ internal static class ResultFormatter
     /// <summary>One part, in the fewest words that say what it is and how much of it there is.</summary>
     private static string Describe(ResultBlock block) => block switch
     {
+        // Text that humcp reads as JSON is announced as what it is shown as, not as "1 line of
+        // text" — which is what 3,000 characters of forecast on one line would otherwise be called.
+        TextResultBlock text when JsonText.TryRead(text.Text, out var title, out var value) =>
+            ResultBuilder.Build(null, value, title.Length > 0 ? title : "Result").AccessibleName,
         TextResultBlock text => $"{Count(Lines(text.Text), "line", "lines")} of text",
         MediaResultBlock media => media.Phrase,
         LinkResultBlock link => link.Label.Length > 0 ? $"a link to {link.Label}" : "a resource link",

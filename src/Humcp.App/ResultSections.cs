@@ -186,6 +186,19 @@ internal static class ResultSections
             // common case, and it reads best as "Result" — which is what it has been since Phase 1.
             var heading = count == 1 ? block.Heading : $"{block.Heading}, part {i + 1} of {count}";
 
+            var label = count == 1 && block is TextResultBlock ? "Result" : heading;
+
+            if (block switch
+                {
+                    TextResultBlock text => ReadAsJson(tool, outcome, label, text.Text),
+                    ResourceTextResultBlock resource => ReadAsJson(tool, outcome, label, resource.Text),
+                    _ => null,
+                } is { } read)
+            {
+                sections.Add(read);
+                continue;
+            }
+
             sections.Add(block switch
             {
                 TextResultBlock text => new TextSection(count == 1 ? "Result" : heading, text.Text)
@@ -244,5 +257,32 @@ internal static class ResultSections
             sections[0].HelpText = $"The tool reported an error. {sections[0].HelpText}".TrimEnd();
 
         return sections;
+    }
+
+    /// <summary>
+    /// A text part that is JSON, as the tree or grid it would have been had the server sent it as
+    /// structured content — or null, and it stays text (see <see cref="JsonText"/>).
+    /// </summary>
+    /// <remarks>
+    /// When the structured content is the same value, that is what is drawn, with the tool's
+    /// output schema: same data, and the server's own names for it rather than names made from the
+    /// data. The structured section is then not drawn a second time, because
+    /// <see cref="ToolCallOutcome.HasOwnStructuredContent"/> already says it repeats the text.
+    /// </remarks>
+    private static StructuredSection? ReadAsJson(ToolInfo? tool, ToolCallOutcome outcome, string heading, string text)
+    {
+        if (!JsonText.TryRead(text, out var title, out var value)) return null;
+
+        var (source, schema) = outcome.StructuredRepeatsText && outcome.Structured is { } structured
+            ? (structured, tool?.OutputSchema)
+            : (value, null);
+
+        var label = title.Length > 0 ? title : heading;
+
+        return new StructuredSection(label, ResultBuilder.Build(schema, source, label))
+        {
+            HelpText = "The server sent this as text, and humcp has read it as JSON. " +
+                       "F1 shows the text as it arrived.",
+        };
     }
 }

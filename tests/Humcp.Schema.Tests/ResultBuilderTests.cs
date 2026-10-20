@@ -368,6 +368,119 @@ public class ResultBuilderTests
         Assert.False(ResultBuilder.RepeatsText(Json("""{ "content": "x" }"""), ""));
     }
 
+    [Fact]
+    public void Structured_content_sent_again_as_json_text_is_recognised_however_it_is_indented()
+    {
+        // The specification asks a server with structured content to send it serialised as text as
+        // well. 1.0 compared strings, so every server that did as it was asked was shown twice.
+        var structured = Json("""{ "city": "Toronto", "temperature": 12.8 }""");
+
+        Assert.True(ResultBuilder.RepeatsText(structured, """{"city":"Toronto","temperature":12.8}"""));
+        Assert.True(ResultBuilder.RepeatsText(structured, "{\n  \"temperature\": 12.8,\n  \"city\": \"Toronto\"\n}"));
+
+        // Or the list inside the wrapper, sent bare.
+        Assert.True(ResultBuilder.RepeatsText(Json("""{ "entities": [ { "a": 1 } ] }"""), """[{"a":1}]"""));
+
+        Assert.False(ResultBuilder.RepeatsText(structured, """{"city":"Toronto","temperature":13}"""));
+    }
+
+    // ------------------------------------------------------------------ tables stored by column
+
+    [Fact]
+    public void An_object_of_equal_lists_is_a_table_one_row_per_position()
+    {
+        // Open-Meteo's shape: the 2nd time and the 2nd temperature belong together, and as two
+        // lists side by side nothing on screen said so.
+        var node = Build("""
+            { "time": ["00:00", "01:00", "02:00"], "temperature_2m": [11.1, 10.4, 9.9], "rain": [0, 0, null] }
+            """);
+
+        Assert.Equal(ResultShape.Table, node.Shape);
+        Assert.Equal(["time", "temperature_2m", "rain"], node.Columns.Select(c => c.Name));
+        Assert.Equal("Temperature 2 m", node.Columns[1].Label);
+        Assert.Equal(3, node.TotalRows);
+        Assert.Equal(["01:00", "10.4", "0"], node.Rows[1].Cells.Select(c => c.Text));
+        Assert.Equal("null", node.Rows[2].Cells[2].Text);
+        Assert.Equal("Result, table, 3 rows, 3 columns", node.AccessibleName);
+    }
+
+    [Theory]
+    [InlineData("""{ "a": [1, 2], "b": [1, 2, 3] }""")]
+    [InlineData("""{ "a": [1, 2], "b": "two" }""")]
+    [InlineData("""{ "a": [1, 2], "b": [[1], [2]] }""")]
+    [InlineData("""{ "a": [{ "x": 1 }, { "x": 2 }], "b": [1, 2] }""")]
+    [InlineData("""{ "a": [], "b": [] }""")]
+    public void Anything_else_keeps_its_shape(string json)
+    {
+        Assert.Equal(ResultShape.Properties, Build(json).Shape);
+    }
+
+    [Fact]
+    public void One_list_alone_is_a_list_and_not_a_one_column_table()
+    {
+        // Unwrapped as a wrapper of one, which is the rule that already applied to it.
+        var node = Build("""{ "elevation": [87] }""");
+
+        Assert.Equal(ResultShape.List, node.Shape);
+        Assert.Equal("Elevation", node.Label);
+    }
+
+    [Fact]
+    public void A_column_table_takes_its_column_names_from_the_schema()
+    {
+        var node = Build(
+            """{ "t": [1, 2], "v": [3, 4] }""",
+            """{ "type": "object", "properties": { "v": { "title": "Value", "description": "What was measured." } } }""");
+
+        Assert.Equal("Value", node.Columns[1].Label);
+        Assert.Equal("What was measured.", node.Columns[1].HelpText);
+    }
+
+    [Fact]
+    public void A_column_table_bigger_than_the_limit_reports_its_real_size()
+    {
+        var times = string.Join(",", Enumerable.Range(0, 500));
+        var node = Build($$"""{ "t": [{{times}}], "v": [{{times}}] }""");
+
+        Assert.Equal(500, node.TotalRows);
+        Assert.Equal(ResultBuildOptions.Default.MaxRows, node.Rows.Count);
+        Assert.True(node.IsTruncated);
+    }
+
+    [Fact]
+    public void A_real_forecast_is_a_tree_with_its_hours_and_days_as_tables()
+    {
+        Assert.True(JsonText.TryRead(ResultFixtures.Text("open-meteo", "weather_forecast"), out _, out var value));
+        var node = ResultBuilder.Build(null, value);
+
+        Assert.Equal(ResultShape.Properties, node.Shape);
+
+        var hourly = Assert.Single(node.Children, c => c.Label == "Hourly");
+        Assert.Equal("Hourly, table, 48 rows, 3 columns", hourly.AccessibleName);
+        Assert.Equal(["Time", "Temperature 2 m", "Precipitation"], hourly.Columns.Select(c => c.Label));
+        Assert.Equal(["2026-10-19T14:00", "18.9", "0"], hourly.Rows[14].Cells.Select(c => c.Text));
+
+        var daily = Assert.Single(node.Children, c => c.Label == "Daily");
+        Assert.Equal("Daily, table, 2 rows, 3 columns", daily.AccessibleName);
+
+        // The units are an object of strings beside it, and stay one: joining them onto the
+        // columns would be a rule for one server.
+        Assert.Equal(ResultShape.Properties, Assert.Single(node.Children, c => c.Label == "Hourly units").Shape);
+    }
+
+    [Fact]
+    public void Real_geocoding_results_are_a_table()
+    {
+        Assert.True(JsonText.TryRead(ResultFixtures.Text("open-meteo", "geocoding"), out _, out var value));
+        var node = ResultBuilder.Build(null, value);
+
+        var table = node.Shape == ResultShape.Table ? node : Assert.Single(node.Children, c => c.Shape == ResultShape.Table);
+
+        Assert.Equal("Results", table.Label);
+        Assert.Contains(table.Columns, c => c.Label == "Population");
+        Assert.Equal("Toronto", table.Rows[0].Cells[table.Columns.ToList().FindIndex(c => c.Name == "name")].Text);
+    }
+
     // ------------------------------------------------------------------ the wrapper of one
 
     [Fact]

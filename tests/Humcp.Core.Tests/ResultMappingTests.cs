@@ -86,6 +86,35 @@ public class ResultMappingTests(TestServerFixture fixture) : IClassFixture<TestS
         Assert.False(outcome.HasOwnStructuredContent);
     }
 
+    [Fact]
+    public async Task Json_sent_as_text_crosses_as_text_and_reads_as_a_forecast()
+    {
+        // Open-Meteo's shape, and most real servers': no structured content, the answer in a text
+        // part. The crossing leaves it alone; reading it is the renderer's business.
+        var outcome = await Call("result_json_text");
+
+        Assert.Null(outcome.Structured);
+        var text = Assert.IsType<TextResultBlock>(Assert.Single(outcome.Blocks));
+
+        Assert.True(JsonText.TryRead(text.Text, out _, out var value));
+
+        var hourly = Assert.Single(ResultBuilder.Build(null, value).Children, c => c.Label == "Hourly");
+        Assert.Equal("Hourly, table, 6 rows, 2 columns", hourly.AccessibleName);
+    }
+
+    [Fact]
+    public async Task Structured_content_sent_again_as_json_text_is_one_result_not_two()
+    {
+        // What the specification asks of a server with structured content, and what 1.0 showed
+        // twice because it compared the two as strings.
+        var outcome = await Connection.CallAsync(Tool("result_json_text"), new() { ["alsoStructured"] = true },
+            TestContext.Current.CancellationToken);
+
+        Assert.NotNull(outcome.Structured);
+        Assert.True(outcome.StructuredRepeatsText);
+        Assert.False(outcome.HasOwnStructuredContent);
+    }
+
     // ------------------------------------------------------------------ content parts
 
     [Fact]

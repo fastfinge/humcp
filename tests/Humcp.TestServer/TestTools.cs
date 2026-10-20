@@ -42,6 +42,7 @@ internal static class TestTools
         yield return Weather();
         yield return Table();
         yield return Wrapped();
+        yield return JsonAsText();
         yield return Mixed();
         yield return Links();
         yield return Deep();
@@ -53,7 +54,7 @@ internal static class TestTools
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 23 + MrtrTools.Count;
+    public const int Count = 24 + MrtrTools.Count;
 
     // ------------------------------------------------------------------ info_
 
@@ -532,6 +533,45 @@ internal static class TestTools
             OutputSchema = Schema("""
                 { "type": "object", "properties": { "content": { "type": "string" } } }
                 """),
+        });
+
+    /// <summary>
+    /// A forecast serialised into a text part, in the shape Open-Meteo sends every answer: one line
+    /// of JSON, the hours in one list and the temperatures in another. Most real servers send no
+    /// structured content and answer like this (humcp 1.1, <c>tests/fixtures/results</c>). With
+    /// <c>alsoStructured</c> it sends the same value as structured content as well, which is what
+    /// the specification asks of a server that has some.
+    /// </summary>
+    private static McpServerTool JsonAsText() => McpServerTool.Create(
+        ([Description("Send the same value as structured content too.")] bool alsoStructured = false) =>
+        {
+            var forecast = JsonSerializer.SerializeToElement(new
+            {
+                latitude = 43.65,
+                longitude = -79.38,
+                timezone = "America/Toronto",
+                hourly_units = new { time = "iso8601", temperature_2m = "°C" },
+                hourly = new
+                {
+                    time = Enumerable.Range(0, 6).Select(h => $"2026-10-19T{h:D2}:00").ToArray(),
+                    temperature_2m = new[] { 11.1, 10.4, 9.9, 10.0, 9.7, 8.2 },
+                },
+            });
+
+            return new CallToolResult
+            {
+                Content = [new TextContentBlock { Text = forecast.GetRawText() }],
+                StructuredContent = alsoStructured ? forecast : null,
+            };
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_json_text",
+            Title = "Forecast as JSON text",
+            Description = "Answers with JSON in a text part rather than as structured content, " +
+                          "which is how most servers answer.",
+            ReadOnly = true,
+            Idempotent = true,
         });
 
     /// <summary>

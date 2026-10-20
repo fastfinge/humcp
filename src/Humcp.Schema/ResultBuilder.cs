@@ -100,21 +100,28 @@ public static class ResultBuilder
     /// is the defect Phase 1 found by ear in a different place (phase1-notes 2.7) and the reason
     /// §7's core rule is written the way it is. So the client checks, and the announcement says
     /// which of the two it is showing.
+    /// <para>
+    /// The other way round as well, since 1.1: the specification asks a server that sends
+    /// structured content to send it serialised as text too, for older clients. That text is now
+    /// read as JSON (see <see cref="JsonText"/>), and when it is the same value — or the same value
+    /// as the one property inside the wrapper — it is the same result, however it was indented.
+    /// </para>
     /// </remarks>
     public static bool RepeatsText(JsonElement structured, string text)
     {
         var expected = text.Trim();
         if (expected.Length == 0) return false;
 
-        return structured.ValueKind switch
-        {
-            JsonValueKind.String => Same(structured, expected),
+        var single = structured.ValueKind == JsonValueKind.Object && structured.EnumerateObject().Count() == 1
+            ? structured.EnumerateObject().First().Value
+            : (JsonElement?)null;
 
-            JsonValueKind.Object when structured.EnumerateObject().Count() == 1 =>
-                Same(structured.EnumerateObject().First().Value, expected),
+        if (structured.ValueKind == JsonValueKind.String && Same(structured, expected)) return true;
+        if (single is { } inner && Same(inner, expected)) return true;
 
-            _ => false,
-        };
+        return JsonText.TryRead(expected, out _, out var parsed)
+               && (JsonElement.DeepEquals(structured, parsed)
+                   || (single is { } wrapped && JsonElement.DeepEquals(wrapped, parsed)));
     }
 
     private static bool Same(JsonElement value, string expected) =>
@@ -199,6 +206,7 @@ public static class ResultBuilder
 
             return value.ValueKind switch
             {
+                JsonValueKind.Object when IsColumns(value) => BuildColumns(label, path, value, schema, help),
                 JsonValueKind.Object => BuildProperties(label, path, value, schema, help, depth),
                 JsonValueKind.Array => BuildArray(label, path, value, schema, help, depth),
                 _ => BuildValue(label, path, value, help),
@@ -294,6 +302,84 @@ public static class ResultBuilder
                 IsTruncated = truncated,
                 Value = value,
                 Children = children,
+            };
+        }
+
+        // ------------------------------------------------------------------ columns
+
+        /// <summary>
+        /// A table stored by column: an object of two or more lists, every one of them plain values
+        /// and every one the same length — <c>{ "time": [ … ], "temperature_2m": [ … ] }</c>.
+        /// </summary>
+        /// <remarks>
+        /// Open-Meteo's whole forecast is in this shape, and so is anything written by a data
+        /// library that stores a frame column by column. Drawn as an object it is a list of hours
+        /// and, beside it, a list of temperatures: the 14th of each belong together and nothing on
+        /// screen says so. Turned the right way round it is the table it always was, one row per
+        /// position. The test is on the data alone; a pair of unrelated lists that happen to be the
+        /// same length becomes a table too, and loses nothing by it.
+        /// </remarks>
+        private static bool IsColumns(JsonElement value)
+        {
+            var columns = 0;
+            var length = -1;
+
+            foreach (var property in value.EnumerateObject())
+            {
+                if (property.Value.ValueKind != JsonValueKind.Array) return false;
+
+                var count = 0;
+
+                foreach (var element in property.Value.EnumerateArray())
+                {
+                    if (element.ValueKind is JsonValueKind.Object or JsonValueKind.Array) return false;
+                    count++;
+                }
+
+                if (count == 0 || (length >= 0 && count != length)) return false;
+
+                length = count;
+                columns++;
+            }
+
+            return columns >= 2;
+        }
+
+        private ResultNode BuildColumns(
+            string label, string path, JsonElement value, JsonElement? schema, string help)
+        {
+            var names = value.EnumerateObject().Select(p => p.Name).ToList();
+            var truncated = names.Count > options.MaxColumns;
+            if (truncated) names = names[..options.MaxColumns];
+
+            var columns = names.Select(name =>
+            {
+                var (columnLabel, columnHelp) = Describe(schema, name);
+                return new ResultColumn(name, columnLabel, columnHelp);
+            }).ToList();
+
+            var lists = names.Select(name => value.GetProperty(name)).ToList();
+            var total = lists[0].GetArrayLength();
+            var shown = Math.Min(total, options.MaxRows);
+            if (shown < total) truncated = true;
+
+            var rows = new List<ResultRow>(shown);
+
+            for (var i = 0; i < shown; i++)
+                rows.Add(new ResultRow(i + 1, [.. lists.Select(list => new ResultCell(CellText(list[i]), null))]));
+
+            return new ResultNode
+            {
+                Label = label,
+                Path = path,
+                Shape = ResultShape.Table,
+                TypeName = "table",
+                HelpText = help,
+                IsTruncated = truncated,
+                Value = value,
+                Columns = columns,
+                Rows = rows,
+                TotalRows = total,
             };
         }
 
