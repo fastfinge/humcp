@@ -46,6 +46,12 @@ public static class FormCommands
     /// <summary>Removes the selected entry. Parameter: the list box it is selected in.</summary>
     public static readonly RoutedUICommand RemoveEntry = new("", nameof(RemoveEntry), typeof(FormCommands));
 
+    /// <summary>
+    /// Opens the selected entry of a list of values in a window of its own, to change it in place.
+    /// Parameter: the list box.
+    /// </summary>
+    public static readonly RoutedUICommand EditEntry = new("", nameof(EditEntry), typeof(FormCommands));
+
     /// <summary>Adds a row to an object list and opens it. Parameter: the <c>ObjectListFieldState</c>.</summary>
     public static readonly RoutedUICommand AddRow = new("", nameof(AddRow), typeof(FormCommands));
 

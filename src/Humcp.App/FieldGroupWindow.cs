@@ -9,7 +9,8 @@ using Humcp.Schema;
 namespace Humcp.App;
 
 /// <summary>
-/// One row of a list of objects, in a window of its own (ROADMAP §5, Tier 2).
+/// One row of a list of objects, in a window of its own (ROADMAP §5, Tier 2) — or, since 1.1, one
+/// entry of a list of values, opened to be changed in place.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -30,13 +31,24 @@ internal static class FieldGroupWindow
     public static void Show(Window owner, string title, GroupFieldState row, WindowManager windows)
     {
         ArgumentNullException.ThrowIfNull(row);
+        Show(owner, title, row.Fields, windows);
+    }
+
+    /// <param name="closeOnEnter">
+    /// For a single entry: Enter closes the window, as it would a dialog asking for one value. A
+    /// row of several fields keeps Enter for its fields.
+    /// </param>
+    public static void Show(
+        Window owner, string title, IReadOnlyList<FieldState> members, WindowManager windows, bool closeOnEnter = false)
+    {
+        ArgumentNullException.ThrowIfNull(members);
         ArgumentNullException.ThrowIfNull(windows);
 
-        AssignAccessKeys(row);
+        AssignAccessKeys(members);
 
         var fields = new FormItemsControl
         {
-            ItemsSource = row.Fields,
+            ItemsSource = members,
             ItemTemplateSelector = new FieldTemplateSelector(),
             Margin = new Thickness(10, 6, 10, 10),
         };
@@ -73,8 +85,9 @@ internal static class FieldGroupWindow
             HorizontalAlignment = HorizontalAlignment.Left,
         };
 
-        AutomationProperties.SetHelpText(close,
-            "Closes this entry. Escape does the same. What you typed is kept.");
+        AutomationProperties.SetHelpText(close, closeOnEnter
+            ? "Closes this entry. Enter and Escape do the same. What you typed is kept."
+            : "Closes this entry. Escape does the same. What you typed is kept.");
 
         // A live region of its own, because the commands below have things to say — "added to
         // Tags, two entries now" — and until Phase 5 this window had neither the commands nor
@@ -113,13 +126,16 @@ internal static class FieldGroupWindow
         // A routed command bubbles up the tree it was raised in, and this is a window of its own —
         // so the owner's bindings never see it. A list inside a row of an object list had a dead
         // Add button for exactly as long as nobody put a list inside one (phase5-notes 4.9).
-        FormCommandBindings.Attach(window, row.Fields, text => Say(status, text), windows);
+        FormCommandBindings.Attach(window, members, text => Say(status, text), windows);
+
+        if (closeOnEnter)
+            window.InputBindings.Add(new KeyBinding(WindowManager.CloseWindow, Key.Enter, ModifierKeys.None));
 
         var bar = windows.CreateMenuBar(window, closable: true);
         DockPanel.SetDock(bar, Dock.Top);
         layout.Children.Insert(0, bar);
 
-        window.Loaded += (_, _) => Focus(fields);
+        window.Loaded += (_, _) => Focus(fields, caretToEnd: closeOnEnter);
         window.Show();
     }
 
@@ -128,9 +144,9 @@ internal static class FieldGroupWindow
     /// and these fields did not exist then — a row is made after the fact, and its window is a
     /// separate place for <kbd>Alt</kbd> to mean something.
     /// </summary>
-    private static void AssignAccessKeys(GroupFieldState row)
+    private static void AssignAccessKeys(IReadOnlyList<FieldState> members)
     {
-        var fields = row.Fields.SelectMany(FormState.Labelled).ToList();
+        var fields = members.SelectMany(FormState.Labelled).ToList();
         var indices = AccessKeys.Assign([.. fields.Select(f => f.Label)], ['c']);
 
         for (var i = 0; i < fields.Count; i++) fields[i].AccessKeyIndex = indices[i];
@@ -145,9 +161,13 @@ internal static class FieldGroupWindow
         peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
     }
 
-    private static void Focus(ItemsControl fields)
+    private static void Focus(ItemsControl fields, bool caretToEnd)
     {
         fields.UpdateLayout();
         fields.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+
+        // An entry opened to be changed is usually changed at its end — the value after NAME= —
+        // and a caret left at the start puts the whole entry between the user and it.
+        if (caretToEnd && Keyboard.FocusedElement is TextBox box) box.CaretIndex = box.Text.Length;
     }
 }

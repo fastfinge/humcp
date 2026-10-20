@@ -248,6 +248,29 @@ public class FormStateTests
     }
 
     [Fact]
+    public void An_entry_changed_in_place_is_sent()
+    {
+        // 1.1: an entry can be edited where it is, rather than removed and typed again. Changing
+        // one entry of the server's own default list is choosing a list, so it is sent.
+        var state = State("""
+        {"type": "object",
+         "properties": {"tags": {"type": "array", "items": {"type": "string", "minLength": 3}, "default": ["a", "bb"]}}}
+        """);
+
+        var list = (ListFieldState)state.Fields.Single();
+
+        // A validation pass sets statuses, and that is not the user's doing.
+        state.Prepare();
+        Assert.Empty(state.Build().Arguments!);
+
+        ((TextFieldState)list.Items[1]).Text = "beta";
+
+        Assert.Equal("a, beta", list.Display);
+        Assert.Equal(["a", "beta"],
+            ((JsonArray)state.Build().Arguments!["tags"]!).Select(v => v!.GetValue<string>()));
+    }
+
+    [Fact]
     public void A_list_of_choices_edits_through_the_same_control_its_entries_use()
     {
         var state = State("""

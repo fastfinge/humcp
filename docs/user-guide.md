@@ -52,7 +52,7 @@ To add one server by hand, press Control plus N. The form asks for:
 - Command: the program that starts it, such as npx. Or leave Command empty and give an Address instead, for a server reached over the web, starting with https://.
 - Arguments: everything after the command, on one line. For example: -y @modelcontextprotocol/server-everything
 - Working directory: usually empty.
-- Environment variables: one NAME=value at a time, usually an API key the server needs. Type it, press Enter to add it to the list, and repeat.
+- Environment variables: one NAME=value at a time, usually an API key the server needs. Type it, press Enter to add it to the list, and repeat. To change one, select it in the list and press F2 or the Edit button; it opens in a small window of its own, and Enter closes it with your change kept. Delete removes it.
 - Start this server: ticked unless you want it in the list without running it.
 
 Press Control plus Enter to save. humcp adds the server, puts the caret on it in the tree, and tells you when it has connected and how many tools it has.
@@ -166,6 +166,12 @@ Help, Keyboard shortcuts shows this list inside humcp.
 - Control plus Enter: run the tool.
 - Control plus O: show or hide the optional parameters.
 - Escape: stop the running tool; with nothing running, close the window.
+
+### A list of entries in a form
+
+- Enter in the entry box: add what is typed to the list.
+- F2: change the selected entry, in a window of its own. Enter or Escape closes it, keeping the change.
+- Delete: remove the selected entry.
 
 ### A result
 

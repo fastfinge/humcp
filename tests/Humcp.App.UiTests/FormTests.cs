@@ -307,6 +307,54 @@ public class FormTests(AppFixture fixture, ITestOutputHelper output)
         Assert.Empty(entries.FindAllChildren());
     }
 
+    [Fact]
+    public void An_entry_of_a_list_can_be_changed_in_place_with_F2()
+    {
+        // 1.1. Before it, the only way to change an entry — an environment variable's value
+        // included — was to remove it and type it again.
+        using var form = Open("Search documents", SearchForm);
+        form.ShowOptional();
+
+        Input.EnsureForeground(form.Window, fixture.Automation);
+
+        var tags = form.Control("Tags");
+        Assert.NotNull(tags);
+
+        tags.Focus();
+        Input.Settle(200);
+        Input.Type("urgent");
+        Input.Press(VirtualKeyShort.RETURN);
+        Input.Settle(400);
+
+        var entries = UiaTree.Descendants(form.Fields)
+            .FirstOrDefault(e => UiaTree.Safe(() => e.Name) == "Tags, entries added");
+        Assert.True(entries is not null, "No entries list for Tags. The form holds: " + form.Names());
+
+        // An Edit button beside Remove, saying its key where a reader looks for one.
+        var edit = UiaTree.Descendants(form.Fields)
+            .FirstOrDefault(e => UiaTree.Safe(() => e.Name) == "Edit entry in Tags");
+        Assert.True(edit is not null, "No Edit button for Tags.");
+        Assert.Equal("F2", UiaTree.Safe(() => edit!.Properties.AcceleratorKey.ValueOrDefault));
+
+        entries!.Focus();
+        Input.Settle(300);
+        Input.Press(VirtualKeyShort.F2);
+
+        var window = fixture.Owned("Tags, entry 1", TimeSpan.FromSeconds(10));
+        Assert.True(window is not null, "F2 opened no window. humcp has: " + string.Join(" | ", fixture.Titles()));
+
+        // The caret lands at the end of the entry, so typing adds to it.
+        Input.Settle(300);
+        Input.Type("-today");
+        Input.Press(VirtualKeyShort.RETURN);
+        Input.Settle(500);
+
+        Assert.Null(fixture.Owned("Tags, entry 1", TimeSpan.FromMilliseconds(500)));
+
+        var only = Assert.Single(entries.FindAllChildren());
+        Assert.Equal("urgent-today", UiaTree.Safe(() => only.Name));
+    }
+
     // ------------------------------------------------------------------ windows
 
     [Fact]

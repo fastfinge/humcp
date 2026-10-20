@@ -537,14 +537,35 @@ public sealed class ListFieldState : FieldState
         Draft = Create(field.ItemField ?? field with { Kind = FieldKind.Text, Tier = FieldTier.Direct });
         Draft.PropertyChanged += (_, _) => Raise(nameof(CanAdd));
 
-        Items.CollectionChanged += (_, _) =>
+        Items.CollectionChanged += (_, e) =>
         {
+            foreach (var entry in e.NewItems?.OfType<FieldState>() ?? []) entry.PropertyChanged += OnEntryChanged;
+            foreach (var entry in e.OldItems?.OfType<FieldState>() ?? []) entry.PropertyChanged -= OnEntryChanged;
+
             Raise(nameof(IsSet));
             Raise(nameof(Count));
             Raise(nameof(Display));
         };
 
         foreach (var entry in Seed(field)) Items.Add(entry);
+    }
+
+    /// <summary>
+    /// An entry edited in place (1.1). Editing is choosing, so a list seeded from the schema's
+    /// default stops being the server's own list the moment one of its entries changes — the
+    /// omission rule's <c>value != initial</c>, one entry down.
+    /// </summary>
+    private void OnEntryChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        // Only the value itself. A problem being found or cleared raises changes too, and a
+        // validation pass is not the user choosing anything.
+        if (e.PropertyName is not (nameof(TextFieldState.Text) or nameof(ChoiceFieldState.Selected)
+            or nameof(BooleanFieldState.Value) or nameof(DateFieldState.Date) or nameof(DateFieldState.Time)))
+            return;
+
+        _touched = true;
+        Raise(nameof(IsSet));
+        Raise(nameof(Display));
     }
 
     /// <summary>The entries, in order. Bound to a list box, which is where they are read from.</summary>

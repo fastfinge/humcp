@@ -53,6 +53,7 @@ internal static class FormCommandBindings
 
         Add(FormCommands.AddEntry, OnAddEntry, (_, e) => e.CanExecute = Entry(e) is ListFieldState { CanAdd: true });
         Add(FormCommands.RemoveEntry, OnRemoveEntry, (_, e) => e.CanExecute = Selected(e) is not null);
+        Add(FormCommands.EditEntry, OnEditEntry, (_, e) => e.CanExecute = Selected(e) is FieldState);
         Add(FormCommands.AddRow, OnAddRow);
         Add(FormCommands.EditRow, OnEditRow, (_, e) => e.CanExecute = Selected(e) is GroupFieldState);
 
@@ -127,6 +128,19 @@ internal static class FormCommandBindings
 
         void Edit(ObjectListFieldState list, GroupFieldState row)
             => FieldGroupWindow.Show(window, $"{list.Label}, entry {list.Rows.IndexOf(row) + 1}", row, windows);
+
+        // The entry box beside Add keeps meaning "the next one" and nothing else; an entry already
+        // in the list is changed in a window of its own, named for which entry it is, the way a
+        // row of an object list always has been. Before 1.1 the only way to change one was to
+        // remove it and type it again — an environment variable's value included.
+        void OnEditEntry(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (e.Parameter is not ListBox { DataContext: ListFieldState list, SelectedItem: FieldState entry })
+                return;
+
+            FieldGroupWindow.Show(window, $"{list.Label}, entry {list.Items.IndexOf(entry) + 1}", [entry], windows,
+                closeOnEnter: true);
+        }
     }
 
     /// <summary>

@@ -243,9 +243,12 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- A list of primitives. Add and Remove, and no Edit: an entry box that silently changes
-         meaning from "the next one" to "that one" is a mode, and a mode with no marker is exactly
-         what a user working by ear cannot check.
+    <!-- A list of primitives. The entry box beside Add only ever means "the next one": a box
+         that silently changed meaning to "that one" would be a mode, and a mode with no marker is
+         exactly what a user working by ear cannot check. So Edit (F2, since 1.1) opens the selected
+         entry in a window of its own, named for which entry it is — the way a row of an object list
+         has always been edited. Before it, the only way to change an entry was to remove it and type
+         it again.
 
          Two templates rather than one with the entry control swapped in. A DataTemplate is its own
          name scope, so an entry control chosen at runtime is a control the label cannot point its
@@ -300,22 +303,31 @@
                          ItemContainerStyle="{StaticResource EntryItem}"
                          MinHeight="60" MaxHeight="160"
                          AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
-                         AutomationProperties.HelpText="Arrow through the entries. Delete removes the selected one."
+                         AutomationProperties.HelpText="Arrow through the entries. F2 changes the selected one, Delete removes it."
                          AutomationProperties.ItemStatus="{Binding Status}">
                     <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="F2"
+                                    Command="{x:Static local:FormCommands.EditEntry}"
+                                    CommandParameter="{Binding ElementName=Entries}" />
                         <KeyBinding Key="Delete"
                                     Command="{x:Static local:FormCommands.RemoveEntry}"
                                     CommandParameter="{Binding ElementName=Entries}" />
                     </local:EntryListBox.InputBindings>
                 </local:EntryListBox>
-                <Button Grid.Column="1" Style="{StaticResource RowButton}"
-                        Content="Remove"
-                        VerticalAlignment="Top"
-                        Command="{x:Static local:FormCommands.RemoveEntry}"
-                        CommandParameter="{Binding ElementName=Entries}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
-                        AutomationProperties.AcceleratorKey="Delete"
-                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                    <Button Style="{StaticResource RowButton}" Content="Edit" Margin="6,0,0,4"
+                            Command="{x:Static local:FormCommands.EditEntry}"
+                            CommandParameter="{Binding ElementName=Entries}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Edit entry in {0}'}"
+                            AutomationProperties.AcceleratorKey="F2"
+                            AutomationProperties.HelpText="Opens the selected entry in its own window to change it. F2 does the same." />
+                    <Button Style="{StaticResource RowButton}" Content="Remove" Margin="6,0,0,0"
+                            Command="{x:Static local:FormCommands.RemoveEntry}"
+                            CommandParameter="{Binding ElementName=Entries}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                            AutomationProperties.AcceleratorKey="Delete"
+                            AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                </StackPanel>
             </Grid>
 
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
@@ -369,22 +381,31 @@
                          ItemContainerStyle="{StaticResource EntryItem}"
                          MinHeight="60" MaxHeight="160"
                          AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
-                         AutomationProperties.HelpText="Arrow through the entries. Delete removes the selected one."
+                         AutomationProperties.HelpText="Arrow through the entries. F2 changes the selected one, Delete removes it."
                          AutomationProperties.ItemStatus="{Binding Status}">
                     <local:EntryListBox.InputBindings>
+                        <KeyBinding Key="F2"
+                                    Command="{x:Static local:FormCommands.EditEntry}"
+                                    CommandParameter="{Binding ElementName=Entries}" />
                         <KeyBinding Key="Delete"
                                     Command="{x:Static local:FormCommands.RemoveEntry}"
                                     CommandParameter="{Binding ElementName=Entries}" />
                     </local:EntryListBox.InputBindings>
                 </local:EntryListBox>
-                <Button Grid.Column="1" Style="{StaticResource RowButton}"
-                        Content="Remove"
-                        VerticalAlignment="Top"
-                        Command="{x:Static local:FormCommands.RemoveEntry}"
-                        CommandParameter="{Binding ElementName=Entries}"
-                        AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
-                        AutomationProperties.AcceleratorKey="Delete"
-                        AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                <StackPanel Grid.Column="1" VerticalAlignment="Top">
+                    <Button Style="{StaticResource RowButton}" Content="Edit" Margin="6,0,0,4"
+                            Command="{x:Static local:FormCommands.EditEntry}"
+                            CommandParameter="{Binding ElementName=Entries}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Edit entry in {0}'}"
+                            AutomationProperties.AcceleratorKey="F2"
+                            AutomationProperties.HelpText="Opens the selected entry in its own window to change it. F2 does the same." />
+                    <Button Style="{StaticResource RowButton}" Content="Remove" Margin="6,0,0,0"
+                            Command="{x:Static local:FormCommands.RemoveEntry}"
+                            CommandParameter="{Binding ElementName=Entries}"
+                            AutomationProperties.Name="{Binding Label, StringFormat='Remove from {0}'}"
+                            AutomationProperties.AcceleratorKey="Delete"
+                            AutomationProperties.HelpText="Removes the selected entry. The Delete key does the same." />
+                </StackPanel>
             </Grid>
 
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
@@ -438,10 +459,13 @@
                          ItemContainerStyle="{StaticResource EntryItem}"
                          MinHeight="60" MaxHeight="160"
                          AutomationProperties.Name="{Binding Label, StringFormat='{}{0}, entries added'}"
-                         AutomationProperties.HelpText="Arrow through the entries. Enter opens one, Delete removes it."
+                         AutomationProperties.HelpText="Arrow through the entries. Enter or F2 opens one, Delete removes it."
                          AutomationProperties.ItemStatus="{Binding Status}">
                     <local:EntryListBox.InputBindings>
                         <KeyBinding Key="Enter"
+                                    Command="{x:Static local:FormCommands.EditRow}"
+                                    CommandParameter="{Binding ElementName=Rows}" />
+                        <KeyBinding Key="F2"
                                     Command="{x:Static local:FormCommands.EditRow}"
                                     CommandParameter="{Binding ElementName=Rows}" />
                         <KeyBinding Key="Delete"
