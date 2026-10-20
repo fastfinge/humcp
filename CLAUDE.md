@@ -89,7 +89,17 @@ ends with humcp (a job object), and unexpected errors go to `%LOCALAPPDATA%\humc
 Released as a per-user MSI (WiX 7, `installer/`) and portable zips by `.github/workflows/release.yml`
 on a `v*` tag; CI (`ci.yml`) builds and runs Schema and Core. Record in **`docs/phase7-notes.md`**.
 
-**Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. To release:
+**Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
+visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
+does not is a patch. Something unusable with a screen reader is a defect, not a missing feature,
+however it came to be unbuilt — 1.1's JSON-in-text results are the precedent.
+
+**Branches: one per major version, tags for everything else.** 1.x lives on `main` until 2.0 work
+starts; then `release/1.x` is cut from `main`, 1.x fixes and their `v1.x.y` tags go there, and
+`main` is 2.0. A fix needed in both is made on `main` and cherry-picked to `release/1.x`. No branch
+per minor: only the newest 1.x is supported, and an old minor can still be branched from its tag
+(`git switch -c release/1.0 v1.0.0`) if it is ever needed. When the first `release/*` branch is
+cut, add it to `ci.yml`'s push branches. To release:
 add a section to `CHANGELOG.md`, run the UI suite and an NVDA pass locally, then tag `vX.Y.Z` and
 push the tag. The release workflow refuses a tag with no changelog section.
 
@@ -254,6 +264,14 @@ object where the tool has a string or a list:
   twice, which is phase1-notes 2.7 in a new place. The announcement says which it is showing.
 - **A limit that bites says so.** A table caps at 200 rows and announces the real total. The cap and
   §7.6's "virtualization stays off" are one decision: every row shown is a row built.
+
+Two more since 1.1, because most servers publish no structured content at all and send JSON as text:
+
+- **Text that is JSON is read as JSON** (`JsonText`): an object or array that runs to the end, with
+  at most three short title lines in front. Anything less certain stays text; F1 always has the
+  text as sent. Same value as the structured content means one result, compared as values.
+- **An object of equal-length lists of plain values is a table**, one row per position — a
+  forecast's hours and temperatures, side by side.
 
 Shape decides the control and nothing else does — array of objects → `DataGrid`, anything else
 structured → tree, long string → a window of text, and <kbd>Enter</kbd> anywhere opens what the
@@ -462,6 +480,9 @@ in; nothing under `src/` knows it exists.
 
 ## Testing notes
 
+- **`tests/fixtures/results/` holds real tool results** captured from published servers (1.1),
+  under the corpus's rule: never hand-written, captured again rather than edited. Its README says
+  how each server was started.
 - **The schema corpus is the highest-value test asset** (§9): 213 real `inputSchema` documents from
   22 published MCP servers in `tests/fixtures/schemas/`, with golden tests over the resulting
   `FieldModel`. Its whole value is that nobody here chose what is in it — never hand-write a fixture
@@ -471,8 +492,9 @@ in; nothing under `src/` knows it exists.
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
-- **The fixture server publishes 30 tools.** Seven were added in Phase 4 with the `result_` prefix,
-  one per shape a result can have; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
+- **The fixture server publishes 31 tools.** Seven were added in Phase 4 with the `result_` prefix,
+  one per shape a result can have, and an eighth in 1.1, `result_json_text`, which sends JSON as
+  text the way most real servers do; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
   round trip can have; and in Phase 6 `tools_toggle`, which adds or removes `tools_appeared` so the
   client is told its list changed, and `demo_progress`, which reports progress five times. A test
   that calls `tools_toggle` on a shared server must call it again before it finishes.

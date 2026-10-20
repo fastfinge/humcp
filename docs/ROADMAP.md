@@ -234,6 +234,20 @@ Three rules came out of the corpus rather than out of taste:
 - **A limit that bites says so.** A table caps at 200 rows and reports the real total, because
   virtualization stays off (§7.6) and the two are one decision (phase4-notes 3.4).
 
+Two more came in 1.1, from real results rather than from the corpus, which holds only input
+schemas (`tests/fixtures/results/`):
+
+- **JSON sent as text is read as JSON.** Most servers send no structured content; they serialise the
+  answer into a text part. A text part that is an object or an array to its last character — after
+  at most three short lines of title, which become the heading — goes through `ResultBuilder` like
+  structured content. Anything else stays text, and the text as sent stays under <kbd>F1</kbd>.
+  When the structured content is the same value, it is one result, not two: the specification asks
+  servers to send both, and 1.0 compared them as strings.
+- **An object of equal-length lists is a table**, one row per position. Open-Meteo's forecast is
+  `{"time": [...], "temperature_2m": [...]}`; as two lists, nothing said the 14th of each belonged
+  together. The test is on the data alone. The `hourly_units` object beside it is not joined onto the
+  columns, because that would be a rule for one server.
+
 The invariant is `FormBuilder`'s, unchanged: **there is no value it refuses to render.** Anything it
 cannot take apart becomes a node holding the JSON with a sentence saying why.
 
@@ -703,6 +717,7 @@ what the reader was told.
 | <kbd>Enter</kbd> (on a tool) | Open its form window |
 | <kbd>F1</kbd> | Full details for the focused tool or field |
 | <kbd>Ctrl+Enter</kbd> | Submit form |
+| <kbd>F2</kbd> (in a list of entries) | Change the selected entry in a window of its own (1.1) |
 | <kbd>Enter</kbd> (in a result) | Open what the caret is on in a window of its own |
 | <kbd>Ctrl+Shift+C</kbd> | Copy the value the caret is on |
 | <kbd>Esc</kbd> | Close current form / result window |
