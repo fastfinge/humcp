@@ -93,8 +93,8 @@ on a `v*` tag; CI (`ci.yml`) builds and runs Schema and Core. Record in **`docs/
 returns focus to humcp when one of its windows closes. NVDA pass and its two defects in
 **`docs/v1.1-notes.md`**.
 
-**2.0 has started on `main`** (2026-10-20); `release/1.x` was cut from it carrying 1.1, which is
-waiting on a SignPath certificate before it is tagged there. First piece of v2: the local-LLM
+**2.0 has started on `main`** (2026-10-20); `release/1.x` was cut from it carrying 1.1, released
+from there unsigned as v1.1.0 on 2026-10-21. First piece of v2: the local-LLM
 spike, §11.0–11.1, done: two tiers of one model, recorded in **`docs/v2-llm-spike.md`**.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
