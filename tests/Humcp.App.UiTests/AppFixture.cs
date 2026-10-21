@@ -82,6 +82,11 @@ public sealed class AppFixture : IAsyncLifetime
         Environment.SetEnvironmentVariable("HUMCP_CONFIG", ConfigurationPath);
         Environment.SetEnvironmentVariable("HUMCP_SETTINGS", Path.Combine(Path.GetDirectoryName(HistoryPath)!, "settings.json"));
 
+        // An empty model store, since Phase 10: a model in the developer's profile would otherwise
+        // describe every image the suite's tools return, in minutes of processor, and make what the
+        // image tests hear depend on whose machine ran them.
+        Environment.SetEnvironmentVariable("HUMCP_MODELS", Path.Combine(Path.GetDirectoryName(HistoryPath)!, "models"));
+
         _app = Application.Launch(executable);
 
         Window = _app.GetMainWindow(Automation, TimeSpan.FromSeconds(30))

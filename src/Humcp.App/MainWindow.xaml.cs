@@ -50,6 +50,10 @@ public partial class MainWindow : Window
 
     private readonly LocalModelMenu _localModel;
 
+    /// <summary>The one loaded model (Phase 10): the File menu's check and every image description share it.</summary>
+    private readonly Humcp.Inference.ModelHost _modelHost = new(ModelStore.Default(), ModelCatalog.Cpu);
+    private readonly ImageDescriber _describer;
+
     private CancellationTokenSource? _currentCall;
     private bool _callInFlight;
     private int _paneIndex;
@@ -145,7 +149,9 @@ public partial class MainWindow : Window
         MainResults.Announce = SetStatus;
         MainResults.ShowMessage("Result", "No tool has been run yet.");
 
-        _localModel = new LocalModelMenu(LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
+        _localModel = new LocalModelMenu(_modelHost, LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
+        _describer = new ImageDescriber(_modelHost, _settings);
+        MainResults.Describer = _describer;
 
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
@@ -170,6 +176,8 @@ public partial class MainWindow : Window
 
             _history.Save();
             _localModel.Dispose();
+            MainResults.StopDescribing();
+            _modelHost.Dispose();
             _ = _registry.DisposeAsync();
             _announcer.Dispose();
         };
@@ -975,6 +983,7 @@ public partial class MainWindow : Window
         var form = new ToolWindow(this, tool, connection, _settings.RememberHistory ? _history : MruHistory.None,
             _windows, _settings.ShowOptionalFields, SpeakIfAway);
 
+        form.Describer = _describer;
         _forms.Add(form);
         form.Closed += (_, _) => _forms.Remove(form);
         form.Show();

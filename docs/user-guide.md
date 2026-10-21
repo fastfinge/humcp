@@ -99,6 +99,7 @@ A result is made of parts, and each part has a control suited to it.
 - A table is a grid with column headers. Arrow keys move from cell to cell, and each cell is read with its column's name. Shift plus F10, or the Applications key, on a column offers to sort by it; the column's header then says how it is sorted.
 - Anything else structured is a tree, read as "name, value". Right arrow opens a branch.
 - A picture, a sound or a file has Save and Open buttons. humcp decides the file type from what the server says it is, and never opens a file it does not recognise.
+- A picture also has a Describe button. Servers never say what a picture shows, so humcp can ask its local model, on your computer, to describe it (File, Local model downloads the model). Once the model is downloaded, every picture a tool returns is described as it arrives: the box under the picture says "Describing" until the description is ready, and then the status bar says so. A description takes from about 20 seconds to a minute, depending on your computer. It is generated, so it can be wrong, and it always begins by saying so; Open shows the picture itself to anyone who can see it. Control plus D describes a picture on request, and Settings can turn the automatic descriptions off.
 - A link has buttons to open it in your browser or copy it. humcp only opens web links; anything else can be copied but is not opened, and humcp says so.
 
 In any part, Enter opens what the caret is on in a window of its own, and Control plus Shift plus C copies it. F1 shows everything about the result, including the raw data the server sent.
@@ -183,6 +184,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 
 - Enter: open what the caret is on in its own window.
 - Control plus Shift plus C: copy it.
+- Control plus D: describe the picture the caret is on, with the local model.
 - Shift plus F10 or Applications in a table: sort by the current column.
 
 ### A question from a server

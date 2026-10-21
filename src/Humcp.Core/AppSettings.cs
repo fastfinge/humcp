@@ -21,6 +21,7 @@ public sealed class AppSettings
     public const string ShowOptionalField = "showOptionalFields";
     public const string RememberHistoryField = "rememberHistory";
     public const string SpeakInBackgroundField = "speakInBackground";
+    public const string DescribeImagesField = "describeImages";
 
     private static readonly JsonSerializerOptions Writing = new() { WriteIndented = true };
 
@@ -45,6 +46,14 @@ public sealed class AppSettings
     /// developer's call at the Phase 6 exit (ROADMAP §13); a Settings check box turns it off.
     /// </summary>
     public bool SpeakInBackground { get; set; } = true;
+
+    /// <summary>
+    /// Whether an image a tool returns is described by the local model as it arrives, when the model
+    /// is downloaded (ROADMAP §11, Phase 10). On by default, the developer's call: the description is
+    /// the whole point of having the model for this audience, and asking for it every time is a
+    /// keystroke per picture. Describe (<kbd>Ctrl+D</kbd>) works either way.
+    /// </summary>
+    public bool DescribeImages { get; set; } = true;
 
     /// <summary>
     /// The width of the servers pane in device-independent pixels, when somebody set one on purpose.
@@ -78,6 +87,7 @@ public sealed class AppSettings
             settings.ShowOptionalFields = Boolean(root[ShowOptionalField]) ?? settings.ShowOptionalFields;
             settings.RememberHistory = Boolean(root[RememberHistoryField]) ?? settings.RememberHistory;
             settings.SpeakInBackground = Boolean(root[SpeakInBackgroundField]) ?? settings.SpeakInBackground;
+            settings.DescribeImages = Boolean(root[DescribeImagesField]) ?? settings.DescribeImages;
 
             if (root["treePaneWidth"] is JsonValue width && width.TryGetValue(out double pixels)
                 && pixels is > 0 and < 10_000)
@@ -105,6 +115,7 @@ public sealed class AppSettings
                 [ShowOptionalField] = ShowOptionalFields,
                 [RememberHistoryField] = RememberHistory,
                 [SpeakInBackgroundField] = SpeakInBackground,
+                [DescribeImagesField] = DescribeImages,
             };
 
             if (TreePaneWidth is { } width) root["treePaneWidth"] = Math.Round(width);
@@ -145,6 +156,10 @@ public sealed class AppSettings
             "speakInBackground": {
               "type": "boolean", "title": "Speak when humcp is in the background",
               "description": "Says through the screen reader when a call finishes or a server changes while another program is in front."
+            },
+            "describeImages": {
+              "type": "boolean", "title": "Describe images with the local model as they arrive",
+              "description": "When the model is downloaded, an image a tool returns is described on this computer. The description is generated and can be wrong. Control plus D describes one on request either way."
             }
           }
         }
@@ -206,6 +221,7 @@ public sealed class AppSettings
         Set(state, ShowOptionalField, ShowOptionalFields);
         Set(state, RememberHistoryField, RememberHistory);
         Set(state, SpeakInBackgroundField, SpeakInBackground);
+        Set(state, DescribeImagesField, DescribeImages);
     }
 
     /// <summary>Takes the settings from the boxes — read directly, for the reason <see cref="ServerForm"/> gives.</summary>
@@ -216,6 +232,7 @@ public sealed class AppSettings
         ShowOptionalFields = Get(state, ShowOptionalField) ?? ShowOptionalFields;
         RememberHistory = Get(state, RememberHistoryField) ?? RememberHistory;
         SpeakInBackground = Get(state, SpeakInBackgroundField) ?? SpeakInBackground;
+        DescribeImages = Get(state, DescribeImagesField) ?? DescribeImages;
     }
 
     private static void Set(FormState state, string path, bool value)

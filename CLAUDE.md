@@ -100,7 +100,9 @@ v2 is built in phases numbered on from v1's (§11, "Built in this order"). **Pha
 no model, is complete** — **`docs/phase8-notes.md`**. Its NVDA pass found three defects the suite had
 not, one of them in the main window's tab order since Phase 1. **Phase 9, the model on the machine
 (CPU tier only), is complete** — **`docs/phase9-notes.md`**: pinned download, `Humcp.Inference`,
-File, Local model, and Windows ML shipped with its licence terms.
+File, Local model, and Windows ML shipped with its licence terms. **Phase 10, alt text, is
+complete** — **`docs/phase10-notes.md`**: every returned image described as it arrives (a setting turns
+it off; Ctrl+D on request), through one shared `ModelHost`.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -366,6 +368,10 @@ These are the rules generated WPF code most often violates. Full contract in §7
   <kbd>Ctrl+R</kbd>, which repeats the last status line on request (Phase 9). Every window writes its
   status through `LiveRegion.Say` so that line is remembered (phase9-notes 5.2); a new status line
   that bypasses it cannot be repeated.
+- **Everything a model writes is labelled as generated, where it is read and where it is announced**
+  (§11.0, Phase 10). A user who cannot see the picture cannot check its description. The words are
+  `ImageDescription`'s, in Core and tested; a new place a model's text appears uses them or their
+  equivalent, never the bare text.
 - **A live region must not carry a static `AutomationProperties.Name`** — a `TextBlock`'s name *is*
   its text, so naming it makes every announcement say the label instead of the message.
 - **Text results go in a read-only multiline `TextBox`, never a `TextBlock`.** A `TextBox` gives

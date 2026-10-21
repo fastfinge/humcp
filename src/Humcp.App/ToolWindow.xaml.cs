@@ -175,11 +175,22 @@ public partial class ToolWindow : Window
             _ = RunAsync();
         };
 
-        Closed += (_, _) => _closing.Cancel();
+        Closed += (_, _) =>
+        {
+            _closing.Cancel();
+            FormResults.StopDescribing();
+        };
     }
 
     /// <summary>The tool this window is a form for. Used by the window manager to avoid opening two.</summary>
     public string ToolName => _tool.Name;
+
+    /// <summary>Alt text for the images this form's calls return (Phase 10), shared with the main window.</summary>
+    internal ImageDescriber? Describer
+    {
+        get => FormResults.Describer;
+        set => FormResults.Describer = value;
+    }
 
     /// <summary>The server this form calls, so the main window can find a form already open for a tool.</summary>
     public ServerConnection Connection => _connection;

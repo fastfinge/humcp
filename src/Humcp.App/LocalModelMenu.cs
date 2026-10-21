@@ -19,8 +19,9 @@ namespace Humcp.App;
 /// </remarks>
 internal sealed class LocalModelMenu : IDisposable
 {
-    private readonly ModelManifest _manifest = ModelCatalog.Cpu;
-    private readonly ModelStore _store = ModelStore.Default();
+    private readonly ModelHost _host;
+    private readonly ModelManifest _manifest;
+    private readonly ModelStore _store;
     private readonly HttpClient _http;
     private readonly Window _owner;
     private readonly WindowManager _windows;
@@ -34,14 +35,17 @@ internal sealed class LocalModelMenu : IDisposable
     private readonly MenuItem _about = new() { Header = "_About the model…" };
 
     private CancellationTokenSource? _downloading;
-    private LocalModel? _loaded;
     private bool _checking;
 
     /// <summary>A first Remove warns; the second removes. Choosing anything else in between is changing your mind.</summary>
     private bool _removing;
 
-    public LocalModelMenu(MenuItem parent, Window owner, WindowManager windows, Action<string> say, Action<string> sayIfAway)
+    /// <param name="host">The model the whole application shares (Phase 10): the check and every image description use the one copy.</param>
+    public LocalModelMenu(ModelHost host, MenuItem parent, Window owner, WindowManager windows, Action<string> say, Action<string> sayIfAway)
     {
+        _host = host;
+        _manifest = host.Manifest;
+        _store = host.Store;
         _owner = owner;
         _windows = windows;
         _say = say;
@@ -143,19 +147,16 @@ internal sealed class LocalModelMenu : IDisposable
 
         try
         {
-            if (_loaded is null)
-            {
-                _say("Loading the model.");
-                _loaded = await LocalModel.LoadAsync(_store.FolderOf(_manifest), CancellationToken.None);
-            }
+            if (!_host.IsLoaded) _say("Loading the model.");
+            var model = await _host.GetAsync();
 
             _say("The model is loaded. Asking it a question.");
-            var answer = await _loaded.GenerateAsync(
+            var answer = await model.GenerateAsync(
                 "In one short sentence, say what a screen reader is.", 40, null, CancellationToken.None);
 
             // Generated text, on its way to a speech synthesiser: the same hygiene as a server's (§4, pitfall 5).
             var line = $"The model answered: {Humcp.Schema.TextSanitizer.Clean(answer.Text, 300)} It took {Seconds(answer.FirstToken)} seconds to the first word " +
-                       $"and wrote {answer.TokensPerSecond:0} tokens a second; loading took {Seconds(_loaded.LoadTime)} seconds.";
+                       $"and wrote {answer.TokensPerSecond:0} tokens a second; loading took {Seconds(model.LoadTime)} seconds.";
             _say(line);
             _sayIfAway("The model answered.");
         }
@@ -169,7 +170,7 @@ internal sealed class LocalModelMenu : IDisposable
         }
     }
 
-    private void Remove()
+    private async void Remove()
     {
         if (!_removing)
         {
@@ -180,9 +181,9 @@ internal sealed class LocalModelMenu : IDisposable
 
         _removing = false;
 
-        // A loaded model holds its files open, and Windows will not delete a mapped file.
-        _loaded?.Dispose();
-        _loaded = null;
+        // A loaded model holds its files open, and Windows will not delete a mapped file — so it is let
+        // go first, after any description it is in the middle of.
+        await _host.UnloadAsync();
 
         _say(_store.Remove(_manifest) ?? "The model is removed.");
     }
@@ -225,8 +226,8 @@ internal sealed class LocalModelMenu : IDisposable
 
     public void Dispose()
     {
+        // The host is the main window's, which disposes it.
         _downloading?.Cancel();
-        _loaded?.Dispose();
         _http.Dispose();
     }
 }

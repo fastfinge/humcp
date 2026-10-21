@@ -44,4 +44,10 @@ public static class ResultCommands
     /// grid, a nested value as a tree. Parameter: the tree, or the node.
     /// </summary>
     public static readonly RoutedUICommand Expand = new("", nameof(Expand), typeof(ResultCommands));
+
+    /// <summary>
+    /// Asks the local model what an image shows (Phase 10). Parameter: the section. <kbd>Ctrl+D</kbd>
+    /// is bound by the result view, which works out which image the caret is on.
+    /// </summary>
+    public static readonly RoutedUICommand Describe = new("", nameof(Describe), typeof(ResultCommands));
 }

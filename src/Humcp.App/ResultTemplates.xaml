@@ -112,7 +112,7 @@
             <TextBox Style="{StaticResource ReadOnlyText}"
                      Text="{Binding Explanation, Mode=OneWay}" TextWrapping="Wrap"
                      AutomationProperties.Name="{Binding Heading}"
-                     AutomationProperties.HelpText="Everything the protocol says about this part. Tab for what can be done with it." />
+                     AutomationProperties.HelpText="What is known about this part, and for a picture, what the local model says it shows, labelled as generated. Tab for what can be done with it." />
 
             <StackPanel Orientation="Horizontal">
                 <Button Style="{StaticResource PartButton}" Content="Save as…"
@@ -124,6 +124,15 @@
                         Visibility="{Binding CanOpen, Converter={StaticResource EmptyToCollapsed}}"
                         AutomationProperties.Name="{Binding Description, StringFormat='Open {0}'}"
                         AutomationProperties.HelpText="Opens this with whichever program Windows uses for its type." />
+                <!-- Phase 10. Shown for every picture humcp can show, model or no model: a button that
+                     appears only after a download is a feature nobody finds, and pressing it without
+                     one says where to get one. -->
+                <Button Style="{StaticResource PartButton}" Content="Describe"
+                        Command="{x:Static local:ResultCommands.Describe}" CommandParameter="{Binding}"
+                        Visibility="{Binding CanDescribe, Converter={StaticResource EmptyToCollapsed}}"
+                        AutomationProperties.Name="{Binding Description, StringFormat='Describe {0}'}"
+                        AutomationProperties.AcceleratorKey="Control plus D"
+                        AutomationProperties.HelpText="Asks the local model, on this computer, what the picture shows. The description is generated and can be wrong." />
             </StackPanel>
         </StackPanel>
     </DataTemplate>

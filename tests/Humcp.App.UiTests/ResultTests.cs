@@ -301,6 +301,31 @@ public class ResultTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     [Fact]
+    public void A_picture_offers_a_description_and_says_where_to_get_the_model_without_one()
+    {
+        // Phase 10. The suite's model store is empty (AppFixture), which is every first run: the
+        // button is there anyway, so the feature can be found, and pressing it says how to get one.
+        Run("One of everything", "One of everything");
+
+        var describe = Focusables().FirstOrDefault(e =>
+            (UiaTree.Safe(() => e.Name) ?? "").StartsWith("Describe Image, PNG,", StringComparison.Ordinal));
+        Assert.True(describe is not null, "No Describe button: " + string.Join(" | ", Focusables().Select(e => UiaTree.Safe(() => e.Name))));
+        Assert.Equal("Control plus D", describe!.Properties.AcceleratorKey.ValueOrDefault);
+
+        describe.AsButton().Invoke();
+
+        var status = Main.FindFirstDescendant(cf => cf.ByAutomationId("LiveStatus"));
+        var deadline = DateTime.UtcNow + TimeSpan.FromSeconds(10);
+        while (DateTime.UtcNow < deadline && !(UiaTree.Safe(() => status!.Name) ?? "").Contains("File, Local model", StringComparison.Ordinal))
+            Thread.Sleep(150);
+
+        Assert.Contains("File, Local model", UiaTree.Safe(() => status!.Name) ?? "");
+
+        var box = Focusables().First(e => (UiaTree.Safe(() => e.Name) ?? "").StartsWith("Image, PNG,", StringComparison.Ordinal));
+        Assert.Contains("File, Local model", box.AsTextBox().Text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void A_picture_says_what_it_is_somewhere_a_reader_will_reach()
     {
         Run("One of everything", "One of everything");

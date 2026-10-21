@@ -24,8 +24,8 @@ public sealed record Generation(string Text, int PromptTokens, int Tokens, TimeS
 /// window, which GenAI otherwise allocates up front.
 /// </para>
 /// <para>
-/// Text only, for now. Images go through GenAI's <c>MultiModalProcessor</c> in Phase 10, which is
-/// where alt text arrives.
+/// Images go through GenAI's <c>MultiModalProcessor</c> (<see cref="DescribeImageAsync"/>), made
+/// the first time one is asked for: a model that is only ever checked never builds it.
 /// </para>
 /// </remarks>
 public sealed class LocalModel : IDisposable
@@ -115,6 +115,87 @@ public sealed class LocalModel : IDisposable
         }
     }
 
+    /// <summary>
+    /// The request for an image's description: the spike's (v2-llm-spike §4.1), measured on eight real
+    /// images. Kind first, so a listener knows at once whether a chart or a photograph is coming;
+    /// only what is visible; and "say so" rather than guess — the failure that matters is a fluent,
+    /// specific, wrong answer said to someone who cannot check it.
+    /// </summary>
+    public const string DescribeRequest =
+        "This image was returned by a tool. Describe it for someone who cannot see it. Say first what kind of image it " +
+        "is (a photograph, a chart, a screenshot of a web page, an icon), then what it shows, then any text or numbers " +
+        "that matter. Describe only what you can see; if something is unclear, say so instead of guessing. Keep it " +
+        "under 120 words.";
+
+    /// <summary>A 120-word description with room to finish its sentence.</summary>
+    public const int DescribeTokens = 220;
+
+    private MultiModalProcessor? _processor;
+
+    /// <summary>
+    /// Describes an image — the bytes as a server sent them, PNG or JPEG or anything else the model's
+    /// own decoder reads. One generation at a time, like <see cref="GenerateAsync"/>.
+    /// </summary>
+    public async Task<Generation> DescribeImageAsync(ReadOnlyMemory<byte> image, CancellationToken cancellation)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await _one.WaitAsync(cancellation).ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() => Describe(image.ToArray(), cancellation), cancellation).ConfigureAwait(false);
+        }
+        catch (OnnxRuntimeGenAIException ex)
+        {
+            // An image the model's decoder cannot read is the commonest case: a format it does not know.
+            throw new LocalModelException($"The model could not describe the image: {ex.Message}", ex);
+        }
+        finally
+        {
+            _one.Release();
+        }
+    }
+
+    private Generation Describe(byte[] image, CancellationToken cancellation)
+    {
+        var clock = Stopwatch.StartNew();
+        _processor ??= new MultiModalProcessor(_model);
+
+        // The image placeholder Qwen's processor expands into the image's tokens.
+        var prompt = $"<|im_start|>user\n<|vision_start|><|image_pad|><|vision_end|>{DescribeRequest}<|im_end|>\n<|im_start|>assistant\n";
+
+        using var images = Images.Load(image);
+        using var inputs = _processor.ProcessImages(prompt, images);
+
+        using var parameters = new GeneratorParams(_model);
+        parameters.SetSearchOption("do_sample", false);
+
+        // An image is about a thousand tokens (v2-llm-spike §4); the prompt and answer fit well inside
+        // this, and it keeps the KV cache from being sized to the model's whole window.
+        parameters.SetSearchOption("max_length", 4096);
+
+        using var generator = new Generator(_model, parameters);
+        generator.SetInputs(inputs);
+        var promptTokens = (int)generator.TokenCount();
+
+        using var stream = _processor.CreateStream();
+        var text = new StringBuilder();
+        var first = TimeSpan.Zero;
+        var produced = 0;
+
+        while (!generator.IsDone() && produced < DescribeTokens)
+        {
+            cancellation.ThrowIfCancellationRequested();
+
+            generator.GenerateNextToken();
+            if (produced++ == 0) first = clock.Elapsed;
+
+            text.Append(stream.Decode(generator.GetNextTokens()[0]));
+        }
+
+        return new Generation(text.ToString().Trim(), promptTokens, produced, first, clock.Elapsed);
+    }
+
     private Generation Generate(string request, int maxTokens, IProgress<string>? partial, CancellationToken cancellation)
     {
         var clock = Stopwatch.StartNew();
@@ -162,6 +243,7 @@ public sealed class LocalModel : IDisposable
 
         // Waits for a generation in flight: disposing the model under it would crash the process.
         _one.Wait();
+        _processor?.Dispose();
         _tokenizer.Dispose();
         _model.Dispose();
         _one.Dispose();

@@ -57,7 +57,30 @@ public sealed class ResultView : ContentControl
         Bind(ResultCommands.Follow, OnFollow);
         Bind(ResultCommands.Copy, OnCopy);
         Bind(ResultCommands.Expand, OnExpand);
+        Bind(ResultCommands.Describe, (_, e) =>
+        {
+            if (e.Parameter is MediaSection media) _ = DescribeAsync(media, asked: true);
+        });
+
+        // Ctrl+D anywhere in the result: the image the caret is on, or the only one there is.
+        PreviewKeyDown += (_, e) =>
+        {
+            if (e.Key != Key.D || Keyboard.Modifiers != ModifierKeys.Control) return;
+
+            e.Handled = true;
+            if (ImageAtCaret() is { } media) _ = DescribeAsync(media, asked: true);
+            else Say("There is no image here to describe.");
+        };
     }
+
+    /// <summary>Stops any description in progress — the window is closing, and its answer would be said to nobody.</summary>
+    public void StopDescribing() => _describing?.Cancel();
+
+    /// <summary>The local model, for alt text (Phase 10). Null in a view that has none to offer.</summary>
+    internal ImageDescriber? Describer { get; set; }
+
+    /// <summary>Stopped when the result is replaced: a description of a picture no longer on screen is said to nobody.</summary>
+    private CancellationTokenSource? _describing;
 
     /// <summary>The window this view is in, for the windows its parts open.</summary>
     public Window? Owner { get; set; }
@@ -80,13 +103,17 @@ public sealed class ResultView : ContentControl
         ArgumentNullException.ThrowIfNull(outcome);
 
         _outcome = outcome;
-        _parts.ItemsSource = ResultSections.Build(tool, outcome);
+        var sections = ResultSections.Build(tool, outcome);
+        _parts.ItemsSource = sections;
+
+        StartDescribing(sections);
     }
 
     /// <summary>Shows a single line of text — "no tool has been run yet", and the like.</summary>
     public void ShowMessage(string heading, string text)
     {
         _outcome = null;
+        _describing?.Cancel();
         // Help text even here: a box with neither help nor a label is one a reader announces as a bare
         // name, and this is the first thing F6 lands on in a window that has run nothing yet.
         _parts.ItemsSource = new[] { new TextSection(heading, text) { HelpText = "Results appear here when a tool runs." } };
@@ -101,6 +128,109 @@ public sealed class ResultView : ContentControl
     {
         _parts.UpdateLayout();
         return _parts.MoveFocus(new TraversalRequest(FocusNavigationDirection.First));
+    }
+
+    // ------------------------------------------------------------------ alt text (Phase 10)
+
+    /// <summary>
+    /// Says what each image's box should say now, and starts describing them if the setting says to.
+    /// One at a time, in order: the model answers one request at a time anyway, and the first picture
+    /// is the one most likely to be read first.
+    /// </summary>
+    private void StartDescribing(IEnumerable<object> sections)
+    {
+        _describing?.Cancel();
+        _describing = new CancellationTokenSource();
+
+        var images = sections.OfType<MediaSection>().Where(m => m.CanDescribe).ToList();
+        if (images.Count == 0 || Describer is not { } describer) return;
+
+        foreach (var image in images)
+            image.AltText = describer.DescribesAutomatically ? ImageDescription.Describing
+                : describer.IsDownloaded ? ImageDescription.Off
+                : ImageDescription.NotDownloaded;
+
+        if (describer.DescribesAutomatically) _ = DescribeAllAsync(images, _describing.Token);
+    }
+
+    private async Task DescribeAllAsync(IReadOnlyList<MediaSection> images, CancellationToken cancellation)
+    {
+        foreach (var image in images)
+        {
+            if (cancellation.IsCancellationRequested) return;
+            await DescribeAsync(image, asked: false, cancellation);
+        }
+    }
+
+    /// <param name="asked">
+    /// True for Describe and Ctrl+D, which answer even when there is nothing to do; false for the
+    /// automatic pass, which says only that a description is ready — the result's own announcement
+    /// has just been made, and the box says "describing" for anyone who goes to look.
+    /// </param>
+    private async Task DescribeAsync(MediaSection image, bool asked, CancellationToken cancellation = default)
+    {
+        if (Describer is not { } describer) return;
+
+        if (!image.CanDescribe)
+        {
+            if (asked) Say("That part is not a picture humcp can show, so the model cannot be asked about it either.");
+            return;
+        }
+
+        if (image.IsDescribed)
+        {
+            if (asked) Say("It is already described: the description is in the box under the picture.");
+            return;
+        }
+
+        if (image.IsDescribing)
+        {
+            if (asked) Say("It is being described now.");
+            return;
+        }
+
+        if (!describer.IsDownloaded)
+        {
+            if (asked) Say(ImageDescription.NotDownloaded);
+            return;
+        }
+
+        if (cancellation == default) cancellation = _describing?.Token ?? CancellationToken.None;
+
+        image.IsDescribing = true;
+        image.AltText = ImageDescription.Describing;
+        if (asked) Say("Describing the image. The description will be announced when it is ready.");
+
+        try
+        {
+            var text = await describer.DescribeAsync(image.Block.Data, cancellation);
+
+            image.IsDescribed = true;
+            image.AltText = ImageDescription.Generated(text);
+            Say(ImageDescription.Ready(image.Block.Phrase));
+        }
+        catch (OperationCanceledException)
+        {
+            // The result was replaced. Nobody is waiting for this one.
+        }
+        catch (Humcp.Inference.LocalModelException ex)
+        {
+            image.AltText = ImageDescription.Failed(ex.Message);
+            Say(image.AltText);
+        }
+        finally
+        {
+            image.IsDescribing = false;
+        }
+    }
+
+    /// <summary>The image the caret is in — its box or its buttons — or, with the caret elsewhere, the only image in the result.</summary>
+    private MediaSection? ImageAtCaret()
+    {
+        if ((Keyboard.FocusedElement as FrameworkElement)?.DataContext is MediaSection { CanDescribe: true } here) return here;
+
+        var images = (_parts.ItemsSource as IEnumerable<object> ?? []).OfType<MediaSection>().Where(m => m.CanDescribe).ToList();
+        return images.Count == 1 ? images[0] : null;
     }
 
     private void Bind(RoutedUICommand command, ExecutedRoutedEventHandler executed) =>

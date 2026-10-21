@@ -40,6 +40,7 @@ internal static class KeyboardHelp
         "A result",
         "  Enter                   Open what the caret is on in a window of its own",
         "  Ctrl+Shift+C            Copy the value the caret is on",
+        "  Ctrl+D                  Describe the picture the caret is on, with the local model",
         "  Shift+F10 in a table    Sort by the current column",
         "",
         "A question a server asks",

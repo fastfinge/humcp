@@ -25,7 +25,18 @@ public sealed class AppSettingsTests : IDisposable
         Assert.False(settings.ShowOptionalFields);
         Assert.True(settings.RememberHistory);
         Assert.True(settings.SpeakInBackground);
+        Assert.True(settings.DescribeImages);
         Assert.Null(settings.TreePaneWidth);
+    }
+
+    [Fact]
+    public void Describing_images_can_be_turned_off_and_stays_off()
+    {
+        var settings = AppSettings.Load(_path);
+        settings.DescribeImages = false;
+        Assert.True(settings.Save());
+
+        Assert.False(AppSettings.Load(_path).DescribeImages);
     }
 
     [Fact]

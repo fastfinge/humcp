@@ -38,8 +38,10 @@ internal sealed class TextSection(string heading, string text, string uri = "") 
 }
 
 /// <summary>Bytes: an image with a preview where one can safely be made, a sound, or a file.</summary>
-internal sealed class MediaSection : ResultSection
+internal sealed class MediaSection : ResultSection, System.ComponentModel.INotifyPropertyChanged
 {
+    private string? _altText;
+
     /// <summary>
     /// Past this many pixels a preview is not attempted. A few hundred kilobytes of PNG can decode
     /// to hundreds of megabytes of bitmap, and the bytes came from a third party (§4, pitfall 5).
@@ -62,6 +64,38 @@ internal sealed class MediaSection : ResultSection
 
     public bool CanOpen => Block.CanOpen;
 
+    /// <summary>
+    /// Whether the local model can be asked about it (Phase 10): an image that decoded. One that will
+    /// not decode for WPF is one the model's own decoder is unlikely to read either, and asking would
+    /// spend half a minute to say so.
+    /// </summary>
+    public bool CanDescribe => Block.Kind == MediaKind.Image && Preview is not null;
+
+    /// <summary>
+    /// What the local model said, or is doing, or why it is not — <see cref="ImageDescription"/>'s
+    /// words. Null until a result view decides, and then <see cref="Explanation"/> says it instead of
+    /// "there is no description".
+    /// </summary>
+    public string? AltText
+    {
+        get => _altText;
+        set
+        {
+            if (_altText == value) return;
+            _altText = value;
+            PropertyChanged?.Invoke(this, new(nameof(AltText)));
+            PropertyChanged?.Invoke(this, new(nameof(Explanation)));
+        }
+    }
+
+    /// <summary>True once the model has said something, so a second Describe does not ask it the same question again.</summary>
+    public bool IsDescribed { get; set; }
+
+    /// <summary>True while the model is working on it.</summary>
+    public bool IsDescribing { get; set; }
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+
     public override string AutomationName => Block.Uri.Length > 0
         ? $"{Block.Description}, {Block.Uri}"
         : Block.Description;
@@ -71,9 +105,12 @@ internal sealed class MediaSection : ResultSection
     /// 6), so this is the whole of what is known about it — and where humcp will not open it, the
     /// reason it will not (§7.18).
     /// </summary>
-    public string Explanation => Block.CanOpen
-        ? $"{Description}. There is no description of it: the protocol has nowhere to put one."
-        : $"{Description}. humcp does not recognise this type, so it can be saved but not opened.";
+    public string Explanation => (Block.CanOpen, AltText) switch
+    {
+        (true, { } alt) => $"{Description}. {alt}",
+        (true, null) => $"{Description}. There is no description of it: the protocol has nowhere to put one.",
+        _ => $"{Description}. humcp does not recognise this type, so it can be saved but not opened.",
+    };
 
     private static ImageSource? MakePreview(MediaResultBlock block)
     {

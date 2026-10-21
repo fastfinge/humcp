@@ -17,3 +17,6 @@ artifacts/
 *.trx
 uia-probe-report.txt
 TestResults/
+
+# Written by @playwright/mcp into whatever directory it was started from (Phase 10 NVDA pass).
+.playwright-mcp/
