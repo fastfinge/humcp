@@ -1167,7 +1167,7 @@ Activate the seams and finish the protocol surface, before widening scope.
 - **LLM integration** through the `IResultSummarizer` / `IToolSuggester` interfaces:
   natural-language tool search, summarisation of large results, and — the highest-value one for
   this audience — **generated alt text for returned images**, which closes pitfall #6. Runtime,
-  model tiers and the spike that decides them: §11.0–11.1.
+  the two model tiers and the spike that decided them: §11.0–11.1.
 - **Prompts and Resources as first-class UI.** v1 lists them; v2 makes them usable. Prompts get the
   same generated-form treatment, and they are the *only* place `completion/complete` works, so
   prompt arguments get real autocomplete that tool arguments cannot have (pitfall #3).
@@ -1207,13 +1207,19 @@ ONNX format, not GGUF; image description needs a small adapter of our own over
 `MultiModalProcessor`, since the `IChatClient` is text-only; and the Windows App SDK runtime
 alongside an unpackaged per-user MSI, which has to be checked against the WiX installer.
 
-**Three model tiers**, chosen in settings, **CPU-only by default**:
+**Two tiers of one model** (decided 2026-10-21, from the spike in §11.1), **CPU by default**:
 
-| Tier | For | Default? |
-|---|---|---|
-| CPU only | Any machine humcp runs on | Yes |
-| Low-end GPU | Integrated graphics, a small discrete card, an NPU | No — the user upgrades |
-| High-end GPU | A discrete card with 8 GB or more | No — the user upgrades |
+| Tier | Model and runtime | For | Default? |
+|---|---|---|---|
+| CPU | Qwen3-VL 4B, int4, CPU provider | Any machine humcp runs on | Yes |
+| NVIDIA GPU | Qwen3-VL 4B, fp16, TensorRT-RTX | An NVIDIA card with about 12 GB or more | No — the user upgrades |
+
+The choice is speed, not quality: both tiers give the same answers, so it is the easier thing to
+explain. The tiers this replaced were CPU, low-end GPU and high-end GPU with model size growing along
+them; measured, the model is 4B everywhere (2B gets numbers wrong, 8B is a small step for twice the
+memory), there is no working low-end GPU path for any vision model tried (§11.1), and below about
+12 GB the GPU build is slower than the CPU. An 8 GB NVIDIA card, an AMD or Intel GPU and the NPU all
+use the CPU tier.
 
 A tier is a pinned model, not a model browser: one download with a stated size, licence and
 SHA-256, checked before the file is loaded — a model from a hub is a third-party file, like a
@@ -1228,6 +1234,15 @@ baseline; a model re-ranks. Search then works before any download, on a slow mac
 model is wrong — and the spike can measure whether the model adds anything over the baseline.
 
 #### 11.1 The spike decides whether the tiers exist
+
+**Done (2026-10-21); the answer was two tiers of one model — §11.0's table.** The record is
+`docs/v2-llm-spike.md`. In short: the CPU tier is worth having with a 4B model (alt text 15–23 s to
+the first word on this machine, tool search 34 of 35 against the lexical baseline's 20 after a
+one-off catalogue prefill); DirectML failed three model families three different ways (Qwen3-VL
+degenerates, Gemma 3's sliding window is ignored past ~1,000 tokens, Phi-4-multimodal hangs the GPU),
+so there is no low-end GPU tier; TensorRT-RTX runs only unquantized weights; and the NPU runs no
+vision model through Windows ML, while its text model decodes at 1–4 tok/s and stops at ~4k tokens.
+What follows is the plan as it was set.
 
 Two questions, and either answer could be no:
 

@@ -95,7 +95,7 @@ returns focus to humcp when one of its windows closes. NVDA pass and its two def
 
 **2.0 has started on `main`** (2026-10-20); `release/1.x` was cut from it carrying 1.1, which is
 waiting on a SignPath certificate before it is tagged there. First piece of v2: the local-LLM
-spike, §11.0–11.1.
+spike, §11.0–11.1, done: two tiers of one model, recorded in **`docs/v2-llm-spike.md`**.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -179,9 +179,11 @@ without saying so is not.
 - **No LLM in v1.** Seams exist (`IResultSummarizer`, `IToolSuggester`) as null implementations;
   they get filled in v2.
 - **v2's LLM is local, through ONNX Runtime GenAI on Windows ML** (§11.0), not SharpMind (no
-  vision) and not DirectML (maintenance mode). No API keys, nothing leaves the machine. Three
-  pinned model tiers — CPU only (the default), low-end GPU, high-end GPU — and the §11.1 spike
-  decides whether each one earns its place. Windows 10 is not supported from v2.
+  vision) and not DirectML (maintenance mode). No API keys, nothing leaves the machine. **Two
+  tiers of one model**, Qwen3-VL 4B: CPU (int4, the default) and NVIDIA GPU (fp16 on
+  TensorRT-RTX, cards with about 12 GB). Decided 2026-10-21 against the original three tiers (CPU,
+  low-end GPU, high-end GPU) on the spike's measurements — no vision model works on DirectML, 2B is
+  too wrong, 8B too small a step (`docs/v2-llm-spike.md`). Windows 10 is not supported from v2.
 - **v1 transports: stdio + *unauthenticated* Streamable HTTP.** OAuth is v3 (§11).
 - **Do not build `ICapabilityProvider` before v4** (§12). Two implementations before an
   abstraction; extracting an interface from one implementation is guessing at the joints.

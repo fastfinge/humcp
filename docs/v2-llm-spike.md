@@ -5,7 +5,7 @@ CPU tier worth having, and is the step from a low-end to a high-end GPU worth a 
 The spike's code is throwaway and lives in `spikes/llm/` (outside the solution, with its own empty
 `Directory.Build.props` so none of the repo's build settings reach it).
 
-**Status: measured; the tiers need a decision (§8).** The short version:
+**Status: done. Decided 2026-10-21: two tiers of one model, Qwen3-VL 4B on the CPU (default) and on NVIDIA GPUs with about 12 GB (§8; ROADMAP §11.0).** The short version:
 
 - **The 2B model is not good enough** — fluent, specific, wrong numbers (§4.1). **4B is the floor.**
 - **The CPU tier is worth having, with 4B**, for alt text and tool search; summaries of long
