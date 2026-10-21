@@ -1,0 +1,81 @@
+Summarise the following text in two sentences.
+
+er 150 words. Do not add anything the result does not contain.
+
+Result:
+Contents of https://www.w3.org/WAI/standards-guidelines/wcag/:
+<p>WCAG 2 Overview | Web Accessibility Initiative (WAI) | W3C</p>
+
+Strategies, standards, resources to make the Web accessible to people with disabilities
+
+# WCAG 2 Overview
+
+## Summary
+
+This page introduces the Web Content Accessibility Guidelines (WCAG) international standard, including WCAG 2.0, WCAG 2.1, and WCAG 2.2. WCAG documents explain how to make web content more accessible to people with disabilities.
+
+A different page introduces WCAG 3.
+
+WCAG is not an introduction to accessibility. For introductions, see Accessibility Fundamentals Overview.
+
+Quick links to resources:
+
+* How to Meet WCAG 2 (Quick Reference)
+* WCAG 2.2 Standard, What’s New in WCAG 2.2
+* WCAG 2.1 Standard
+
+## Introduction
+
+Web Content Accessibility Guidelines (WCAG) 2 is developed through the W3C process in cooperation with individuals and organizations around the world, with a goal of providing a single shared standard for web content accessibility that meets the needs of individuals, organizations, and governments internationally.
+
+The WCAG documents explain how to make web content more accessible to people with disabilities. Web “content” generally refers to the information in a web page or web application, including:
+
+* natural information such as text, images, and sounds
+* code or markup that defines structure, presentation, etc.
+
+WCAG applies to dynamic content, multimedia, web on mobile, and AI web interfaces. WCAG can also be applied to non-web information and communications technologies (ICT) such as native apps, software, and documents, as described in WCAG2ICT.
+
+## Who WCAG is for
+
+WCAG is for those who want a technical standard. It is not an introduction to accessibility. For links to introductory material, see “Where should I start?” in the FAQ.
+
+WCAG is primarily intended for:
+
+* web content developers (page authors, site designers, etc.)
+* web authoring tool developers
+* web accessibility evaluation tool developers
+* others who want or need a standard for web accessibility, including for mobile accessibility
+
+To meet the needs of others — including policy makers, managers, and researchers — there are many different WAI Resources.
+
+## What is in WCAG 2
+
+The WCAG 2.2 has 13 guidelines. The guidelines are organized under 4 principles: perceivable, operable, understandable, and robust.
+
+For each guideline, there are testable success criteria. The success criteria are at three levels: A, AA, and AAA.
+
+The success criteria are what determine “conformance” to WCAG. That is, in order to meet WCAG, the content needs to meet the success criteria. Details are in the Conformance section of WCAG.
+
+For a short summary of the WCAG 2 guidelines, see WCAG 2 at a Glance.
+
+### Supporting material and supplemental guidance
+
+The following resources help you understand and implement WCAG, and improve accessibility beyond WCAG:
+
+* Quick Reference / How to Meet WCAG 2 / Checklist
+* Understanding WCAG 2
+* Techniques for WCAG 2
+* Test Rules for WCAG 2
+* Supplemental Guidance
+
+Please read about these WCAG 2 resources from WCAG 2 Documents.
+
+## WCAG 2.0, 2.1, 2.2
+
+Web Content Accessibility Guidelines (WCAG) versions are stable, referenceable standards when they are published as a “W3C Recommendation” web standard.
+
+The first links below go to the latest publication. Each publication has a unique web address (URL) that includes the date in the URL. The standard at a dated URL does not change.
+
+* WCAG 2.0 was published on 11 December 2008.
+* WCAG 2.1 was published on 5 June 2018 at https://www.w3.org/TR/2018/REC-WCAG21-20180605/, and updates were published on 21 September 2023, 12 December 2024, and 6 May 2025.
+* WCAG 2.2 was published on 5 October 2023, and an update was published on 

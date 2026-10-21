@@ -1,0 +1,5 @@
+[
+ { "label": "sum:fetch-wcag-understanding", "prompt": "material/prompts/summary-fetch-wcag-understanding.txt", "maxNew": 120 },
+ { "label": "alt:playwright-shot-photo-cat-1.png", "prompt": "material/prompts/alttext.txt", "image": "material/images/playwright-shot-photo-cat-1.png", "maxNew": 80 },
+ { "label": "alt2:playwright-shot-photo-cat-1.png", "prompt": "material/prompts/alttext.txt", "image": "material/images/playwright-shot-photo-cat-1.png", "maxNew": 80 }
+]

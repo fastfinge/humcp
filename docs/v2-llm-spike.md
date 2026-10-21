@@ -16,6 +16,9 @@ The spike's code is throwaway and lives in `spikes/llm/` (outside the solution, 
   garbage from every int4 build, so a GPU model is full size: 4B needs a card with about 12 GB.
   On this machine's 8 GB card the 4B is slower than the CPU (§5.2).
 - **8B over 4B is a small step** (§4.1), not a tier's worth.
+- **Gemma 3 4B runs on DirectML on both GPUs, up to about 1,000 prompt tokens** — DirectML ignores
+  its sliding window past that — **but is worse than Qwen3-VL 4B at everything** (§5.3).
+- **The NPU installs, but runs no vision model through Windows ML** (§5.4).
 
 ## 1. The machine
 
@@ -58,7 +61,10 @@ on the Hub are transformers.js layouts, not GenAI ones, so they would have to be
 - **NvTensorRTRTX: obtainable, but `EnsureReadyAsync` took several minutes** the first time (it is a
   Store package download) and appeared to hang under a 3-minute timeout. A user who switches to a
   GPU tier waits for this before the model download even starts.
-- **VitisAI (AMD NPU): `EnsureReadyAsync` did not complete** within 3 minutes; not retried yet.
+- **VitisAI (AMD NPU): `EnsureReadyAsync` did not complete** within 3 minutes the first time. Retried
+  on 2026-10-21 it installed in seconds — a slow or stalled Store download, not a defect. By then the
+  catalog also listed `AMDGPUExecutionProvider` and `RyzenAILightExecutionProvider`; what the NPU can
+  run is §5.4.
 - **WebGPU: not in the catalog** without the experimental Windows ML package. Microsoft's page says
   it is "not yet recommended for performance-critical production scenarios".
 - **Microsoft's own production guidance is vendor EPs for premium hardware and DirectML "for broad
@@ -226,6 +232,59 @@ match this graph's `present` shape, so KV sharing and CUDA graphs are off — an
 tokens and 4.5–7 tok/s — slower than the same model on this CPU.** A 12 GB card would hold it;
 there is none here to measure. 8B would need about 20 GB.
 
+### 5.3 Gemma 3 4B — runs on DirectML, but not well enough to use
+
+Gemma 3 does not use M-RoPE, so it tests whether §5.1 is about Qwen3-VL or about DirectML. The build
+is AMD's (`amd/Gemma3-4B-it_gpuep_1.0_gpu_128`: GenAI builder, int4 RTN, fp16 activations, no vendor
+ops); Google's own weights are gated and not accepted on this account. One patch: its embedding graph
+declares `image_features` as rank 3, and GenAI passes rank 2 when there is no image, so every
+text-only call failed — the input's shape is cleared and its last-dimension lookup made `-1`.
+
+**On DirectML it is correct up to about 1,000 prompt tokens and wrong after.** Same output as the CPU
+for every image description, on both GPUs; a summary prompt is right at 1,182 tokens, slips at 1,210,
+and is "Here is the following:" repeated at 1,231. Compared layer by layer against the CPU, DirectML's
+`GroupQueryAttention` **ignores `local_window_size`** — Gemma's sliding-window layers attend over the
+whole prompt, which matches the CPU with the window removed to 0.6% and the real model not at all.
+It ignores an explicit `attention_bias` mask too, so the window cannot be put back from outside the
+operator. A DirectML provider bug, in maintenance mode; image descriptions (349 tokens) are unaffected.
+
+Where it works, it is fast: **decode 50–80 tok/s on the Radeon 890M** as well as the RTX 5070, against
+7–11 on the CPU. The vision graph stays on the CPU either way, so an image description still takes
+17–19 s to its first word (22 s all on the CPU, 39 s on 4 threads).
+
+**And the model is not good enough** (same material, same greedy decoding as Qwen):
+
+| | Qwen3-VL 4B | Gemma 3 4B |
+|---|---|---|
+| Tool search, top 3 of 35 | 34 | **22** — and invents ids (`filesystem/rename_file`, `github/API-get-pull-request-reviews`) |
+| Charts | reads the values | "numbers and labels … unclear", no values from any chart |
+| 16-pixel logo | "a curved pencil" / "a paperclip" — wrong | "a microphone" — wrong the same way |
+| Repetition | none | four of eight descriptions loop the same sentence to the token limit |
+| CPU, 2.5k / 6.3k / 12k-token summary, first word | 22 / 71 / 136 s | 40 / 110 / 228 s |
+
+Gemma resizes every image to a fixed 896×896, so a screenshot's text is unreadable before the model
+sees it. **Gemma 3 4B does not replace Qwen3-VL 4B at any tier.** Gemma 4 (E2B/E4B) is newer, but
+GenAI's builder makes its text component only ("vision and audio components are not supported"), and
+its ONNX uploads are transformers.js layouts — not loadable here without a conversion of our own.
+
+### 5.4 The NPU
+
+The VitisAI provider now installs (§3.1). Two routes, neither of which runs a vision model through
+Windows ML today:
+
+- **AMD's NPU build of Gemma 3 4B** (`amd/Gemma-3-4b_rai_1.8.0_npu_16K`) names a `RyzenAI` provider.
+  GenAI maps that to `RyzenAILightExecutionProvider` and loads it from `RYZENAI_EP_PATH`; pointed at
+  the copy Windows ML installed, it loads and starts AMD's runtime, then stops: **"No supported shapes
+  with matching txn_fname_prefix found"** for the first layer norm, whatever the kernel cache path.
+  The build carries precompiled NPU kernels for the full Ryzen AI 1.8 SDK runtime, which Windows ML's
+  1.8.80 provider package does not match.
+- **AMD's documented Windows ML route** (`RyzenAI-SW/WinML/LLM`) is Olive with Quark quantization and
+  `VitisGenerateModelLLM`, run with `VitisAIExecutionProvider` — and it and Foundry Local's NPU
+  catalog are **text-only models** (Phi-4-mini, Qwen2.5, Mistral 7B). No vision model.
+
+So the NPU could carry summaries and tool search but not alt text, through a model and a conversion
+toolchain different from every other tier. Not measured: Foundry Local is not installed here.
+
 ## 6. Tool search
 
 The baseline is BM25 over each tool's server, name and description, with 35 requests written for
@@ -288,8 +347,10 @@ Open, before building on it:
 
 - **Whether GenAI's DirectML bug is ours to wait for or to report.** Fixed, it would bring back a
   GPU path for AMD and Intel — and for 8 GB NVIDIA cards, through int4.
-- **Whether a model family without M-RoPE does better on DirectML** — a vision model of about 4B,
-  checked against the same material.
+- **Whether a model family without M-RoPE does better on DirectML** — Gemma 3 4B does, up to about
+  1,000 tokens (§5.3), which is enough for alt text — but it is not good enough at alt text. A vision
+  model with neither M-RoPE nor sliding-window attention is the remaining candidate (Phi-4-multimodal).
 - **The CPU tier on an ordinary machine.** These numbers are from a 12-core Ryzen AI 9; the
   4-thread rows are a stand-in, not a measurement of a four-core laptop.
-- **The NPU** (XDNA 2, VitisAI): not obtained from the catalog here.
+- **The NPU** (XDNA 2): installs now, runs no vision model through Windows ML (§5.4). A text-only
+  NPU model for summaries and tool search is measurable through Foundry Local.

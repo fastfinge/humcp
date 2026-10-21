@@ -58,7 +58,10 @@ static void Bench(Dictionary<string, string> o)
     var raw = JsonNode.Parse(File.ReadAllText(Path.Combine(modelDir, "genai_config.json")))!["model"]!.AsObject();
     foreach (var part in new[] { "embedding", "vision" })
         if (raw.ContainsKey(part)) sessions.Add("\"" + part + "\":" + visionSession);
-    config.Overlay("{\"model\":{" + string.Join(",", sessions) + "}}");
+    // --ep asis leaves the config's providers alone: a vendor build such as AMD's NPU models carries
+    // options per session that an overlay would merge into.
+    if (ep != "asis") config.Overlay("{\"model\":{" + string.Join(",", sessions) + "}}");
+    if (o.TryGetValue("register", out var register)) RegisterWinMl(register);
     if (ep != "cpu" && o.TryGetValue("vendor", out var vendor))
         config.SetDecoderProviderOptionsHardwareVendorId(ep, Convert.ToUInt32(vendor, 16));
     if (o.GetValueOrDefault("share") == "false")
@@ -72,6 +75,8 @@ static void Bench(Dictionary<string, string> o)
     using var processor = new MultiModalProcessor(model);
     using var tokenizer = new Tokenizer(model);
     var chunk = int.Parse(o.GetValueOrDefault("chunk", "0"));
+    // Each family has its own turn markers and its own image placeholder, which the processor expands.
+    Chat.Family = raw["type"]!.ToString().StartsWith("gemma") ? "gemma" : "qwen";
     var meta = new { tag, model = modelDir, ep, threads = threads ?? "default", chunk, loadMs = Math.Round(loadMs) };
 
     if (o.TryGetValue("jobs", out var jobsFile))
@@ -91,9 +96,7 @@ static void Bench(Dictionary<string, string> o)
 
 static Dictionary<string, object?> RunOne(Model model, MultiModalProcessor processor, Tokenizer tokenizer, string promptFile, string? image, int maxNew, int ctx, int chunk)
 {
-    var prompt = "<|im_start|>user\n"
-        + (image is null ? "" : "<|vision_start|><|image_pad|><|vision_end|>")
-        + File.ReadAllText(promptFile) + "<|im_end|>\n<|im_start|>assistant\n";
+    var prompt = Chat.UserStart + (image is null ? "" : Chat.Image) + File.ReadAllText(promptFile) + Chat.UserEnd;
     using var stream = processor.CreateStream();
     var sw = Stopwatch.StartNew();
     using var gp = new GeneratorParams(model);
@@ -137,7 +140,7 @@ static void PrefixRun(Model model, Tokenizer tokenizer, object meta, string pref
     using var gen = new Generator(model, gp);
     using var stream = tokenizer.CreateStream();
     var sw = Stopwatch.StartNew();
-    var head = tokenizer.Encode("<|im_start|>user\n" + prefix)[0].ToArray();
+    var head = tokenizer.Encode(Chat.UserStart + prefix)[0].ToArray();
     var step = chunk > 0 ? chunk : head.Length;
     for (int i = 0; i < head.Length; i += step)
         gen.AppendTokens(head.AsSpan(i, Math.Min(step, head.Length - i)));
@@ -150,7 +153,7 @@ static void PrefixRun(Model model, Tokenizer tokenizer, object meta, string pref
     {
         gen.RewindTo(prefixTokens);
         var tail = tokenizer.Encode(
-            "\nThe request: \"" + (string)q!["q"]! + "\"\n\nAnswer with the three tool ids that best match, best first, one per line, and nothing else.<|im_end|>\n<|im_start|>assistant\n");
+            "\nThe request: \"" + (string)q!["q"]! + "\"\n\nAnswer with the three tool ids that best match, best first, one per line, and nothing else." + Chat.UserEnd);
         var qsw = Stopwatch.StartNew();
         gen.AppendTokens(tail[0]);
         var (text, ttft, produced, total) = Decode(gen, stream, qsw, 60);
@@ -219,4 +222,12 @@ static async Task Probe()
     }
     foreach (var d in OrtEnv.Instance().GetEpDevices())
         Console.WriteLine($"device: {d.EpName} {d.HardwareDevice.Type} vendor={d.EpVendor} hw={d.HardwareDevice.Vendor} id={d.HardwareDevice.DeviceId}");
+}
+
+static class Chat
+{
+    public static string Family = "qwen";
+    public static string UserStart => Family == "gemma" ? "<start_of_turn>user\n" : "<|im_start|>user\n";
+    public static string UserEnd => Family == "gemma" ? "<end_of_turn>\n<start_of_turn>model\n" : "<|im_end|>\n<|im_start|>assistant\n";
+    public static string Image => Family == "gemma" ? "<start_of_image>" : "<|vision_start|><|image_pad|><|vision_end|>";
 }

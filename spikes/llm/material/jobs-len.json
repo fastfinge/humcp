@@ -1,0 +1,1 @@
+[{"label": "len2400", "prompt": "material/prompts/len/wcag-2400.txt", "maxNew": 60}, {"label": "len3600", "prompt": "material/prompts/len/wcag-3600.txt", "maxNew": 60}, {"label": "len4400", "prompt": "material/prompts/len/wcag-4400.txt", "maxNew": 60}, {"label": "len6000", "prompt": "material/prompts/len/wcag-6000.txt", "maxNew": 60}]

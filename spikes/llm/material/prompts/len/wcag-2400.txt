@@ -1,0 +1,53 @@
+Summarise the following text in two sentences.
+
+er 150 words. Do not add anything the result does not contain.
+
+Result:
+Contents of https://www.w3.org/WAI/standards-guidelines/wcag/:
+<p>WCAG 2 Overview | Web Accessibility Initiative (WAI) | W3C</p>
+
+Strategies, standards, resources to make the Web accessible to people with disabilities
+
+# WCAG 2 Overview
+
+## Summary
+
+This page introduces the Web Content Accessibility Guidelines (WCAG) international standard, including WCAG 2.0, WCAG 2.1, and WCAG 2.2. WCAG documents explain how to make web content more accessible to people with disabilities.
+
+A different page introduces WCAG 3.
+
+WCAG is not an introduction to accessibility. For introductions, see Accessibility Fundamentals Overview.
+
+Quick links to resources:
+
+* How to Meet WCAG 2 (Quick Reference)
+* WCAG 2.2 Standard, What’s New in WCAG 2.2
+* WCAG 2.1 Standard
+
+## Introduction
+
+Web Content Accessibility Guidelines (WCAG) 2 is developed through the W3C process in cooperation with individuals and organizations around the world, with a goal of providing a single shared standard for web content accessibility that meets the needs of individuals, organizations, and governments internationally.
+
+The WCAG documents explain how to make web content more accessible to people with disabilities. Web “content” generally refers to the information in a web page or web application, including:
+
+* natural information such as text, images, and sounds
+* code or markup that defines structure, presentation, etc.
+
+WCAG applies to dynamic content, multimedia, web on mobile, and AI web interfaces. WCAG can also be applied to non-web information and communications technologies (ICT) such as native apps, software, and documents, as described in WCAG2ICT.
+
+## Who WCAG is for
+
+WCAG is for those who want a technical standard. It is not an introduction to accessibility. For links to introductory material, see “Where should I start?” in the FAQ.
+
+WCAG is primarily intended for:
+
+* web content developers (page authors, site designers, etc.)
+* web authoring tool developers
+* web accessibility evaluation tool developers
+* others who want or need a standard for web accessibility, including for mobile accessibility
+
+To meet the needs of others — including policy makers, managers, and researchers — there are many different WAI Resources.
+
+## What is in WCAG 2
+
+The WCAG 2.2 has 13
