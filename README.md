@@ -30,7 +30,7 @@ Get the latest release from the
   administrator rights; or
 - `humcp-win-x64.zip` / `humcp-win-arm64.zip`, portable: extract and run `Humcp.App.exe`.
 
-Windows 10 or 11. Releases are not code-signed yet, so SmartScreen may warn: choose More info, then
+Windows 10 or 11. Releases are not code-signed, so SmartScreen may warn: choose More info, then
 Run anyway. Each release lists SHA-256 checksums.
 
 ## Documentation

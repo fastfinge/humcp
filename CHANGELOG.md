@@ -3,7 +3,7 @@
 humcp follows [semantic versioning](https://semver.org). 1.x releases are bug fixes, most of them
 from user reports; 2.0 and 3.0 follow the roadmap in `docs/ROADMAP.md`.
 
-## 1.1.0 — unreleased
+## 1.1.0 — 2026-10-21
 
 A fix, released as a minor version because results look different afterwards.
 

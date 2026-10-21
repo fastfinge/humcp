@@ -108,7 +108,7 @@ add a section to `CHANGELOG.md`, run the UI suite and an NVDA pass locally, then
 push the tag. The release workflow refuses a tag with no changelog section.
 
 **Licence:** 0BSD for humcp's own code; `THIRD-PARTY-NOTICES.md` and `licenses/` for what it ships.
-Code signing is not set up yet (SignPath Foundation, then MSIX through the Microsoft Store).
+Code signing is not available: SignPath Foundation refused the application (2026-10-21), and the Microsoft Store's identity verification cannot be completed with a screen reader. Releases ship unsigned with SHA-256 checksums.
 
 **Manual testing is NVDA only from Phase 6 on** — the developer's call: JAWS and Narrator agree with
 NVDA nearly always. The NVDA pass can be driven through the screen reader MCP bridge (`user`
