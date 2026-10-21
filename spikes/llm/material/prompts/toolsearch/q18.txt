@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"send a message to the team channel"
+
+Here are the candidate tools, numbered:
+
+1. slack / slack_post_message: Post a new message to a Slack channel
+2. slack / slack_get_channel_history: Get recent messages from a channel
+3. everything / get-annotated-message: Demonstrates how annotations can be used to provide metadata about content.
+4. slack / slack_add_reaction: Add a reaction emoji to a message
+5. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+6. slack / slack_get_thread_replies: Get all replies in a message thread
+7. firecrawl / firecrawl_search_feedback: Records schema-validated quality feedback for a prior `firecrawl_search` UUID `searchId`.
+8. firecrawl / firecrawl_monitor_create: Create a recurring scrape, crawl, or search monitor that compares each check with its retained predecessor.
+9. firecrawl / firecrawl_developer_search: For a developer question — code behaviour, a library or framework, an API contract, an error message, or a known bug — search an index built for coding agents.
+10. firecrawl / firecrawl_parse: Parse one supported document into markdown, HTML, links, summary, targeted answers, or JSON matching a schema.
+11. time / get_current_time: Get current time in a specific timezone
+12. time / convert_time: Convert time between timezones
+13. tavily / tavily_search: Search the web for current information on any topic.
+14. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+15. tavily / tavily_map: Map a website's structure.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

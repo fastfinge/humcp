@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"remember that my sister's birthday is in May"
+
+Here are the candidate tools, numbered:
+
+1. filesystem / directory_tree: Get a recursive tree view of files and directories as a JSON structure.
+2. tavily / tavily_map: Map a website's structure.
+3. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+4. notion / API-get-self: Notion | Retrieve your token's bot user Error Responses: 400: Bad request
+5. kubernetes / kubectl_patch: Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch
+6. firecrawl / firecrawl_monitor_run: Queue an immediate check for a monitor outside its normal schedule.
+7. figma / download_figma_images: Download SVG and PNG images used in a Figma file based on the IDs of image or icon nodes.
+8. firecrawl / firecrawl_map: Enumerate URLs indexed under one website through Firecrawl without fetching each page's content.
+9. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+10. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+11. brave-search / brave_local_search: Searches for local businesses and places using Brave's Local Search API.
+12. firecrawl / firecrawl_agent_status: Retrieve progress or final results for a `firecrawl_agent` job ID.
+13. firecrawl / firecrawl_agent: Start an asynchronous web research job from a prompt, optional seed URLs, and an optional JSON schema.
+14. firecrawl / firecrawl_search_feedback: Records schema-validated quality feedback for a prior `firecrawl_search` UUID `searchId`.
+15. time / get_current_time: Get current time in a specific timezone
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

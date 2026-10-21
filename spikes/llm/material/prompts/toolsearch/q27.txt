@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"what do you remember about me"
+
+Here are the candidate tools, numbered:
+
+1. google-maps / maps_place_details: Get detailed information about a specific place
+2. everything / get-annotated-message: Demonstrates how annotations can be used to provide metadata about content.
+3. filesystem / get_file_info: Retrieve detailed metadata about a file or directory.
+4. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+5. time / get_current_time: Get current time in a specific timezone
+6. time / convert_time: Convert time between timezones
+7. tavily / tavily_search: Search the web for current information on any topic.
+8. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+9. tavily / tavily_map: Map a website's structure.
+10. tavily / tavily_extract: Extract content from URLs.
+11. tavily / tavily_crawl: Crawl a website starting from a URL.
+12. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+13. slack / slack_post_message: Post a new message to a Slack channel
+14. slack / slack_list_channels: List public or pre-defined channels in the workspace with pagination
+15. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

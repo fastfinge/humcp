@@ -1,0 +1,564 @@
+A tool called browser_snapshot returned the result below. Summarise it in plain sentences for someone listening with a screen reader: lead with what matters most, give the key facts and numbers, and keep it under 150 words. Do not add anything the result does not contain.
+
+Result:
+### Page
+- Page URL: https://github.com/fastfinge/humcp
+- Page Title: GitHub - fastfinge/humcp: An accessible, screen-reader-first Windows client for Model Context Protocol servers · GitHub
+- Console: 1 errors, 0 warnings
+### Snapshot
+```yaml
+- generic [ref=f2e2]:
+  - generic [ref=f2e3]:
+    - link "Skip to content" [ref=f2e4] [cursor=pointer]:
+      - /url: "#start-of-content"
+    - banner [ref=f2e9]:
+      - heading "Navigation Menu" [level=2] [ref=f2e10]
+      - generic [ref=f2e11]:
+        - link "Homepage" [ref=f2e13] [cursor=pointer]:
+          - /url: /
+        - generic [ref=f2e16]:
+          - navigation "Global" [ref=f2e17]:
+            - list [ref=f2e18]:
+              - listitem [ref=f2e19]:
+                - button "Platform" [ref=f2e21] [cursor=pointer]
+              - listitem [ref=f2e24]:
+                - button "Solutions" [ref=f2e26] [cursor=pointer]
+              - listitem [ref=f2e29]:
+                - button "Resources" [ref=f2e31] [cursor=pointer]
+              - listitem [ref=f2e34]:
+                - button "Open Source" [ref=f2e36] [cursor=pointer]
+              - listitem [ref=f2e39]:
+                - button "Enterprise" [ref=f2e41] [cursor=pointer]
+              - listitem [ref=f2e44]:
+                - link "Pricing" [ref=f2e45] [cursor=pointer]:
+                  - /url: https://github.com/pricing
+          - generic [ref=f2e46]:
+            - button "Search or jump to, type / to search" [ref=f2e48] [cursor=pointer]
+            - link "Sign in" [ref=f2e55] [cursor=pointer]:
+              - /url: /login?return_to=https%3A%2F%2Fgithub.com%2Ffastfinge%2Fhumcp
+            - link "Sign up" [ref=f2e58] [cursor=pointer]:
+              - /url: /signup?ref_cta=Sign+up&ref_loc=header+logged+out&ref_page=%2F%3Cuser-name%3E%2F%3Crepo-name%3E&source=header-repo&source_repo=fastfinge%2Fhumcp
+            - button "Appearance settings" [ref=f2e61] [cursor=pointer]
+  - main [ref=f2e68]:
+    - generic "Global navigation menu" [ref=f2e71]:
+      - navigation "Breadcrumbs" [ref=f2e74]:
+        - list [ref=f2e75]:
+          - listitem [ref=f2e76]:
+            - link "fastfinge" [ref=f2e77] [cursor=pointer]:
+              - /url: /fastfinge
+          - listitem [ref=f2e79]:
+            - link "humcp" [ref=f2e80] [cursor=pointer]:
+              - /url: /fastfinge/humcp
+      - heading "Repository navigation" [level=2] [ref=f2e83]
+      - navigation "Repository" [ref=f2e84]:
+        - list [ref=f2e85]:
+          - listitem [ref=f2e86]:
+            - link "Code" [ref=f2e87] [cursor=pointer]:
+              - /url: /fastfinge/humcp
+          - listitem [ref=f2e92]:
+            - link "Issues" [ref=f2e93] [cursor=pointer]:
+              - /url: /fastfinge/humcp/issues
+          - listitem [ref=f2e99]:
+            - link "Pull requests" [ref=f2e100] [cursor=pointer]:
+              - /url: /fastfinge/humcp/pulls
+          - listitem [ref=f2e105]:
+            - link "Actions" [ref=f2e106] [cursor=pointer]:
+              - /url: /fastfinge/humcp/actions
+          - listitem [ref=f2e111]:
+            - link "Projects" [ref=f2e112] [cursor=pointer]:
+              - /url: /fastfinge/humcp/projects
+          - listitem [ref=f2e117]:
+            - link "Security and quality" [ref=f2e118] [cursor=pointer]:
+              - /url: /fastfinge/humcp/security
+          - listitem [ref=f2e123]:
+            - link "Insights" [ref=f2e124] [cursor=pointer]:
+              - /url: /fastfinge/humcp/pulse
+    - generic [ref=f2e141]:
+      - generic [ref=f2e145]:
+        - generic [ref=f2e148]:
+          - img "fastfinge" [ref=f2e149]
+          - generic "humcp" [ref=f2e150]:
+            - strong [ref=f2e151]:
+              - link "humcp" [ref=f2e152] [cursor=pointer]:
+                - /url: /fastfinge/humcp
+          - generic [ref=f2e153]: Public
+        - list [ref=f2e155]:
+          - listitem [ref=f2e156]:
+            - link "You must be signed in to change notification settings" [ref=f2e157] [cursor=pointer]:
+              - /url: /login?return_to=%2Ffastfinge%2Fhumcp
+              - generic [ref=f2e158]: Notifications
+          - listitem [ref=f2e160]:
+            - link "You must be signed in to fork a repository" [ref=f2e161] [cursor=pointer]:
+              - /url: /login?return_to=%2Ffastfinge%2Fhumcp
+              - generic [ref=f2e163]:
+                - text: Fork
+                - generic [aria-hidden] [ref=f2e164]: "0"
+                - generic [ref=f2e165]: (0)
+          - listitem [ref=f2e166]:
+            - link "Star (0)" [ref=f2e167] [cursor=pointer]:
+              - /url: /login?return_to=%2Ffastfinge%2Fhumcp
+              - generic [ref=f2e169]:
+                - text: Star
+                - generic [aria-hidden] [ref=f2e170]: "0"
+                - generic [ref=f2e171]: (0)
+      - generic [ref=f2e172]:
+        - generic [ref=f2e175]:
+          - generic [ref=f2e176]:
+            - generic [ref=f2e177]:
+              - button "main branch" [ref=f2e179] [cursor=pointer]:
+                - generic [ref=f2e180]: main
+              - generic [ref=f2e184]:
+                - link [ref=f2e185] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/branches
+                  - generic [ref=f2e188]:
+                    - strong [ref=f2e189]: "1"
+                    - text: Branch
+                - link [ref=f2e190] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/tags
+                  - generic [ref=f2e193]:
+                    - strong [ref=f2e194]: "1"
+                    - text: Tag
+            - generic [ref=f2e195]:
+              - combobox "Go to file" [ref=f2e203]
+              - button "Code" [ref=f2e204] [cursor=pointer]
+          - generic [ref=f2e207]:
+            - generic [ref=f2e208]:
+              - generic [ref=f2e210]:
+                - heading "Latest commit" [level=2] [ref=f2e211]
+                - generic [ref=f2e212]:
+                  - generic [ref=f2e213]:
+                    - generic [ref=f2e215]:
+                      - img "fastfinge" [ref=f2e216]
+                      - img "claude" [ref=f2e217]
+                    - link "commits by fastfinge" [ref=f2e219] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/commits?author=fastfinge
+                      - text: fastfinge
+                    - generic [ref=f2e220]: and
+                    - link "commits by claude" [ref=f2e222] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/commits?author=claude
+                      - text: claude
+                  - generic [ref=f2e223]:
+                    - 'link "1.1 NVDA pass: entries named for their list, focus kept in humcp" [ref=f2e226] [cursor=pointer]':
+                      - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                    - button "Open commit details" [ref=f2e227] [cursor=pointer]
+                    - button "success" [ref=f2e230] [cursor=pointer]
+                - generic [ref=f2e233]:
+                  - generic [ref=f2e235]:
+                    - link "Commit aa397fc" [ref=f2e236] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                      - text: aa397fc
+                    - text: ·
+                    - generic "Oct 19, 2026, 22:04 EDT" [ref=f2e237]: Oct 20, 202618 hours ago
+                  - generic [ref=f2e238]:
+                    - heading "History" [level=2] [ref=f2e239]
+                    - link "22 Commits" [ref=f2e240] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/commits/main/
+              - heading "Folders and files" [level=2] [ref=f2e243]
+              - table "Folders and files" [ref=f2e245]:
+                - rowgroup:
+                  - row "Name Last commit message Last commit date":
+                    - columnheader "Name"
+                    - columnheader "Last commit message"
+                    - columnheader "Last commit date"
+                - rowgroup [ref=f2e246]:
+                  - row [ref=f2e247]:
+                    - cell [ref=f2e248]:
+                      - link ".github, (Directory)" [ref=f2e255] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/.github
+                        - text: .github
+                    - cell [ref=f2e256]:
+                      - generic [ref=f2e258]:
+                        - link "Late progress is still delivered (" [ref=f2e259] [cursor=pointer]:
+                          - /url: /fastfinge/humcp/commit/f9b5d24abb8ded7ec90d7887ccc99329f29ddfd9
+                        - link "#1" [ref=f2e260] [cursor=pointer]:
+                          - /url: https://github.com/fastfinge/humcp/issues/1
+                        - link ")" [ref=f2e261] [cursor=pointer]:
+                          - /url: /fastfinge/humcp/commit/f9b5d24abb8ded7ec90d7887ccc99329f29ddfd9
+                    - cell "Oct 19, 2026yesterday" [ref=f2e262]
+                  - row [ref=f2e264]:
+                    - cell [ref=f2e265]:
+                      - link "docs, (Directory)" [ref=f2e272] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/docs
+                        - text: docs
+                    - cell [ref=f2e273]:
+                      - 'link "1.1 NVDA pass: entries named for their list, focus kept in humcp" [ref=f2e276] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                    - cell "Oct 20, 202618 hours ago" [ref=f2e277]
+                  - row [ref=f2e279]:
+                    - cell [ref=f2e280]:
+                      - link "installer, (Directory)" [ref=f2e287] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/installer
+                        - text: installer
+                    - cell [ref=f2e288]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e291] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e292]
+                  - row [ref=f2e294]:
+                    - cell [ref=f2e295]:
+                      - link "licenses, (Directory)" [ref=f2e302] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/licenses
+                        - text: licenses
+                    - cell [ref=f2e303]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e306] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e307]
+                  - row [ref=f2e309]:
+                    - cell [ref=f2e310]:
+                      - link "src, (Directory)" [ref=f2e317] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/src
+                        - text: src
+                    - cell [ref=f2e318]:
+                      - 'link "1.1 NVDA pass: entries named for their list, focus kept in humcp" [ref=f2e321] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                    - cell "Oct 20, 202618 hours ago" [ref=f2e322]
+                  - row [ref=f2e324]:
+                    - cell [ref=f2e325]:
+                      - link "tests, (Directory)" [ref=f2e332] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/tests
+                        - text: tests
+                    - cell [ref=f2e333]:
+                      - link "An entry of a list is changed in place with F2" [ref=f2e336] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/commit/48ced1f4b3d3f4573f0addd163b5dad714eb9cbd
+                    - cell "Oct 20, 202619 hours ago" [ref=f2e337]
+                  - row [ref=f2e339]:
+                    - cell [ref=f2e340]:
+                      - link "tools/Humcp.Harvester, (Directory)" [ref=f2e347] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/tree/main/tools/Humcp.Harvester
+                        - text: tools/Humcp.Harvester
+                    - cell [ref=f2e348]:
+                      - 'link "Phase 2: the schema engine, and what a real corpus said about it" [ref=f2e351] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e8c24e915f8e0df0208af333bd8335e8661350f5
+                    - cell "Aug 21, 20262 months ago" [ref=f2e352]
+                  - row [ref=f2e354]:
+                    - cell [ref=f2e355]:
+                      - link ".gitignore, (File)" [ref=f2e362] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/.gitignore
+                        - text: .gitignore
+                    - cell [ref=f2e363]:
+                      - 'link "Phase 0: WPF accessibility spike, and the findings it produced" [ref=f2e366] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/337f5ec727a65415fb12c9d01ccbc4f5aefd5f56
+                    - cell "Aug 20, 20262 months ago" [ref=f2e367]
+                  - row [ref=f2e369]:
+                    - cell [ref=f2e370]:
+                      - link "CHANGELOG.md, (File)" [ref=f2e377] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/CHANGELOG.md
+                        - text: CHANGELOG.md
+                    - cell [ref=f2e378]:
+                      - 'link "1.1 NVDA pass: entries named for their list, focus kept in humcp" [ref=f2e381] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                    - cell "Oct 20, 202618 hours ago" [ref=f2e382]
+                  - row [ref=f2e384]:
+                    - cell [ref=f2e385]:
+                      - link "CLAUDE.md, (File)" [ref=f2e392] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/CLAUDE.md
+                        - text: CLAUDE.md
+                    - cell [ref=f2e393]:
+                      - 'link "1.1 NVDA pass: entries named for their list, focus kept in humcp" [ref=f2e396] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/aa397fc6d7719a86f6fe50fca7a2254a82723a70
+                    - cell "Oct 20, 202618 hours ago" [ref=f2e397]
+                  - row [ref=f2e399]:
+                    - cell [ref=f2e400]:
+                      - link "Directory.Build.props, (File)" [ref=f2e407] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/Directory.Build.props
+                        - text: Directory.Build.props
+                    - cell [ref=f2e408]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e411] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e412]
+                  - row [ref=f2e414]:
+                    - cell [ref=f2e415]:
+                      - link "Directory.Packages.props, (File)" [ref=f2e422] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/Directory.Packages.props
+                        - text: Directory.Packages.props
+                    - cell [ref=f2e423]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e426] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e427]
+                  - row [ref=f2e429]:
+                    - cell [ref=f2e430]:
+                      - link "Humcp.slnx, (File)" [ref=f2e437] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/Humcp.slnx
+                        - text: Humcp.slnx
+                    - cell [ref=f2e438]:
+                      - 'link "Phase 2: the schema engine, and what a real corpus said about it" [ref=f2e441] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e8c24e915f8e0df0208af333bd8335e8661350f5
+                    - cell "Aug 21, 20262 months ago" [ref=f2e442]
+                  - row [ref=f2e444]:
+                    - cell [ref=f2e445]:
+                      - link "LICENSE, (File)" [ref=f2e452] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/LICENSE
+                        - text: LICENSE
+                    - cell [ref=f2e453]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e456] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e457]
+                  - row [ref=f2e459]:
+                    - cell [ref=f2e460]:
+                      - link "README.md, (File)" [ref=f2e467] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/README.md
+                        - text: README.md
+                    - cell [ref=f2e468]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e471] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e472]
+                  - row [ref=f2e474]:
+                    - cell [ref=f2e475]:
+                      - link "SECURITY.md, (File)" [ref=f2e482] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/SECURITY.md
+                        - text: SECURITY.md
+                    - cell [ref=f2e483]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e486] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e487]
+                  - row [ref=f2e489]:
+                    - cell [ref=f2e490]:
+                      - link "THIRD-PARTY-NOTICES.md, (File)" [ref=f2e497] [cursor=pointer]:
+                        - /url: /fastfinge/humcp/blob/main/THIRD-PARTY-NOTICES.md
+                        - text: THIRD-PARTY-NOTICES.md
+                    - cell [ref=f2e498]:
+                      - 'link "Phase 7: hardening and release, and humcp 1.0.0" [ref=f2e501] [cursor=pointer]':
+                        - /url: /fastfinge/humcp/commit/e7ef3469ae3c256d323d63ff2ee542b074db4e99
+                    - cell "Oct 19, 2026yesterday" [ref=f2e502]
+            - generic [ref=f2e505]:
+              - generic [ref=f2e506]:
+                - heading "Repository files navigation" [level=2] [ref=f2e507]
+                - navigation "Repository files" [ref=f2e508]:
+                  - list [ref=f2e509]:
+                    - listitem [ref=f2e510]:
+                      - link "README" [ref=f2e511] [cursor=pointer]:
+                        - /url: "#"
+                    - listitem [ref=f2e516]:
+                      - link "0BSD license" [ref=f2e517] [cursor=pointer]:
+                        - /url: "#"
+                    - listitem [ref=f2e522]:
+                      - link "Security" [ref=f2e523] [cursor=pointer]:
+                        - /url: "#"
+                - button "Outline" [ref=f2e528] [cursor=pointer]
+              - article [ref=f2e532]:
+                - generic [ref=f2e533]:
+                  - heading "humcp" [level=1] [ref=f2e534]
+                  - 'link "Permalink: humcp" [ref=f2e535] [cursor=pointer]':
+                    - /url: "#humcp"
+                - paragraph [ref=f2e538]:
+                  - text: An accessible, screen-reader-first Windows client for
+                  - link "Model Context Protocol" [ref=f2e539] [cursor=pointer]:
+                    - /url: https://modelcontextprotocol.io
+                  - text: servers.
+                - paragraph [ref=f2e540]: "MCP servers publish machine-readable descriptions of their tools: names, purposes, and the exact shape of what each one needs. humcp turns those descriptions into keyboard-first, screen-reader-ready forms and results, automatically, for any server. There is no per-server code, and no AI in the way: you run the tools yourself."
+                - list [ref=f2e541]:
+                  - listitem [ref=f2e542]: A tree of your servers and their tools, with status, tool counts and errors in each name.
+                  - listitem [ref=f2e543]: "A generated form for every tool: real labels, help text, required fields, access keys, validation that names the problem and moves you to it, and history for what you typed before."
+                  - listitem [ref=f2e544]: "Results as controls that suit them: text you can review line by line, tables as grids with column headers that you can sort, structures as trees, pictures and files you can save."
+                  - listitem [ref=f2e545]: Questions a server asks mid-call, as forms of their own.
+                  - listitem [ref=f2e546]: Servers you start (stdio) and servers on the web (Streamable HTTP, without sign-in for now).
+                  - listitem [ref=f2e547]: Paste your configuration from Claude Desktop, VS Code or any other client to bring your servers across.
+                - paragraph [ref=f2e548]: Built and tested with NVDA. Every form, result and window is checked against the live UI Automation tree, and every release is walked through by ear.
+                - generic [ref=f2e549]:
+                  - heading "Download" [level=2] [ref=f2e550]
+                  - 'link "Permalink: Download" [ref=f2e551] [cursor=pointer]':
+                    - /url: "#download"
+                - paragraph [ref=f2e554]:
+                  - text: Get the latest release from the
+                  - link "Releases page" [ref=f2e555] [cursor=pointer]:
+                    - /url: https://github.com/fastfinge/humcp/releases/latest
+                  - text: ":"
+                - list [ref=f2e556]:
+                  - listitem [ref=f2e557]:
+                    - code [ref=f2e558]: humcp-x64.msi
+                    - text: ", a Windows Installer package that installs for you only and needs no administrator rights; or"
+                  - listitem [ref=f2e559]:
+                    - code [ref=f2e560]: humcp-win-x64.zip
+                    - text: /
+                    - code [ref=f2e561]: humcp-win-arm64.zip
+                    - text: ", portable: extract and run"
+                    - code [ref=f2e562]: Humcp.App.exe
+                    - text: .
+                - paragraph [ref=f2e563]: "Windows 10 or 11. Releases are not code-signed yet, so SmartScreen may warn: choose More info, then Run anyway. Each release lists SHA-256 checksums."
+                - generic [ref=f2e564]:
+                  - heading "Documentation" [level=2] [ref=f2e565]
+                  - 'link "Permalink: Documentation" [ref=f2e566] [cursor=pointer]':
+                    - /url: "#documentation"
+                - list [ref=f2e569]:
+                  - listitem [ref=f2e570]:
+                    - link "User guide" [ref=f2e571] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/blob/main/docs/user-guide.md
+                    - text: ", also in the app under Help, User guide."
+                  - listitem [ref=f2e572]:
+                    - link "Changelog" [ref=f2e573] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/blob/main/CHANGELOG.md
+                    - text: .
+                  - listitem [ref=f2e574]:
+                    - link "Roadmap" [ref=f2e575] [cursor=pointer]:
+                      - /url: /fastfinge/humcp/blob/main/docs/ROADMAP.md
+                    - text: ": the design, and what versions 2 and 3 will bring."
+                - generic [ref=f2e576]:
+                  - heading "Building from source" [level=2] [ref=f2e577]
+                  - 'link "Permalink: Building from source" [ref=f2e578] [cursor=pointer]':
+                    - /url: "#building-from-source"
+                - paragraph [ref=f2e581]: Requires the .NET 10 SDK on Windows.
+                - generic [ref=f2e582]:
+                  - code [ref=f2e584]: dotnet build dotnet test tests/Humcp.Schema.Tests dotnet test tests/Humcp.Core.Tests dotnet run --project src/Humcp.App
+                  - button "Copy code to clipboard" [ref=f2e586] [cursor=pointer]
+                - paragraph [ref=f2e590]:
+                  - code [ref=f2e591]: tests/Humcp.App.UiTests
+                  - text: drives the real application with real keystrokes through UI Automation, so it takes over the desktop while it runs; it is run before each release rather than in CI.
+                  - code [ref=f2e592]: CLAUDE.md
+                  - text: and
+                  - code [ref=f2e593]: docs/ROADMAP.md
+                  - text: describe the architecture and the accessibility contract every change is held to.
+                - generic [ref=f2e594]:
+                  - heading "Reporting problems" [level=2] [ref=f2e595]
+                  - 'link "Permalink: Reporting problems" [ref=f2e596] [cursor=pointer]':
+                    - /url: "#reporting-problems"
+                - paragraph [ref=f2e599]:
+                  - link "Open an issue" [ref=f2e600] [cursor=pointer]:
+                    - /url: https://github.com/fastfinge/humcp/issues/new/choose
+                  - text: ". Bug fixes ship as 1.x releases. Security problems: see"
+                  - link "SECURITY.md" [ref=f2e601] [cursor=pointer]:
+                    - /url: /fastfinge/humcp/blob/main/SECURITY.md
+                  - text: .
+                - generic [ref=f2e602]:
+                  - heading "Licence" [level=2] [ref=f2e603]
+                  - 'link "Permalink: Licence" [ref=f2e604] [cursor=pointer]':
+                    - /url: "#licence"
+                - paragraph [ref=f2e607]:
+                  - text: humcp is released under the
+                  - link "BSD Zero Clause License" [ref=f2e608] [cursor=pointer]:
+                    - /url: /fastfinge/humcp/blob/main/LICENSE
+                  - text: ": do what you like with it. The components it ships with have their own licences, listed in"
+                  - link "THIRD-PARTY-NOTICES.md" [ref=f2e609] [cursor=pointer]:
+                    - /url: /fastfinge/humcp/blob/main/THIRD-PARTY-NOTICES.md
+                  - text: .
+        - generic [ref=f2e612]:
+          - generic [ref=f2e613]:
+            - heading "About" [level=2] [ref=f2e614]
+            - paragraph [ref=f2e615]: An accessible, screen-reader-first Windows client for Model Context Protocol servers
+            - generic "https://github.com/fastfinge/humcp#readme" [ref=f2e619]:
+              - link "github.com/fastfinge/humcp#readme" [ref=f2e620] [cursor=pointer]:
+                - /url: https://github.com/fastfinge/humcp#readme
+            - heading "Topics" [level=3] [ref=f2e621]
+            - generic [ref=f2e622]:
+              - link "accessibility" [ref=f2e623] [cursor=pointer]:
+                - /url: /topics/accessibility
+              - link "mcp" [ref=f2e624] [cursor=pointer]:
+                - /url: /topics/mcp
+              - link "model-context-protocol" [ref=f2e625] [cursor=pointer]:
+                - /url: /topics/model-context-protocol
+              - link "nvda" [ref=f2e626] [cursor=pointer]:
+                - /url: /topics/nvda
+              - link "screen-reader" [ref=f2e627] [cursor=pointer]:
+                - /url: /topics/screen-reader
+              - link "wpf" [ref=f2e628] [cursor=pointer]:
+                - /url: /topics/wpf
+            - heading "Resources" [level=3] [ref=f2e629]
+            - link "Readme" [ref=f2e631] [cursor=pointer]:
+              - /url: "#readme-ov-file"
+            - link "0BSD license" [ref=f2e635] [cursor=pointer]:
+              - /url: "#0BSD-1-ov-file"
+            - heading "Security policy" [level=3] [ref=f2e638]
+            - link "Security policy" [ref=f2e640] [cursor=pointer]:
+              - /url: "#security-ov-file"
+            - generic [ref=f2e643]:
+              - link "Activity" [ref=f2e646] [cursor=pointer]:
+                - /url: /fastfinge/humcp/activity
+              - generic [ref=f2e649]:
+                - heading "Stars" [level=3] [ref=f2e650]
+                - generic [ref=f2e652]:
+                  - strong [ref=f2e655]: "0"
+                  - text: stars
+                - heading "Watchers" [level=3] [ref=f2e656]
+                - generic [ref=f2e658]:
+                  - strong [ref=f2e661]: "0"
+                  - text: watching
+                - heading "Forks" [level=3] [ref=f2e662]
+                - link [ref=f2e664] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/forks
+                  - strong [ref=f2e668]: "0"
+                  - text: forks
+            - link "Report repository" [ref=f2e670] [cursor=pointer]:
+              - /url: /contact/report-content?content_url=https%3A%2F%2Fgithub.com%2Ffastfinge%2Fhumcp&report=fastfinge+%28user%29
+          - generic [ref=f2e671]:
+            - heading "Releases (1)" [level=2] [ref=f2e672]:
+              - generic [ref=f2e673]:
+                - link "Releases" [ref=f2e674] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/releases
+                - generic [aria-hidden] [ref=f2e675]: "1"
+                - generic [ref=f2e676]: (1)
+            - link "humcp 1.0.0 Latest Oct 19, 2026yesterday" [ref=f2e677] [cursor=pointer]:
+              - /url: /fastfinge/humcp/releases/tag/v1.0.0
+              - generic [ref=f2e680]:
+                - generic [ref=f2e681]:
+                  - generic "humcp 1.0.0" [ref=f2e682]
+                  - generic [ref=f2e683]: Latest
+                - generic [ref=f2e684]: Oct 19, 2026yesterday
+          - generic [ref=f2e685]:
+            - heading "Contributors (2)" [level=2] [ref=f2e686]:
+              - generic [ref=f2e687]:
+                - link "Contributors" [ref=f2e688] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/graphs/contributors
+                - generic [aria-hidden] [ref=f2e689]: "2"
+                - generic [ref=f2e690]: (2)
+            - list [ref=f2e691]:
+              - listitem [ref=f2e692]:
+                - link [ref=f2e693] [cursor=pointer]:
+                  - /url: /claude
+                  - img "@claude" [ref=f2e694]
+                - generic "claude Claude" [ref=f2e695]:
+                  - link [ref=f2e696] [cursor=pointer]:
+                    - /url: /claude
+                    - strong [ref=f2e697]: claude
+                    - text: Claude
+              - listitem [ref=f2e698]:
+                - link [ref=f2e699] [cursor=pointer]:
+                  - /url: /fastfinge
+                  - img "@fastfinge" [ref=f2e700]
+                - generic "fastfinge Samuel Proulx" [ref=f2e701]:
+                  - link [ref=f2e702] [cursor=pointer]:
+                    - /url: /fastfinge
+                    - strong [ref=f2e703]: fastfinge
+                    - text: Samuel Proulx
+          - generic [ref=f2e704]:
+            - heading "Languages" [level=2] [ref=f2e705]
+            - 'progressbar "C#: 100%" [ref=f2e708]'
+            - list [ref=f2e709]:
+              - listitem [ref=f2e710]:
+                - link "C# 100%" [ref=f2e711] [cursor=pointer]:
+                  - /url: /fastfinge/humcp/search?l=c%23
+                  - generic [ref=f2e713]: C#
+                  - generic [ref=f2e714]: 100%
+  - contentinfo [ref=f2e716]:
+    - heading "Footer" [level=2] [ref=f2e717]
+    - generic [ref=f2e718]:
+      - generic [ref=f2e719]:
+        - link "GitHub Homepage" [ref=f2e720] [cursor=pointer]:
+          - /url: https://github.com
+        - generic [ref=f2e723]: © 2026 GitHub, Inc.
+      - navigation "Footer" [ref=f2e724]:
+        - heading "Footer navigation" [level=3] [ref=f2e725]
+        - list "Footer navigation" [ref=f2e726]:
+          - listitem [ref=f2e727]:
+            - link "Terms" [ref=f2e728] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/github-terms/github-terms-of-service
+          - listitem [ref=f2e729]:
+            - link "Privacy" [ref=f2e730] [cursor=pointer]:
+              - /url: https://docs.github.com/site-policy/privacy-policies/github-privacy-statement
+          - listitem [ref=f2e731]:
+            - link "Security" [ref=f2e732] [cursor=pointer]:
+              - /url: https://github.com/security
+          - listitem [ref=f2e733]:
+            - link "Status" [ref=f2e734] [cursor=pointer]:
+              - /url: https://www.githubstatus.com/
+          - listitem [ref=f2e735]:
+            - link "Community" [ref=f2e736] [cursor=pointer]:
+              - /url: https://github.community/
+          - listitem [ref=f2e737]:
+            - link "Docs" [ref=f2e738] [cursor=pointer]:
+              - /url: https://docs.github.com/
+          - listitem [ref=f2e739]:
+            - link "Contact" [ref=f2e740] [cursor=pointer]:
+              - /url: https://support.github.com?tags=dotcom-footer
+          - listitem [ref=f2e741]:
+            - button "Manage cookies" [ref=f2e743] [cursor=pointer]
+          - listitem [ref=f2e744]:
+            - button "Do not share my personal information" [ref=f2e746] [cursor=pointer]
+```

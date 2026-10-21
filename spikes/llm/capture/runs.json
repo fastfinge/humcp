@@ -1,0 +1,31 @@
+[
+ {"id": "open-meteo", "command": "npx", "args": ["-y", "-p", "open-meteo-mcp-server", "open-meteo-mcp-server"],
+  "calls": [
+   {"name": "forecast-week", "tool": "weather_forecast", "arguments": {"latitude": 43.65, "longitude": -79.38,
+     "hourly": ["temperature_2m", "precipitation_probability", "precipitation", "wind_speed_10m", "cloud_cover"],
+     "daily": ["temperature_2m_max", "temperature_2m_min", "precipitation_sum", "sunrise", "sunset"],
+     "current": ["temperature_2m", "wind_speed_10m", "cloud_cover"], "forecast_days": 7, "timezone": "America/Toronto"}}
+  ]},
+ {"id": "fetch", "command": "uvx", "args": ["mcp-server-fetch"],
+  "calls": [
+   {"name": "wcag-understanding", "tool": "fetch", "arguments": {"url": "https://www.w3.org/WAI/standards-guidelines/wcag/", "max_length": 20000}},
+   {"name": "nvda-whatsnew", "tool": "fetch", "arguments": {"url": "https://download.nvaccess.org/documentation/changes.html", "max_length": 20000}},
+   {"name": "wikipedia-screen-reader", "tool": "fetch", "arguments": {"url": "https://en.wikipedia.org/wiki/Screen_reader", "max_length": 20000}}
+  ]},
+ {"id": "playwright", "command": "npx", "args": ["-y", "@playwright/mcp@latest", "--headless", "--isolated"],
+  "calls": [
+   {"name": "nav-wikipedia-cat", "tool": "browser_navigate", "arguments": {"url": "https://en.wikipedia.org/wiki/Cat"}},
+   {"name": "shot-wikipedia-cat", "tool": "browser_take_screenshot", "arguments": {}},
+   {"name": "nav-weather", "tool": "browser_navigate", "arguments": {"url": "https://weather.gc.ca/en/location/index.html?coords=43.655,-79.383"}},
+   {"name": "shot-weather", "tool": "browser_take_screenshot", "arguments": {}},
+   {"name": "nav-github", "tool": "browser_navigate", "arguments": {"url": "https://github.com/fastfinge/humcp"}},
+   {"name": "shot-github", "tool": "browser_take_screenshot", "arguments": {}},
+   {"name": "snapshot-github", "tool": "browser_snapshot", "arguments": {}},
+   {"name": "nav-chart", "tool": "browser_navigate", "arguments": {"url": "https://en.wikipedia.org/wiki/Population_growth"}},
+   {"name": "shot-chart", "tool": "browser_take_screenshot", "arguments": {}}
+  ]},
+ {"id": "everything", "command": "npx", "args": ["-y", "@modelcontextprotocol/server-everything"],
+  "calls": [
+   {"name": "tiny-image", "tool": "get-tiny-image", "arguments": {}}
+  ]}
+]

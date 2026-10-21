@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"how high above sea level is Denver"
+
+Here are the candidate tools, numbered:
+
+1. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+2. everart / generate_image: Generate images using EverArt Models and returns a clickable link to view the generated image.
+3. context7 / resolve-library-id: Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
+4. time / get_current_time: Get current time in a specific timezone
+5. time / convert_time: Convert time between timezones
+6. tavily / tavily_search: Search the web for current information on any topic.
+7. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+8. tavily / tavily_map: Map a website's structure.
+9. tavily / tavily_extract: Extract content from URLs.
+10. tavily / tavily_crawl: Crawl a website starting from a URL.
+11. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+12. slack / slack_post_message: Post a new message to a Slack channel
+13. slack / slack_list_channels: List public or pre-defined channels in the workspace with pagination
+14. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+15. slack / slack_get_user_profile: Get detailed profile information for a specific user
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

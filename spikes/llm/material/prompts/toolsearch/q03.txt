@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"how do I get from the airport to downtown by car"
+
+Here are the candidate tools, numbered:
+
+1. time / get_current_time: Get current time in a specific timezone
+2. github / get_pull_request: Get details of a specific pull request
+3. github / get_issue: Get details of a specific issue in a GitHub repository.
+4. slack / slack_get_channel_history: Get recent messages from a channel
+5. github / get_pull_request_reviews: Get the reviews on a pull request
+6. slack / slack_get_thread_replies: Get all replies in a message thread
+7. kubernetes / kubectl_get: Get or list Kubernetes resources by resource type, name, and optionally namespace
+8. github / get_pull_request_comments: Get the review comments on a pull request
+9. github / get_file_contents: Get the contents of a file or directory from a GitHub repository
+10. slack / slack_get_user_profile: Get detailed profile information for a specific user
+11. github / get_pull_request_files: Get the list of files changed in a pull request
+12. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+13. github / get_pull_request_status: Get the combined status of all status checks for a pull request
+14. everything / get-sum: Returns the sum of two numbers
+15. figma / get_figma_data: Get comprehensive Figma file data including layout, content, visuals, and component information
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

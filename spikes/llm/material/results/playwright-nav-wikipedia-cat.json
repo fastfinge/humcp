@@ -1,0 +1,25 @@
+{
+ "server": "playwright",
+ "started": [
+  "npx",
+  "-y",
+  "@playwright/mcp@latest",
+  "--headless",
+  "--isolated"
+ ],
+ "tool": "browser_navigate",
+ "arguments": {
+  "url": "https://en.wikipedia.org/wiki/Cat"
+ },
+ "captured": "2026-10-20",
+ "result": {
+  "content": [
+   {
+    "type": "text",
+    "text": "### Ran Playwright code\n```js\nawait page.goto('https://en.wikipedia.org/wiki/Cat');\n```\n### Page\n- Page URL: https://en.wikipedia.org/wiki/Cat\n- Page Title: Cat - Wikipedia\n### Snapshot\n- [Snapshot](.playwright-mcp\\page-2026-10-20T20-19-34-074Z.yml)"
+   }
+  ],
+  "isError": false,
+  "resultType": "complete"
+ }
+}

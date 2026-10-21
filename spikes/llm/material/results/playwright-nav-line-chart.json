@@ -1,0 +1,25 @@
+{
+ "server": "playwright",
+ "started": [
+  "npx",
+  "-y",
+  "@playwright/mcp@latest",
+  "--headless",
+  "--isolated"
+ ],
+ "tool": "browser_navigate",
+ "arguments": {
+  "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Absolute_increase_in_global_population_per_year%2C_OWID.svg/1280px-Absolute_increase_in_global_population_per_year%2C_OWID.svg.png"
+ },
+ "captured": "2026-10-20",
+ "result": {
+  "content": [
+   {
+    "type": "text",
+    "text": "### Ran Playwright code\n```js\nawait page.goto('https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Absolute_increase_in_global_population_per_year%2C_OWID.svg/1280px-Absolute_increase_in_global_population_per_year%2C_OWID.svg.png');\n```\n### Page\n- Page URL: https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Absolute_increase_in_global_population_per_year%2C_OWID.svg/1280px-Absolute_increase_in_global_population_per_year%2C_OWID.svg.png\n- Page Title: 1280px-Absolute_increase_in_global_population_per_year,_OWID.svg.png (1280×904)\n### Snapshot\n- [Snapshot](.playwright-mcp\\page-2026-10-20T20-20-21-087Z.yml)"
+   }
+  ],
+  "isError": false,
+  "resultType": "complete"
+ }
+}

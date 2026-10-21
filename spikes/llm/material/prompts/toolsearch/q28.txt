@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"draw me a picture of a lighthouse at sunset"
+
+Here are the candidate tools, numbered:
+
+1. time / get_current_time: Get current time in a specific timezone
+2. time / convert_time: Convert time between timezones
+3. tavily / tavily_search: Search the web for current information on any topic.
+4. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+5. tavily / tavily_map: Map a website's structure.
+6. tavily / tavily_extract: Extract content from URLs.
+7. tavily / tavily_crawl: Crawl a website starting from a URL.
+8. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+9. slack / slack_post_message: Post a new message to a Slack channel
+10. slack / slack_list_channels: List public or pre-defined channels in the workspace with pagination
+11. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+12. slack / slack_get_user_profile: Get detailed profile information for a specific user
+13. slack / slack_get_thread_replies: Get all replies in a message thread
+14. slack / slack_get_channel_history: Get recent messages from a channel
+15. slack / slack_add_reaction: Add a reaction emoji to a message
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

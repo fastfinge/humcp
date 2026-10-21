@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"add two numbers"
+
+Here are the candidate tools, numbered:
+
+1. everything / get-sum: Returns the sum of two numbers
+2. slack / slack_add_reaction: Add a reaction emoji to a message
+3. github / add_issue_comment: Add a comment to an existing issue
+4. memory / add_observations: Add new observations to existing entities in the knowledge graph
+5. git / git_add: Adds file contents to the staging area
+6. playwright / browser_drag: Perform drag and drop between two elements
+7. google-maps / maps_directions: Get directions between two points
+8. brave-search / brave_local_search: Searches for local businesses and places using Brave's Local Search API.
+9. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+10. firecrawl / firecrawl_search: Search web, news, or image sources and return ranked results.
+11. firecrawl / firecrawl_parse: Parse one supported document into markdown, HTML, links, summary, targeted answers, or JSON matching a schema.
+12. time / get_current_time: Get current time in a specific timezone
+13. time / convert_time: Convert time between timezones
+14. tavily / tavily_search: Search the web for current information on any topic.
+15. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

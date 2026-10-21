@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"who reviewed my pull request"
+
+Here are the candidate tools, numbered:
+
+1. github / merge_pull_request: Merge a pull request
+2. github / get_pull_request: Get details of a specific pull request
+3. github / get_pull_request_reviews: Get the reviews on a pull request
+4. github / create_pull_request_review: Create a review on a pull request
+5. github / get_pull_request_comments: Get the review comments on a pull request
+6. github / create_pull_request: Create a new pull request in a GitHub repository
+7. github / get_pull_request_files: Get the list of files changed in a pull request
+8. github / update_pull_request_branch: Update a pull request branch with the latest changes from the base branch
+9. github / get_pull_request_status: Get the combined status of all status checks for a pull request
+10. github / list_pull_requests: List and filter repository pull requests
+11. firecrawl / firecrawl_research_search_github: Search indexed public GitHub issue, pull-request, and README content.
+12. github / search_issues: Search for issues and pull requests across GitHub repositories
+13. playwright / browser_network_request: Returns full details (headers and body) of a single network request, or a single part if `part` is set.
+14. notion / API-update-a-block: Notion | Update a block Error Responses: 400: Bad request
+15. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"how do I use the useEffect hook in React, show current docs"
+
+Here are the candidate tools, numbered:
+
+1. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+2. git / git_show: Shows the contents of a commit
+3. playwright / browser_take_screenshot: Take a screenshot of the current page.
+4. context7 / query-docs: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+5. tavily / tavily_search: Search the web for current information on any topic.
+6. firecrawl / firecrawl_extract: Deprecated compatibility entry point.
+7. filesystem / read_file: Read the complete contents of a file as text.
+8. time / get_current_time: Get current time in a specific timezone
+9. firecrawl / firecrawl_scrape: Retrieve and extract content from one supplied URL through Firecrawl.
+10. filesystem / search_files: Recursively search for files and directories matching a pattern.
+11. playwright / browser_network_requests: Returns a numbered list of network requests since loading the page.
+12. playwright / browser_network_request: Returns full details (headers and body) of a single network request, or a single part if `part` is set.
+13. filesystem / read_text_file: Read the complete contents of a file from the file system as text.
+14. filesystem / write_file: Create a new file or completely overwrite an existing file with new content.
+15. filesystem / list_allowed_directories: Returns the list of directories that this server is allowed to access.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

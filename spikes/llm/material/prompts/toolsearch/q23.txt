@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"go back to the previous page"
+
+Here are the candidate tools, numbered:
+
+1. playwright / browser_navigate_back: Go back to the previous page in the history
+2. everything / echo: Echoes back the input string
+3. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+4. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+5. notion / API-post-page: Notion | Create a page Error Responses: 400: Bad request
+6. notion / API-move-page: Notion | Move a page Error Responses: 400: Bad request
+7. notion / API-patch-page: Notion | Update page properties Error Responses: 400: Bad request
+8. notion / API-retrieve-a-page-property: Notion | Retrieve a page property item Error Responses: 400: Bad request
+9. notion / API-retrieve-page-markdown: Notion | Retrieve a page as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+10. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+11. playwright / browser_close: Close the page
+12. puppeteer / puppeteer_hover: Hover an element on the page
+13. puppeteer / puppeteer_click: Click an element on the page
+14. playwright / browser_hover: Hover over element on page
+15. playwright / browser_click: Perform click on a web page
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

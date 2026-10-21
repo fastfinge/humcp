@@ -1,0 +1,3 @@
+[
+ { "label": "sum:playwright-snapshot-github", "prompt": "material/prompts/summary-playwright-snapshot-github.txt", "maxNew": 300 }
+]

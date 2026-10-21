@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"what time is it in Tokyo right now"
+
+Here are the candidate tools, numbered:
+
+1. time / convert_time: Convert time between timezones
+2. time / get_current_time: Get current time in a specific timezone
+3. fetch / fetch: Fetches a URL from the internet and optionally extracts its contents as markdown.
+4. playwright / browser_wait_for: Wait for text to appear or disappear or a specified time to pass
+5. google-maps / maps_distance_matrix: Calculate travel distance and time for multiple origins and destinations
+6. filesystem / get_file_info: Retrieve detailed metadata about a file or directory.
+7. firecrawl / firecrawl_agent_status: Retrieve progress or final results for a `firecrawl_agent` job ID.
+8. firecrawl / firecrawl_agent: Start an asynchronous web research job from a prompt, optional seed URLs, and an optional JSON schema.
+9. tavily / tavily_search: Search the web for current information on any topic.
+10. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+11. tavily / tavily_map: Map a website's structure.
+12. tavily / tavily_extract: Extract content from URLs.
+13. tavily / tavily_crawl: Crawl a website starting from a URL.
+14. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+15. slack / slack_post_message: Post a new message to a Slack channel
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

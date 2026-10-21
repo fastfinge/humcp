@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"run a SQL query against the sales database"
+
+Here are the candidate tools, numbered:
+
+1. postgres / query: Run a read-only SQL query
+2. notion / API-retrieve-a-database: Notion | Retrieve a database Error Responses: 400: Bad request
+3. playwright / browser_run_code_unsafe: Run a Playwright code snippet.
+4. firecrawl / firecrawl_monitor_run: Queue an immediate check for a monitor outside its normal schedule.
+5. notion / API-query-data-source: Notion | Query a data source Error Responses: 400: Bad request
+6. firecrawl / firecrawl_monitor_get: Retrieve one monitor by ID, including its configuration and current state.
+7. memory / search_nodes: Search for nodes in the knowledge graph based on a query
+8. everything / simulate-research-query: Simulates a deep research operation that gathers, analyzes, and synthesizes information.
+9. context7 / query-docs: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+10. firecrawl / firecrawl_interact: Open or reuse a live browser session to navigate a page, click controls, fill fields, or run browser code.
+11. firecrawl / firecrawl_research_search_papers: Search paper metadata and abstracts with a natural-language query across the indexed corpus, which spans biomedical, life-science, and clinical literature (PubMed, bioRxiv, medRxiv) alongside arXiv an
+12. context7 / resolve-library-id: Resolves a package/product name to a Context7-compatible library ID and returns matching libraries.
+13. brave-search / brave_local_search: Searches for local businesses and places using Brave's Local Search API.
+14. firecrawl / firecrawl_map: Enumerate URLs indexed under one website through Firecrawl without fetching each page's content.
+15. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

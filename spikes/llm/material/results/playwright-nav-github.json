@@ -1,0 +1,25 @@
+{
+ "server": "playwright",
+ "started": [
+  "npx",
+  "-y",
+  "@playwright/mcp@latest",
+  "--headless",
+  "--isolated"
+ ],
+ "tool": "browser_navigate",
+ "arguments": {
+  "url": "https://github.com/fastfinge/humcp"
+ },
+ "captured": "2026-10-20",
+ "result": {
+  "content": [
+   {
+    "type": "text",
+    "text": "### Ran Playwright code\n```js\nawait page.goto('https://github.com/fastfinge/humcp');\n```\n### Page\n- Page URL: https://github.com/fastfinge/humcp\n- Page Title: GitHub - fastfinge/humcp: An accessible, screen-reader-first Windows client for Model Context Protocol servers · GitHub\n- Console: 1 errors, 0 warnings\n### Snapshot\n- [Snapshot](.playwright-mcp\\page-2026-10-20T20-19-38-112Z.yml)\n### Events\n- New console entries: .playwright-mcp\\console-2026-10-20T20-19-35-835Z.log#L1"
+   }
+  ],
+  "isError": false,
+  "resultType": "complete"
+ }
+}

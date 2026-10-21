@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"make a copy of someone else's repository under my account"
+
+Here are the candidate tools, numbered:
+
+1. github / create_repository: Create a new GitHub repository in your account
+2. github / fork_repository: Fork a GitHub repository to your account or specified organization
+3. firecrawl / firecrawl_map: Enumerate URLs indexed under one website through Firecrawl without fetching each page's content.
+4. filesystem / edit_file: Make line-based edits to a text file.
+5. firecrawl / firecrawl_monitor_list: List monitors for the authenticated account with optional pagination controls.
+6. git / git_commit: Records changes to the repository
+7. playwright / browser_find: Search the accessibility snapshot of the current page for text or a regular expression.
+8. github / update_issue: Update an existing issue in a GitHub repository
+9. github / create_issue: Create a new issue in a GitHub repository
+10. github / create_branch: Create a new branch in a GitHub repository
+11. tavily / tavily_map: Map a website's structure.
+12. github / list_pull_requests: List and filter repository pull requests
+13. github / list_issues: List issues in a GitHub repository with filtering options
+14. github / list_commits: Get list of commits of a branch in a GitHub repository
+15. github / get_issue: Get details of a specific issue in a GitHub repository.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

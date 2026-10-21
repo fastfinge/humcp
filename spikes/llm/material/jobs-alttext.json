@@ -1,0 +1,50 @@
+[
+ {
+  "label": "alt:everything-tiny-image-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\everything-tiny-image-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-bar-chart-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-bar-chart-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-chart-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-chart-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-github-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-github-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-line-chart-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-line-chart-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-photo-cat-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-photo-cat-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-weather-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-weather-1.png",
+  "maxNew": 220
+ },
+ {
+  "label": "alt:playwright-shot-wikipedia-cat-1.png",
+  "prompt": "material/prompts/alttext.txt",
+  "image": "material/images\\playwright-shot-wikipedia-cat-1.png",
+  "maxNew": 220
+ }
+]

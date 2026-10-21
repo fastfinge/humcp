@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"tell me what's on the page in a way a screen reader understands"
+
+Here are the candidate tools, numbered:
+
+1. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+2. firecrawl / firecrawl_map: Enumerate URLs indexed under one website through Firecrawl without fetching each page's content.
+3. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+4. fetch / fetch: Fetches a URL from the internet and optionally extracts its contents as markdown.
+5. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+6. notion / API-post-page: Notion | Create a page Error Responses: 400: Bad request
+7. notion / API-move-page: Notion | Move a page Error Responses: 400: Bad request
+8. tavily / tavily_map: Map a website's structure.
+9. notion / API-patch-page: Notion | Update page properties Error Responses: 400: Bad request
+10. notion / API-retrieve-a-page-property: Notion | Retrieve a page property item Error Responses: 400: Bad request
+11. notion / API-retrieve-page-markdown: Notion | Retrieve a page as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+12. notion / API-get-self: Notion | Retrieve your token's bot user Error Responses: 400: Bad request
+13. kubernetes / kubectl_patch: Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch
+14. firecrawl / firecrawl_monitor_run: Queue an immediate check for a monitor outside its normal schedule.
+15. playwright / browser_close: Close the page
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

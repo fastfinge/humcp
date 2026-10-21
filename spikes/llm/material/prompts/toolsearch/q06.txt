@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"read this web page to me"
+
+Here are the candidate tools, numbered:
+
+1. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+2. playwright / browser_click: Perform click on a web page
+3. notion / API-retrieve-page-markdown: Notion | Retrieve a page as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+4. memory / read_graph: Read the entire knowledge graph
+5. filesystem / read_file: Read the complete contents of a file as text.
+6. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+7. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+8. brave-search / brave_web_search: Performs a web search using the Brave Search API, ideal for general queries, news, articles, and online content.
+9. filesystem / read_text_file: Read the complete contents of a file from the file system as text.
+10. filesystem / read_media_file: Read a file and return it as a base64-encoded content block with its MIME type.
+11. firecrawl / firecrawl_agent: Start an asynchronous web research job from a prompt, optional seed URLs, and an optional JSON schema.
+12. postgres / query: Run a read-only SQL query
+13. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+14. firecrawl / firecrawl_research_read_paper: Retrieve in-body passages from one paper that are relevant to a specific question.
+15. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

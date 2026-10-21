@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"add a page to my notes workspace"
+
+Here are the candidate tools, numbered:
+
+1. slack / slack_add_reaction: Add a reaction emoji to a message
+2. github / add_issue_comment: Add a comment to an existing issue
+3. memory / add_observations: Add new observations to existing entities in the knowledge graph
+4. git / git_add: Adds file contents to the staging area
+5. slack / slack_list_channels: List public or pre-defined channels in the workspace with pagination
+6. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+7. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+8. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+9. notion / API-post-page: Notion | Create a page Error Responses: 400: Bad request
+10. notion / API-move-page: Notion | Move a page Error Responses: 400: Bad request
+11. notion / API-patch-page: Notion | Update page properties Error Responses: 400: Bad request
+12. notion / API-retrieve-a-page-property: Notion | Retrieve a page property item Error Responses: 400: Bad request
+13. notion / API-retrieve-page-markdown: Notion | Retrieve a page as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+14. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+15. playwright / browser_close: Close the page
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

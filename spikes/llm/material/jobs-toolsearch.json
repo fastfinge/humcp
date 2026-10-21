@@ -1,0 +1,893 @@
+[
+ {
+  "label": "tools-q00",
+  "prompt": "material/prompts/toolsearch/q00.txt",
+  "maxNew": 12,
+  "candidates": [
+   "time/convert_time",
+   "time/get_current_time",
+   "fetch/fetch",
+   "playwright/browser_wait_for",
+   "google-maps/maps_distance_matrix",
+   "filesystem/get_file_info",
+   "firecrawl/firecrawl_agent_status",
+   "firecrawl/firecrawl_agent",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message"
+  ],
+  "gold": [
+   "time/get_current_time"
+  ]
+ },
+ {
+  "label": "tools-q01",
+  "prompt": "material/prompts/toolsearch/q01.txt",
+  "maxNew": 12,
+  "candidates": [
+   "time/convert_time",
+   "time/get_current_time",
+   "firecrawl/firecrawl_agent_status",
+   "firecrawl/firecrawl_agent",
+   "playwright/browser_wait_for",
+   "google-maps/maps_distance_matrix",
+   "filesystem/get_file_info",
+   "brave-search/brave_local_search",
+   "tavily/tavily_map",
+   "exa/web_fetch_exa",
+   "notion/API-get-self",
+   "kubernetes/kubectl_patch",
+   "playwright/browser_drop",
+   "playwright/browser_network_request",
+   "firecrawl/firecrawl_monitor_run"
+  ],
+  "gold": [
+   "time/convert_time"
+  ]
+ },
+ {
+  "label": "tools-q02",
+  "prompt": "material/prompts/toolsearch/q02.txt",
+  "maxNew": 12,
+  "candidates": [
+   "playwright/browser_find",
+   "firecrawl/firecrawl_research_related_papers",
+   "brave-search/brave_local_search",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_list_channels",
+   "slack/slack_get_users",
+   "slack/slack_get_user_profile"
+  ],
+  "gold": [
+   "brave-search/brave_local_search",
+   "google-maps/maps_search_places"
+  ]
+ },
+ {
+  "label": "tools-q03",
+  "prompt": "material/prompts/toolsearch/q03.txt",
+  "maxNew": 12,
+  "candidates": [
+   "time/get_current_time",
+   "github/get_pull_request",
+   "github/get_issue",
+   "slack/slack_get_channel_history",
+   "github/get_pull_request_reviews",
+   "slack/slack_get_thread_replies",
+   "kubernetes/kubectl_get",
+   "github/get_pull_request_comments",
+   "github/get_file_contents",
+   "slack/slack_get_user_profile",
+   "github/get_pull_request_files",
+   "slack/slack_get_users",
+   "github/get_pull_request_status",
+   "everything/get-sum",
+   "figma/get_figma_data"
+  ],
+  "gold": [
+   "google-maps/maps_directions"
+  ]
+ },
+ {
+  "label": "tools-q04",
+  "prompt": "material/prompts/toolsearch/q04.txt",
+  "maxNew": 12,
+  "candidates": [
+   "google-maps/maps_geocode",
+   "google-maps/maps_reverse_geocode",
+   "filesystem/list_allowed_directories",
+   "firecrawl/firecrawl_monitor_update",
+   "tavily/tavily_map",
+   "exa/web_fetch_exa",
+   "notion/API-get-self",
+   "kubernetes/kubectl_patch",
+   "firecrawl/firecrawl_monitor_run",
+   "figma/download_figma_images",
+   "firecrawl/firecrawl_map",
+   "notion/API-update-page-markdown",
+   "filesystem/read_multiple_files",
+   "brave-search/brave_local_search",
+   "firecrawl/firecrawl_agent_status"
+  ],
+  "gold": [
+   "google-maps/maps_reverse_geocode"
+  ]
+ },
+ {
+  "label": "tools-q05",
+  "prompt": "material/prompts/toolsearch/q05.txt",
+  "maxNew": 12,
+  "candidates": [
+   "exa/web_search_exa",
+   "google-maps/maps_place_details",
+   "everything/get-annotated-message",
+   "everything/get-resource-links",
+   "tavily/tavily_search",
+   "filesystem/get_file_info",
+   "fetch/fetch",
+   "filesystem/create_directory",
+   "brave-search/brave_web_search",
+   "context7/query-docs",
+   "firecrawl/firecrawl_search",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_research",
+   "tavily/tavily_map"
+  ],
+  "gold": [
+   "brave-search/brave_web_search",
+   "exa/web_search_exa",
+   "firecrawl/firecrawl_search",
+   "tavily/tavily_search"
+  ]
+ },
+ {
+  "label": "tools-q06",
+  "prompt": "material/prompts/toolsearch/q06.txt",
+  "maxNew": 12,
+  "candidates": [
+   "exa/web_fetch_exa",
+   "playwright/browser_click",
+   "notion/API-retrieve-page-markdown",
+   "memory/read_graph",
+   "filesystem/read_file",
+   "notion/API-update-page-markdown",
+   "exa/web_search_exa",
+   "brave-search/brave_web_search",
+   "filesystem/read_text_file",
+   "filesystem/read_media_file",
+   "firecrawl/firecrawl_agent",
+   "postgres/query",
+   "filesystem/read_multiple_files",
+   "firecrawl/firecrawl_research_read_paper",
+   "notion/API-retrieve-a-page"
+  ],
+  "gold": [
+   "fetch/fetch",
+   "exa/web_fetch_exa",
+   "firecrawl/firecrawl_scrape",
+   "tavily/tavily_extract"
+  ]
+ },
+ {
+  "label": "tools-q07",
+  "prompt": "material/prompts/toolsearch/q07.txt",
+  "maxNew": 12,
+  "candidates": [
+   "filesystem/move_file",
+   "filesystem/read_file",
+   "github/get_file_contents",
+   "github/create_or_update_file",
+   "filesystem/read_text_file",
+   "playwright/browser_file_upload",
+   "filesystem/write_file",
+   "filesystem/read_media_file",
+   "filesystem/get_file_info",
+   "filesystem/edit_file",
+   "everything/gzip-file-as-resource",
+   "git/git_add",
+   "kubernetes/kubectl_apply",
+   "kubernetes/kubectl_delete",
+   "kubernetes/kubectl_create"
+  ],
+  "gold": [
+   "filesystem/move_file"
+  ]
+ },
+ {
+  "label": "tools-q08",
+  "prompt": "material/prompts/toolsearch/q08.txt",
+  "maxNew": 12,
+  "candidates": [
+   "filesystem/edit_file",
+   "memory/create_entities",
+   "github/create_repository",
+   "github/create_issue",
+   "github/create_branch",
+   "slack/slack_post_message",
+   "memory/add_observations",
+   "filesystem/write_file",
+   "git/git_create_branch",
+   "github/create_pull_request",
+   "memory/create_relations",
+   "kubernetes/kubectl_reconnect",
+   "filesystem/create_directory",
+   "firecrawl/firecrawl_monitor_check",
+   "time/get_current_time"
+  ],
+  "gold": [
+   "filesystem/create_directory"
+  ]
+ },
+ {
+  "label": "tools-q09",
+  "prompt": "material/prompts/toolsearch/q09.txt",
+  "maxNew": 12,
+  "candidates": [
+   "github/push_files",
+   "github/get_pull_request_files",
+   "filesystem/read_multiple_files",
+   "filesystem/search_files",
+   "filesystem/list_directory",
+   "filesystem/list_directory_with_sizes",
+   "playwright/browser_file_upload",
+   "filesystem/move_file",
+   "filesystem/directory_tree",
+   "playwright/browser_drop",
+   "filesystem/write_file",
+   "filesystem/list_allowed_directories",
+   "filesystem/read_media_file",
+   "firecrawl/firecrawl_developer_search",
+   "firecrawl/firecrawl_parse"
+  ],
+  "gold": [
+   "filesystem/list_directory_with_sizes",
+   "filesystem/get_file_info"
+  ]
+ },
+ {
+  "label": "tools-q10",
+  "prompt": "material/prompts/toolsearch/q10.txt",
+  "maxNew": 12,
+  "candidates": [
+   "playwright/browser_find",
+   "firecrawl/firecrawl_parse",
+   "firecrawl/firecrawl_research_related_papers",
+   "firecrawl/firecrawl_search",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_list_channels",
+   "slack/slack_get_users"
+  ],
+  "gold": [
+   "filesystem/search_files"
+  ]
+ },
+ {
+  "label": "tools-q11",
+  "prompt": "material/prompts/toolsearch/q11.txt",
+  "maxNew": 12,
+  "candidates": [
+   "git/git_commit",
+   "git/git_show",
+   "git/git_log",
+   "playwright/browser_network_requests",
+   "git/git_diff_staged",
+   "github/push_files",
+   "fetch/fetch",
+   "filesystem/get_file_info",
+   "firecrawl/firecrawl_monitor_update",
+   "filesystem/read_text_file",
+   "firecrawl/firecrawl_monitor_check",
+   "firecrawl/firecrawl_monitor_create",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search"
+  ],
+  "gold": [
+   "git/git_diff_unstaged",
+   "git/git_status",
+   "git/git_diff"
+  ]
+ },
+ {
+  "label": "tools-q12",
+  "prompt": "material/prompts/toolsearch/q12.txt",
+  "maxNew": 12,
+  "candidates": [
+   "git/git_add",
+   "git/git_commit",
+   "git/git_reset",
+   "git/git_diff_staged",
+   "git/git_diff_unstaged",
+   "github/update_pull_request_branch",
+   "filesystem/edit_file",
+   "firecrawl/firecrawl_monitor_update",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl"
+  ],
+  "gold": [
+   "git/git_reset"
+  ]
+ },
+ {
+  "label": "tools-q13",
+  "prompt": "material/prompts/toolsearch/q13.txt",
+  "maxNew": 12,
+  "candidates": [
+   "git/git_create_branch",
+   "github/update_pull_request_branch",
+   "github/create_branch",
+   "git/git_branch",
+   "kubernetes/uninstall_helm_chart",
+   "kubernetes/upgrade_helm_chart",
+   "github/list_commits",
+   "firecrawl/firecrawl_interact_stop",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl"
+  ],
+  "gold": [
+   "git/git_checkout"
+  ]
+ },
+ {
+  "label": "tools-q14",
+  "prompt": "material/prompts/toolsearch/q14.txt",
+  "maxNew": 12,
+  "candidates": [
+   "memory/open_nodes",
+   "context7/resolve-library-id",
+   "context7/query-docs",
+   "firecrawl/firecrawl_developer_search",
+   "firecrawl/firecrawl_monitor_check",
+   "firecrawl/firecrawl_interact",
+   "firecrawl/firecrawl_parse",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread"
+  ],
+  "gold": [
+   "github/create_issue"
+  ]
+ },
+ {
+  "label": "tools-q15",
+  "prompt": "material/prompts/toolsearch/q15.txt",
+  "maxNew": 12,
+  "candidates": [
+   "github/merge_pull_request",
+   "github/get_pull_request",
+   "github/get_pull_request_reviews",
+   "github/create_pull_request_review",
+   "github/get_pull_request_comments",
+   "github/create_pull_request",
+   "github/get_pull_request_files",
+   "github/update_pull_request_branch",
+   "github/get_pull_request_status",
+   "github/list_pull_requests",
+   "firecrawl/firecrawl_research_search_github",
+   "github/search_issues",
+   "playwright/browser_network_request",
+   "notion/API-update-a-block",
+   "notion/API-retrieve-a-page"
+  ],
+  "gold": [
+   "github/get_pull_request_reviews"
+  ]
+ },
+ {
+  "label": "tools-q16",
+  "prompt": "material/prompts/toolsearch/q16.txt",
+  "maxNew": 12,
+  "candidates": [
+   "playwright/browser_wait_for",
+   "firecrawl/firecrawl_monitor_checks",
+   "github/get_pull_request_status",
+   "fetch/fetch",
+   "firecrawl/firecrawl_monitor_update",
+   "firecrawl/firecrawl_monitor_create",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message"
+  ],
+  "gold": [
+   "github/get_pull_request_status"
+  ]
+ },
+ {
+  "label": "tools-q17",
+  "prompt": "material/prompts/toolsearch/q17.txt",
+  "maxNew": 12,
+  "candidates": [
+   "github/create_repository",
+   "github/fork_repository",
+   "firecrawl/firecrawl_map",
+   "filesystem/edit_file",
+   "firecrawl/firecrawl_monitor_list",
+   "git/git_commit",
+   "playwright/browser_find",
+   "github/update_issue",
+   "github/create_issue",
+   "github/create_branch",
+   "tavily/tavily_map",
+   "github/list_pull_requests",
+   "github/list_issues",
+   "github/list_commits",
+   "github/get_issue"
+  ],
+  "gold": [
+   "github/fork_repository"
+  ]
+ },
+ {
+  "label": "tools-q18",
+  "prompt": "material/prompts/toolsearch/q18.txt",
+  "maxNew": 12,
+  "candidates": [
+   "slack/slack_post_message",
+   "slack/slack_get_channel_history",
+   "everything/get-annotated-message",
+   "slack/slack_add_reaction",
+   "slack/slack_reply_to_thread",
+   "slack/slack_get_thread_replies",
+   "firecrawl/firecrawl_search_feedback",
+   "firecrawl/firecrawl_monitor_create",
+   "firecrawl/firecrawl_developer_search",
+   "firecrawl/firecrawl_parse",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map"
+  ],
+  "gold": [
+   "slack/slack_post_message"
+  ]
+ },
+ {
+  "label": "tools-q19",
+  "prompt": "material/prompts/toolsearch/q19.txt",
+  "maxNew": 12,
+  "candidates": [
+   "slack/slack_list_channels",
+   "slack/slack_get_users",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_get_user_profile",
+   "slack/slack_get_thread_replies",
+   "slack/slack_get_channel_history",
+   "slack/slack_add_reaction"
+  ],
+  "gold": [
+   "slack/slack_get_users"
+  ]
+ },
+ {
+  "label": "tools-q20",
+  "prompt": "material/prompts/toolsearch/q20.txt",
+  "maxNew": 12,
+  "candidates": [
+   "puppeteer/puppeteer_click",
+   "playwright/browser_click",
+   "firecrawl/firecrawl_interact",
+   "notion/API-retrieve-a-page",
+   "notion/API-post-page",
+   "notion/API-move-page",
+   "notion/API-patch-page",
+   "notion/API-retrieve-a-page-property",
+   "notion/API-retrieve-page-markdown",
+   "notion/API-update-page-markdown",
+   "playwright/browser_close",
+   "puppeteer/puppeteer_hover",
+   "playwright/browser_hover",
+   "puppeteer/puppeteer_select",
+   "puppeteer/puppeteer_screenshot"
+  ],
+  "gold": [
+   "playwright/browser_click",
+   "puppeteer/puppeteer_click"
+  ]
+ },
+ {
+  "label": "tools-q21",
+  "prompt": "material/prompts/toolsearch/q21.txt",
+  "maxNew": 12,
+  "candidates": [
+   "playwright/browser_take_screenshot",
+   "puppeteer/puppeteer_screenshot",
+   "playwright/browser_click",
+   "exa/web_fetch_exa",
+   "exa/web_search_exa",
+   "brave-search/brave_web_search",
+   "notion/API-retrieve-a-page",
+   "notion/API-post-page",
+   "notion/API-move-page",
+   "tavily/tavily_search",
+   "notion/API-patch-page",
+   "notion/API-retrieve-a-page-property",
+   "notion/API-retrieve-page-markdown",
+   "notion/API-update-page-markdown",
+   "firecrawl/firecrawl_search"
+  ],
+  "gold": [
+   "playwright/browser_take_screenshot",
+   "puppeteer/puppeteer_screenshot"
+  ]
+ },
+ {
+  "label": "tools-q22",
+  "prompt": "material/prompts/toolsearch/q22.txt",
+  "maxNew": 12,
+  "candidates": [
+   "notion/API-update-page-markdown",
+   "firecrawl/firecrawl_map",
+   "exa/web_fetch_exa",
+   "fetch/fetch",
+   "notion/API-retrieve-a-page",
+   "notion/API-post-page",
+   "notion/API-move-page",
+   "tavily/tavily_map",
+   "notion/API-patch-page",
+   "notion/API-retrieve-a-page-property",
+   "notion/API-retrieve-page-markdown",
+   "notion/API-get-self",
+   "kubernetes/kubectl_patch",
+   "firecrawl/firecrawl_monitor_run",
+   "playwright/browser_close"
+  ],
+  "gold": [
+   "playwright/browser_snapshot"
+  ]
+ },
+ {
+  "label": "tools-q23",
+  "prompt": "material/prompts/toolsearch/q23.txt",
+  "maxNew": 12,
+  "candidates": [
+   "playwright/browser_navigate_back",
+   "everything/echo",
+   "firecrawl/firecrawl_monitor_check",
+   "notion/API-retrieve-a-page",
+   "notion/API-post-page",
+   "notion/API-move-page",
+   "notion/API-patch-page",
+   "notion/API-retrieve-a-page-property",
+   "notion/API-retrieve-page-markdown",
+   "notion/API-update-page-markdown",
+   "playwright/browser_close",
+   "puppeteer/puppeteer_hover",
+   "puppeteer/puppeteer_click",
+   "playwright/browser_hover",
+   "playwright/browser_click"
+  ],
+  "gold": [
+   "playwright/browser_navigate_back"
+  ]
+ },
+ {
+  "label": "tools-q24",
+  "prompt": "material/prompts/toolsearch/q24.txt",
+  "maxNew": 12,
+  "candidates": [
+   "kubernetes/kubectl_scale",
+   "kubernetes/kubectl_rollout",
+   "brave-search/brave_web_search",
+   "playwright/browser_click",
+   "exa/web_fetch_exa",
+   "exa/web_search_exa",
+   "tavily/tavily_search",
+   "filesystem/read_multiple_files",
+   "firecrawl/firecrawl_search",
+   "context7/query-docs",
+   "firecrawl/firecrawl_monitor_check",
+   "firecrawl/firecrawl_monitor_create",
+   "brave-search/brave_local_search",
+   "firecrawl/firecrawl_agent",
+   "firecrawl/firecrawl_parse"
+  ],
+  "gold": [
+   "kubernetes/kubectl_scale",
+   "kubernetes/kubectl_rollout"
+  ]
+ },
+ {
+  "label": "tools-q25",
+  "prompt": "material/prompts/toolsearch/q25.txt",
+  "maxNew": 12,
+  "candidates": [
+   "kubernetes/exec_in_pod",
+   "git/git_show",
+   "everything/get-structured-content",
+   "playwright/browser_find",
+   "firecrawl/firecrawl_interact_stop",
+   "everything/gzip-file-as-resource",
+   "firecrawl/firecrawl_monitor_get",
+   "firecrawl/firecrawl_monitor_delete",
+   "firecrawl/firecrawl_monitor_run",
+   "filesystem/directory_tree",
+   "firecrawl/firecrawl_monitor_update",
+   "filesystem/read_media_file",
+   "fetch/fetch",
+   "firecrawl/firecrawl_interact",
+   "filesystem/read_multiple_files"
+  ],
+  "gold": [
+   "kubernetes/kubectl_logs"
+  ]
+ },
+ {
+  "label": "tools-q26",
+  "prompt": "material/prompts/toolsearch/q26.txt",
+  "maxNew": 12,
+  "candidates": [
+   "filesystem/directory_tree",
+   "tavily/tavily_map",
+   "exa/web_fetch_exa",
+   "notion/API-get-self",
+   "kubernetes/kubectl_patch",
+   "firecrawl/firecrawl_monitor_run",
+   "figma/download_figma_images",
+   "firecrawl/firecrawl_map",
+   "notion/API-update-page-markdown",
+   "filesystem/read_multiple_files",
+   "brave-search/brave_local_search",
+   "firecrawl/firecrawl_agent_status",
+   "firecrawl/firecrawl_agent",
+   "firecrawl/firecrawl_search_feedback",
+   "time/get_current_time"
+  ],
+  "gold": [
+   "memory/create_entities",
+   "memory/add_observations"
+  ]
+ },
+ {
+  "label": "tools-q27",
+  "prompt": "material/prompts/toolsearch/q27.txt",
+  "maxNew": 12,
+  "candidates": [
+   "google-maps/maps_place_details",
+   "everything/get-annotated-message",
+   "filesystem/get_file_info",
+   "exa/web_search_exa",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_list_channels",
+   "slack/slack_get_users"
+  ],
+  "gold": [
+   "memory/read_graph",
+   "memory/search_nodes"
+  ]
+ },
+ {
+  "label": "tools-q28",
+  "prompt": "material/prompts/toolsearch/q28.txt",
+  "maxNew": 12,
+  "candidates": [
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_list_channels",
+   "slack/slack_get_users",
+   "slack/slack_get_user_profile",
+   "slack/slack_get_thread_replies",
+   "slack/slack_get_channel_history",
+   "slack/slack_add_reaction"
+  ],
+  "gold": [
+   "everart/generate_image"
+  ]
+ },
+ {
+  "label": "tools-q29",
+  "prompt": "material/prompts/toolsearch/q29.txt",
+  "maxNew": 12,
+  "candidates": [
+   "exa/web_search_exa",
+   "git/git_show",
+   "playwright/browser_take_screenshot",
+   "context7/query-docs",
+   "tavily/tavily_search",
+   "firecrawl/firecrawl_extract",
+   "filesystem/read_file",
+   "time/get_current_time",
+   "firecrawl/firecrawl_scrape",
+   "filesystem/search_files",
+   "playwright/browser_network_requests",
+   "playwright/browser_network_request",
+   "filesystem/read_text_file",
+   "filesystem/write_file",
+   "filesystem/list_allowed_directories"
+  ],
+  "gold": [
+   "context7/query-docs",
+   "context7/resolve-library-id"
+  ]
+ },
+ {
+  "label": "tools-q30",
+  "prompt": "material/prompts/toolsearch/q30.txt",
+  "maxNew": 12,
+  "candidates": [
+   "firecrawl/firecrawl_research_related_papers",
+   "firecrawl/firecrawl_research_search_papers",
+   "playwright/browser_find",
+   "google-maps/maps_place_details",
+   "everything/get-annotated-message",
+   "firecrawl/firecrawl_research_read_paper",
+   "filesystem/get_file_info",
+   "exa/web_search_exa",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl"
+  ],
+  "gold": [
+   "firecrawl/firecrawl_research_search_papers"
+  ]
+ },
+ {
+  "label": "tools-q31",
+  "prompt": "material/prompts/toolsearch/q31.txt",
+  "maxNew": 12,
+  "candidates": [
+   "postgres/query",
+   "notion/API-retrieve-a-database",
+   "playwright/browser_run_code_unsafe",
+   "firecrawl/firecrawl_monitor_run",
+   "notion/API-query-data-source",
+   "firecrawl/firecrawl_monitor_get",
+   "memory/search_nodes",
+   "everything/simulate-research-query",
+   "context7/query-docs",
+   "firecrawl/firecrawl_interact",
+   "firecrawl/firecrawl_research_search_papers",
+   "context7/resolve-library-id",
+   "brave-search/brave_local_search",
+   "firecrawl/firecrawl_map",
+   "exa/web_search_exa"
+  ],
+  "gold": [
+   "postgres/query"
+  ]
+ },
+ {
+  "label": "tools-q32",
+  "prompt": "material/prompts/toolsearch/q32.txt",
+  "maxNew": 12,
+  "candidates": [
+   "slack/slack_add_reaction",
+   "github/add_issue_comment",
+   "memory/add_observations",
+   "git/git_add",
+   "slack/slack_list_channels",
+   "slack/slack_get_users",
+   "firecrawl/firecrawl_monitor_check",
+   "notion/API-retrieve-a-page",
+   "notion/API-post-page",
+   "notion/API-move-page",
+   "notion/API-patch-page",
+   "notion/API-retrieve-a-page-property",
+   "notion/API-retrieve-page-markdown",
+   "notion/API-update-page-markdown",
+   "playwright/browser_close"
+  ],
+  "gold": [
+   "notion/API-post-page"
+  ]
+ },
+ {
+  "label": "tools-q33",
+  "prompt": "material/prompts/toolsearch/q33.txt",
+  "maxNew": 12,
+  "candidates": [
+   "firecrawl/firecrawl_monitor_check",
+   "everart/generate_image",
+   "context7/resolve-library-id",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research",
+   "tavily/tavily_map",
+   "tavily/tavily_extract",
+   "tavily/tavily_crawl",
+   "slack/slack_reply_to_thread",
+   "slack/slack_post_message",
+   "slack/slack_list_channels",
+   "slack/slack_get_users",
+   "slack/slack_get_user_profile"
+  ],
+  "gold": [
+   "google-maps/maps_elevation"
+  ]
+ },
+ {
+  "label": "tools-q34",
+  "prompt": "material/prompts/toolsearch/q34.txt",
+  "maxNew": 12,
+  "candidates": [
+   "everything/get-sum",
+   "slack/slack_add_reaction",
+   "github/add_issue_comment",
+   "memory/add_observations",
+   "git/git_add",
+   "playwright/browser_drag",
+   "google-maps/maps_directions",
+   "brave-search/brave_local_search",
+   "firecrawl/firecrawl_monitor_check",
+   "firecrawl/firecrawl_search",
+   "firecrawl/firecrawl_parse",
+   "time/get_current_time",
+   "time/convert_time",
+   "tavily/tavily_search",
+   "tavily/tavily_research"
+  ],
+  "gold": [
+   "everything/get-sum"
+  ]
+ }
+]

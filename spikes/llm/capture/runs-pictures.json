@@ -1,0 +1,50 @@
+[
+ {
+  "id": "playwright",
+  "command": "npx",
+  "args": [
+   "-y",
+   "@playwright/mcp@latest",
+   "--headless",
+   "--isolated"
+  ],
+  "calls": [
+   {
+    "name": "nav-line-chart",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/e/eb/Absolute_increase_in_global_population_per_year%2C_OWID.svg/1280px-Absolute_increase_in_global_population_per_year%2C_OWID.svg.png"
+    }
+   },
+   {
+    "name": "shot-line-chart",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   },
+   {
+    "name": "nav-bar-chart",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/c/c4/Comparing_Population_Growth_By_Country%27s_Development%2C_2002.svg/1280px-Comparing_Population_Growth_By_Country%27s_Development%2C_2002.svg.png"
+    }
+   },
+   {
+    "name": "shot-bar-chart",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   },
+   {
+    "name": "nav-photo-cat",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://thumb.wikimedia.org/wikipedia/commons/thumb/f/f8/Cat_in_tree03.jpg/1280px-Cat_in_tree03.jpg"
+    }
+   },
+   {
+    "name": "shot-photo-cat",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   }
+  ]
+ }
+]

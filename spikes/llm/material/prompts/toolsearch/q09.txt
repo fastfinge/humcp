@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"how big are the files in my downloads folder"
+
+Here are the candidate tools, numbered:
+
+1. github / push_files: Push multiple files to a GitHub repository in a single commit
+2. github / get_pull_request_files: Get the list of files changed in a pull request
+3. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+4. filesystem / search_files: Recursively search for files and directories matching a pattern.
+5. filesystem / list_directory: Get a detailed listing of all files and directories in a specified path.
+6. filesystem / list_directory_with_sizes: Get a detailed listing of all files and directories in a specified path, including sizes.
+7. playwright / browser_file_upload: Upload one or multiple files
+8. filesystem / move_file: Move or rename files and directories.
+9. filesystem / directory_tree: Get a recursive tree view of files and directories as a JSON structure.
+10. playwright / browser_drop: Drop files or MIME-typed data onto an element, as if dragged from outside the page.
+11. filesystem / write_file: Create a new file or completely overwrite an existing file with new content.
+12. filesystem / list_allowed_directories: Returns the list of directories that this server is allowed to access.
+13. filesystem / read_media_file: Read a file and return it as a base64-encoded content block with its MIME type.
+14. firecrawl / firecrawl_developer_search: For a developer question — code behaviour, a library or framework, an API contract, an error message, or a known bug — search an index built for coding agents.
+15. firecrawl / firecrawl_parse: Parse one supported document into markdown, HTML, links, summary, targeted answers, or JSON matching a schema.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

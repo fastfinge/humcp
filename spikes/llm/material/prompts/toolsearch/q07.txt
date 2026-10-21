@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"rename a file"
+
+Here are the candidate tools, numbered:
+
+1. filesystem / move_file: Move or rename files and directories.
+2. filesystem / read_file: Read the complete contents of a file as text.
+3. github / get_file_contents: Get the contents of a file or directory from a GitHub repository
+4. github / create_or_update_file: Create or update a single file in a GitHub repository
+5. filesystem / read_text_file: Read the complete contents of a file from the file system as text.
+6. playwright / browser_file_upload: Upload one or multiple files
+7. filesystem / write_file: Create a new file or completely overwrite an existing file with new content.
+8. filesystem / read_media_file: Read a file and return it as a base64-encoded content block with its MIME type.
+9. filesystem / get_file_info: Retrieve detailed metadata about a file or directory.
+10. filesystem / edit_file: Make line-based edits to a text file.
+11. everything / gzip-file-as-resource: Compresses a single file using gzip compression.
+12. git / git_add: Adds file contents to the staging area
+13. kubernetes / kubectl_apply: Apply a Kubernetes YAML manifest from a string or file
+14. kubernetes / kubectl_delete: Delete Kubernetes resources by resource type, name, labels, or from a manifest file
+15. kubernetes / kubectl_create: Create Kubernetes resources using various methods (from file or using subcommands)
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

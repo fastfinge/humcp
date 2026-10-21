@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"what did I change since my last commit"
+
+Here are the candidate tools, numbered:
+
+1. git / git_commit: Records changes to the repository
+2. git / git_show: Shows the contents of a commit
+3. git / git_log: Shows the commit logs
+4. playwright / browser_network_requests: Returns a numbered list of network requests since loading the page.
+5. git / git_diff_staged: Shows changes that are staged for commit
+6. github / push_files: Push multiple files to a GitHub repository in a single commit
+7. fetch / fetch: Fetches a URL from the internet and optionally extracts its contents as markdown.
+8. filesystem / get_file_info: Retrieve detailed metadata about a file or directory.
+9. firecrawl / firecrawl_monitor_update: Patch an existing monitor by ID.
+10. filesystem / read_text_file: Read the complete contents of a file from the file system as text.
+11. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+12. firecrawl / firecrawl_monitor_create: Create a recurring scrape, crawl, or search monitor that compares each check with its retained predecessor.
+13. time / get_current_time: Get current time in a specific timezone
+14. time / convert_time: Convert time between timezones
+15. tavily / tavily_search: Search the web for current information on any topic.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

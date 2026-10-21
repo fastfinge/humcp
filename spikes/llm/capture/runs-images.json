@@ -1,0 +1,82 @@
+[
+ {
+  "id": "playwright",
+  "command": "npx",
+  "args": [
+   "-y",
+   "@playwright/mcp@latest",
+   "--headless",
+   "--isolated"
+  ],
+  "calls": [
+   {
+    "name": "nav-wikipedia-cat",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://en.wikipedia.org/wiki/Cat"
+    }
+   },
+   {
+    "name": "shot-wikipedia-cat",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   },
+   {
+    "name": "nav-weather",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://weather.gc.ca/en/location/index.html?coords=43.655,-79.383"
+    }
+   },
+   {
+    "name": "shot-weather",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   },
+   {
+    "name": "nav-github",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://github.com/fastfinge/humcp"
+    }
+   },
+   {
+    "name": "shot-github",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   },
+   {
+    "name": "snapshot-github",
+    "tool": "browser_snapshot",
+    "arguments": {}
+   },
+   {
+    "name": "nav-chart",
+    "tool": "browser_navigate",
+    "arguments": {
+     "url": "https://en.wikipedia.org/wiki/Population_growth"
+    }
+   },
+   {
+    "name": "shot-chart",
+    "tool": "browser_take_screenshot",
+    "arguments": {}
+   }
+  ]
+ },
+ {
+  "id": "everything",
+  "command": "npx",
+  "args": [
+   "-y",
+   "@modelcontextprotocol/server-everything"
+  ],
+  "calls": [
+   {
+    "name": "tiny-image",
+    "tool": "get-tiny-image",
+    "arguments": {}
+   }
+  ]
+ }
+]

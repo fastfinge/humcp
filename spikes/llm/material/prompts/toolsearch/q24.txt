@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"restart the web deployment with more copies"
+
+Here are the candidate tools, numbered:
+
+1. kubernetes / kubectl_scale: Scale a Kubernetes deployment
+2. kubernetes / kubectl_rollout: Manage the rollout of a resource (e.g., deployment, daemonset, statefulset)
+3. brave-search / brave_web_search: Performs a web search using the Brave Search API, ideal for general queries, news, articles, and online content.
+4. playwright / browser_click: Perform click on a web page
+5. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+6. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+7. tavily / tavily_search: Search the web for current information on any topic.
+8. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+9. firecrawl / firecrawl_search: Search web, news, or image sources and return ranked results.
+10. context7 / query-docs: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+11. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+12. firecrawl / firecrawl_monitor_create: Create a recurring scrape, crawl, or search monitor that compares each check with its retained predecessor.
+13. brave-search / brave_local_search: Searches for local businesses and places using Brave's Local Search API.
+14. firecrawl / firecrawl_agent: Start an asynchronous web research job from a prompt, optional seed URLs, and an optional JSON schema.
+15. firecrawl / firecrawl_parse: Parse one supported document into markdown, HTML, links, summary, targeted answers, or JSON matching a schema.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

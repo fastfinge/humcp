@@ -1,0 +1,25 @@
+{
+ "server": "playwright",
+ "started": [
+  "npx",
+  "-y",
+  "@playwright/mcp@latest",
+  "--headless",
+  "--isolated"
+ ],
+ "tool": "browser_navigate",
+ "arguments": {
+  "url": "https://weather.gc.ca/en/location/index.html?coords=43.655,-79.383"
+ },
+ "captured": "2026-10-20",
+ "result": {
+  "content": [
+   {
+    "type": "text",
+    "text": "### Ran Playwright code\n```js\nawait page.goto('https://weather.gc.ca/en/location/index.html?coords=43.655,-79.383');\n```\n### Page\n- Page URL: https://weather.gc.ca/en/location/index.html?coords=43.655,-79.383\n- Page Title: Toronto, ON - 7 Day Forecast - Environment Canada\n### Snapshot\n- [Snapshot](.playwright-mcp\\page-2026-10-20T20-19-35-767Z.yml)"
+   }
+  ],
+  "isError": false,
+  "resultType": "complete"
+ }
+}

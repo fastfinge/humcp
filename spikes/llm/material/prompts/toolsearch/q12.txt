@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"undo staging my changes"
+
+Here are the candidate tools, numbered:
+
+1. git / git_add: Adds file contents to the staging area
+2. git / git_commit: Records changes to the repository
+3. git / git_reset: Unstages all staged changes
+4. git / git_diff_staged: Shows changes that are staged for commit
+5. git / git_diff_unstaged: Shows changes in the working directory that are not yet staged
+6. github / update_pull_request_branch: Update a pull request branch with the latest changes from the base branch
+7. filesystem / edit_file: Make line-based edits to a text file.
+8. firecrawl / firecrawl_monitor_update: Patch an existing monitor by ID.
+9. time / get_current_time: Get current time in a specific timezone
+10. time / convert_time: Convert time between timezones
+11. tavily / tavily_search: Search the web for current information on any topic.
+12. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+13. tavily / tavily_map: Map a website's structure.
+14. tavily / tavily_extract: Extract content from URLs.
+15. tavily / tavily_crawl: Crawl a website starting from a URL.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

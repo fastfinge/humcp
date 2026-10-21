@@ -1,0 +1,8 @@
+models/
+bin/
+obj/
+out/*
+!out/results.jsonl
+builder-venv/
+ortdml-venv/
+.playwright-mcp/

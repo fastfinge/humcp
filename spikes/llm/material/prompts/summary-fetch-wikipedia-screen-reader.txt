@@ -1,0 +1,212 @@
+A tool called fetch returned the result below. Summarise it in plain sentences for someone listening with a screen reader: lead with what matters most, give the key facts and numbers, and keep it under 150 words. Do not add anything the result does not contain.
+
+Result:
+Contents of https://en.wikipedia.org/wiki/Screen_reader:
+<p>Screen reader - Wikipedia</p>
+
+Jump to content
+
+Search
+
+# Screen reader
+
+* العربية
+* Català
+* Deutsch
+* Ελληνικά
+* Esperanto
+* Español
+* فارسی
+* Suomi
+* Français
+* עברית
+* Íslenska
+* Italiano
+* 日本語
+* 한국어
+* Bahasa Melayu
+* Nederlands
+* Norsk bokmål
+* Polski
+* Português
+* Русский
+* Српски / srpski
+* ไทย
+* Türkçe
+* Українська
+* 粵語
+* 中文
+
+Edit links
+
+From Wikipedia, the free encyclopedia
+
+Assistive technology that converts text or images to speech or Braille
+
+|  |
+| --- |
+| This article needs more citations. Please help improve this article by adding citations to reliable sources. Unsourced material may be challenged and removed. Find sources: "Screen reader" – news · newspapers · books · scholar · JSTOR (July 2017) (Learn how and when to remove this message) |
+
+An example of someone using a screen reader showing documents that are inaccessible, readable and accessible
+
+A screen reader is a form of assistive technology (AT)^[1] that renders text and image content as speech or braille output. Screen readers are essential to blind people,^[2] and are also useful to people who are visually impaired,^[2] illiterate, learning-disabled, or otherwise have a print disability.^[3]^[4]^[5] Screen readers are software applications that attempt to convey what people with normal eyesight see on a display to their users via non-visual means, like text-to-speech,^[6] earcons,^[7] or a braille device.^[2] They do this by applying a wide variety of techniques that include, for example, interacting with dedicated accessibility APIs, using various operating system features (like inter-process communication and querying user interface properties), and employing hooking techniques.^[8]
+
+Microsoft Windows operating systems have included the Microsoft Narrator screen reader since Windows 2000, though separate products such as Freedom Scientific's commercially available JAWS screen reader and ZoomText screen magnifier and the free and open source screen reader NVDA by NV Access are more popular for that operating system.^[9] Apple Inc.'s macOS, iOS, and tvOS include VoiceOver as a built-in screen reader, while Google's Android provides the Talkback screen reader and its ChromeOS can use ChromeVox.^[10] Similarly, Android-based devices from Amazon provide the VoiceView screen reader. There are also free and open source screen readers for Linux and Unix-like systems, such as Speakup and Orca.
+
+## History
+
+[edit]
+
+Around 1978, Al Overby of IBM Raleigh developed a prototype of a talking terminal, known as SAID (for Synthetic Audio Interface Driver), for the IBM 3270 terminal.^[11] SAID read the ASCII values of the display in a stream and spoke them through a large vocal track synthesizer the size of a suitcase, and it cost around $10,000.^[12] Dr. Jesse Wright, a blind research mathematician, and Jim Thatcher, formerly his graduate student from the University of Michigan, working as mathematicians for IBM, adapted this as an internal IBM tool for use by blind people. After the early IBM Personal Computer (PC) was released in 1981, Thatcher and Wright developed a software equivalent to SAID, called PC-SAID, or Personal Computer Synthetic Audio Interface Driver. This was renamed and released in 1984 as IBM Screen Reader, which became the proprietary eponym for that general class of assistive technology.^[12]
+
+## Types
+
+[edit]
+
+### Command-line (text)
+
+[edit]
+
+In early operating systems, such as MS-DOS, which employed command-line interfaces (CLIs), the screen display consisted of characters mapping directly to a screen buffer in memory and a cursor position. Input was by keyboard. All this information could therefore be obtained from the system either by hooking the flow of information around the system and reading the screen buffer or by using a standard hardware output socket^[13] and communicating the results to the user.
+
+In the 1980s, the Research Centre for the Education of the Visually Handicapped (RCEVH) at the University of Birmingham developed a Screen Reader for the BBC Micro and NEC Portable.^[14]^[15]
+
+### Graphical
+
+[edit]
+
+#### Off-screen models
+
+[edit]
+
+With the arrival of graphical user interfaces (GUIs), the situation became more complicated. A GUI has characters and graphics drawn on the screen at particular positions, and therefore there is no purely textual representation of the graphical contents of the display. Screen readers were therefore forced to employ new low-level techniques, gathering messages from the operating system and using these to build up an "off-screen model", a representation of the display in which the required text content is stored.^[16]
+
+For example, the operating system might send messages to draw a command button and its caption. These messages are intercepted and used to construct the off-screen model. The user can switch between controls (such as buttons) available on the screen and the captions and control contents will be read aloud and/or shown on a refreshable braille display.
+
+Screen readers can also communicate information on menus, controls, and other visual constructs to permit blind users to interact with these constructs. However, maintaining an off-screen model is a significant technical challenge; hooking the low-level messages and maintaining an accurate model are both difficult tasks.^[citation needed]
+
+#### Accessibility APIs
+
+[edit]
+
+Operating system and application designers have attempted to address these problems by providing ways for screen readers to access the display contents without having to maintain an off-screen model. These involve the provision of alternative and accessible representations of what is being displayed on the screen accessed through an API. Existing APIs include:
+
+* Android Accessibility Framework^[17]
+* Apple Accessibility API^[18]
+* AT-SPI
+* IAccessible2
+* Microsoft Active Accessibility (MSAA)
+* Microsoft UI Automation
+* Java Access Bridge^[19]
+
+Screen readers can query the operating system or application for what is currently being displayed and receive updates when the display changes. For example, a screen reader can be told that the current focus is on a button and the button caption is to be communicated to the user. This approach is considerably easier for the developers of screen readers, but fails when applications do not comply with the accessibility API. One approach when the accessibility API is insufficient is to use available operating system messages and application object models to supplement accessibility APIs.
+
+Screen readers can be assumed to be able to access all display content that is not intrinsically inaccessible. Web browsers, word processors, icons and windows and email programs are just some of the applications used successfully by screen reader users. However, according to some users,^[who?] using a screen reader is considerably more difficult than using a GUI, and many applications have specific problems resulting from the nature of the application (e.g. animations) or failure to comply with accessibility standards for the platform.^[citation needed]
+
+## Customization
+
+[edit]
+
+Most screen readers allow the user to select whether most punctuation is announced or silently ignored. Some screen readers can be tailored to a particular application through scripting. One advantage of scripting is that it allows customizations to be shared among users, increasing accessibility for all. JAWS enjoys an active script-sharing community, for example.^[20]
+
+### Verbosity
+
+[edit]
+
+Verbosity is a feature of screen reading software that supports vision-impaired computer users. Speech verbosity controls enable users to choose how much speech feedback they wish to hear. Specifically, verbosity settings allow users to construct a mental model of web pages displayed on their computer screen. Based on verbosity settings, a screen-reading program informs users of certain formatting changes, such as when a frame or table begins and ends, where graphics have been inserted into the text, or when a list appears in the document. The verbosity settings can also control the level of descriptiveness of elements, such as lists, tables, and regions.^[21] For example, JAWS provides low, medium, and high web verbosity preset levels. The high web verbosity level provides more detail about the contents of a webpage.^[22]
+
+### Language
+
+[edit]
+
+Some screen readers can read text in more than one language, provided that the language of the material is encoded in its metadata.^[23]
+
+## See also
+
+[edit]
+
+* List of screen readers
+* Screen magnifier
+* Speech processing
+* Speech recognition
+* Speech synthesis
+* Vinux
+* VoiceOver
+
+## References
+
+[edit]
+
+Look up screen reader in Wiktionary, the free dictionary.
+
+1. ↑ "Types of Assistive Technology Products". Microsoft Accessibility. Retrieved June 13, 2016.
+2. 1 2 3 "Screen reading technology". AFB. Retrieved February 23, 2022.
+3. ↑ "Screen Readers and how they work with E-Learning". Virginia.gov. Archived from the original on June 14, 2019. Retrieved March 31, 2019.
+4. ↑ Kiss, Suzanne. "LibGuides Home: Towards Inclusive Accessibility in Libraries (TIAL): Serving Individuals Who Are Blind or Have a Print Disability". libguides.ctstatelibrary.org. Retrieved September 5, 2026.
+5. ↑ Canada, Employment and Social Development (May 21, 2024). "Alternate format reading materials: what we heard report". www.canada.ca. Retrieved September 5, 2026.
+6. ↑ "Hear text read aloud with Narrator". Microsoft. Retrieved June 13, 2016.
+7. ↑ "iCons and Earcons: Critical but often overlooked tech skills". Perkins School for the Blind. March 21, 2023. Retrieved January 10, 2026.
+8. ↑ "What is a Screen Reader". Nomensa. Retrieved July 9, 2017.
+9. ↑ "Screen Reader User Survey #9". WebAIM. Retrieved July 1, 2021.
+10. ↑ "ChromeVox". Google. Retrieved March 9, 2020.
+11. ↑ Cooke, Annemarie (March 2004). "A History of Accessibility at IBM". The American Foundation for the Blind (AFB).
+12. 1 2 "Making A Difference Award (2009) — Jim Thatcher (interview)". SIGCAS, the Association for Computing Machinery Special Interest Group for Computers and Society. 2009.
+13. ↑ "Talking Terminals. BYTE, September 1982". Archived from the original on June 25, 2006. Retrieved September 7, 2006.
+14. ↑ Paul Blenkhorn, "The RCEVH project on micro-computer systems and computer assisted learning", British Journal of Visual Impairment, 4/3, 101-103 (1986). Free HTML version at Visugate Archived September 28, 2007, at the Wayback Machine.
+15. ↑ "Access to personal computers using speech synthesis. RNIB New Beacon No.76, May 1992". March 3, 2014.
+16. ↑ According to "Making the GUI Talk" (by Richard Schwerdtfeger, BYTE December 1991, p. 118-128), the first screen reader to build an off-screen model was outSPOKEN.
+17. ↑ Implementing Accessibility on Android.
+18. ↑ Apple Accessibility API.
+19. ↑ "Oracle Technology Network for Java Developers – Oracle Technology Network – Oracle".
+20. ↑ "An Introduction to JAWS Scripting". AccessWorld (American Foundation for the Blind).
+21. ↑ Zong, Jonathan; Lee, Crystal; Lundgard, Alan; Jang, JiWoong; Hajas, Daniel; Satyanarayan, Arvind (2022). "Rich Screen Reader Experiences for Accessible Data Visualization". Computer Graphics Forum. 41 (3): 15–27. arXiv:2205.04917. doi:10.1111/cgf.14519. ISSN 0167-7055. S2CID 248665696.
+22. ↑ "JAWS Web Verbosity". www.freedomscientific.com. Retrieved February 19, 2026.
+23. ↑ Chris Heilmann (March 13, 2008). "Yahoo! search results now with natural language support". Yahoo! Developer Network Blog. Archived from the original on January 25, 2009. Retrieved February 28, 2015.
+
+| * v * t * e  Assistive technology | |
+| --- | --- |
+| Blindness / Visual impairment | * Braille * Braille technology    + Braille display   + Braille embosser   + Braille ebook * Guide dog * Guide horse * Screen magnifier * Screen reader * White cane * Video magnifier |
+| Deaf / Hearing loss | * Assistive Technology for Deaf and Hard of Hearing * Assistive listening device * Audio induction loop * Closed captioning * Hearing aid    + Bone-anchored hearing aid * Cochlear implant * Hearing dog * Telecommunications device |
+| Mobility aids | * Adapted automobile    + Cars for wheelchair users   + Wheelchair accessible van * Cane * Crutch * Exoskeleton * Knee scooter * Orthotics * Prosthesis * Mobility assistance dog * Mobility scooter * Walker * Wheelchair    + All-terrain wheelchair   + Motorized wheelchair   + Standing wheelchair |
+| Other | * Accessible toilet * Adaptive clothing * Assistance dog    + Autism assistance dog   + Diabetes alert dog   + Medical response dog   + Psychiatric assistance dog   + Seizure response dog * Assistive eating devices * Augmentative and alternative communication * Implant * Insulin pump * Service animal |
+| In culture | * Assistive technology in sport |
+| * Category | |
+
+Retrieved from "https://en.wikipedia.org/w/index.php?title=Screen\_reader&oldid=1379637546"
+
+Categories:
+
+* Assistive technology
+* Screen readers
+
+Hidden categories:
+
+* Articles with short description
+* Short description matches Wikidata
+* Articles needing additional references from July 2017
+* All articles needing additional references
+* Use mdy dates from January 2026
+* Webarchive template wayback links
+* All articles with unsourced statements
+* Articles with unsourced statements from January 2015
+* All articles with specifically marked weasel-worded phrases
+* Articles with specifically marked weasel-worded phrases from January 2015
+
+* This page was last edited on 11 October 2026, at 02:31 (UTC).
+* Page was rendered with Parsoid.
+* Text is available under the Creative Commons Attribution-ShareAlike 4.0 License; additional terms may apply. By using this site, you agree to the Terms of Use and Privacy Policy. Wikipedia® is a registered trademark of the Wikimedia Foundation, Inc., a non-profit organization.
+
+* Privacy policy
+* About Wikipedia
+* Disclaimers
+* Contact Wikipedia
+* Legal & safety contacts
+* Code of Conduct
+* Developers
+* Statistics
+* Cookie statement
+* Mobile view
+
+Screen reader
+
+Add topic

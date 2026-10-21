@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"what's the street address for these coordinates"
+
+Here are the candidate tools, numbered:
+
+1. google-maps / maps_geocode: Convert an address into geographic coordinates
+2. google-maps / maps_reverse_geocode: Convert coordinates into an address
+3. filesystem / list_allowed_directories: Returns the list of directories that this server is allowed to access.
+4. firecrawl / firecrawl_monitor_update: Patch an existing monitor by ID.
+5. tavily / tavily_map: Map a website's structure.
+6. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+7. notion / API-get-self: Notion | Retrieve your token's bot user Error Responses: 400: Bad request
+8. kubernetes / kubectl_patch: Update field(s) of a resource using strategic merge patch, JSON merge patch, or JSON patch
+9. firecrawl / firecrawl_monitor_run: Queue an immediate check for a monitor outside its normal schedule.
+10. figma / download_figma_images: Download SVG and PNG images used in a Figma file based on the IDs of image or icon nodes.
+11. firecrawl / firecrawl_map: Enumerate URLs indexed under one website through Firecrawl without fetching each page's content.
+12. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+13. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+14. brave-search / brave_local_search: Searches for local businesses and places using Brave's Local Search API.
+15. firecrawl / firecrawl_agent_status: Retrieve progress or final results for a `firecrawl_agent` job ID.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

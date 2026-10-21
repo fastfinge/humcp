@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"find every pdf on my drive"
+
+Here are the candidate tools, numbered:
+
+1. playwright / browser_find: Search the accessibility snapshot of the current page for text or a regular expression.
+2. firecrawl / firecrawl_parse: Parse one supported document into markdown, HTML, links, summary, targeted answers, or JSON matching a schema.
+3. firecrawl / firecrawl_research_related_papers: Find citation-graph candidates from one to ten `seed_ids`; the first ID is the primary seed and later IDs are anchors.
+4. firecrawl / firecrawl_search: Search web, news, or image sources and return ranked results.
+5. time / get_current_time: Get current time in a specific timezone
+6. time / convert_time: Convert time between timezones
+7. tavily / tavily_search: Search the web for current information on any topic.
+8. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+9. tavily / tavily_map: Map a website's structure.
+10. tavily / tavily_extract: Extract content from URLs.
+11. tavily / tavily_crawl: Crawl a website starting from a URL.
+12. slack / slack_reply_to_thread: Reply to a specific message thread in Slack
+13. slack / slack_post_message: Post a new message to a Slack channel
+14. slack / slack_list_channels: List public or pre-defined channels in the workspace with pagination
+15. slack / slack_get_users: Get a list of all users in the workspace with their basic profile information
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"make a new folder called invoices"
+
+Here are the candidate tools, numbered:
+
+1. filesystem / edit_file: Make line-based edits to a text file.
+2. memory / create_entities: Create multiple new entities in the knowledge graph
+3. github / create_repository: Create a new GitHub repository in your account
+4. github / create_issue: Create a new issue in a GitHub repository
+5. github / create_branch: Create a new branch in a GitHub repository
+6. slack / slack_post_message: Post a new message to a Slack channel
+7. memory / add_observations: Add new observations to existing entities in the knowledge graph
+8. filesystem / write_file: Create a new file or completely overwrite an existing file with new content.
+9. git / git_create_branch: Creates a new branch from an optional base branch
+10. github / create_pull_request: Create a new pull request in a GitHub repository
+11. memory / create_relations: Create multiple new relations between entities in the knowledge graph.
+12. kubernetes / kubectl_reconnect: Reconnect to the Kubernetes API server by recreating all API clients.
+13. filesystem / create_directory: Create a new directory or ensure a directory exists.
+14. firecrawl / firecrawl_monitor_check: Retrieve one monitor check and its page-level results, optionally filtered by page status.
+15. time / get_current_time: Get current time in a specific timezone
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

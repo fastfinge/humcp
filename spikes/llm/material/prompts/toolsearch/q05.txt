@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"look up news about the election"
+
+Here are the candidate tools, numbered:
+
+1. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+2. google-maps / maps_place_details: Get detailed information about a specific place
+3. everything / get-annotated-message: Demonstrates how annotations can be used to provide metadata about content.
+4. everything / get-resource-links: Returns up to ten resource links that reference different types of resources
+5. tavily / tavily_search: Search the web for current information on any topic.
+6. filesystem / get_file_info: Retrieve detailed metadata about a file or directory.
+7. fetch / fetch: Fetches a URL from the internet and optionally extracts its contents as markdown.
+8. filesystem / create_directory: Create a new directory or ensure a directory exists.
+9. brave-search / brave_web_search: Performs a web search using the Brave Search API, ideal for general queries, news, articles, and online content.
+10. context7 / query-docs: Retrieves and queries up-to-date documentation and code examples from Context7 for any programming library or framework.
+11. firecrawl / firecrawl_search: Search web, news, or image sources and return ranked results.
+12. time / get_current_time: Get current time in a specific timezone
+13. time / convert_time: Convert time between timezones
+14. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+15. tavily / tavily_map: Map a website's structure.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

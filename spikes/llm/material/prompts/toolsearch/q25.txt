@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"why is my pod crashing, show me its output"
+
+Here are the candidate tools, numbered:
+
+1. kubernetes / exec_in_pod: Execute a command in a Kubernetes pod or container and return the output.
+2. git / git_show: Shows the contents of a commit
+3. everything / get-structured-content: Returns structured content along with an output schema for client data validation
+4. playwright / browser_find: Search the accessibility snapshot of the current page for text or a regular expression.
+5. firecrawl / firecrawl_interact_stop: Stop the live interact session associated with a `scrapeId` and release its resources.
+6. everything / gzip-file-as-resource: Compresses a single file using gzip compression.
+7. firecrawl / firecrawl_monitor_get: Retrieve one monitor by ID, including its configuration and current state.
+8. firecrawl / firecrawl_monitor_delete: Permanently delete a monitor by ID and stop its future schedule.
+9. firecrawl / firecrawl_monitor_run: Queue an immediate check for a monitor outside its normal schedule.
+10. filesystem / directory_tree: Get a recursive tree view of files and directories as a JSON structure.
+11. firecrawl / firecrawl_monitor_update: Patch an existing monitor by ID.
+12. filesystem / read_media_file: Read a file and return it as a base64-encoded content block with its MIME type.
+13. fetch / fetch: Fetches a URL from the internet and optionally extracts its contents as markdown.
+14. firecrawl / firecrawl_interact: Open or reuse a live browser session to navigate a page, click controls, fill fields, or run browser code.
+15. filesystem / read_multiple_files: Read the contents of multiple files simultaneously.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

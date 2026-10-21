@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"switch to the release branch"
+
+Here are the candidate tools, numbered:
+
+1. git / git_create_branch: Creates a new branch from an optional base branch
+2. github / update_pull_request_branch: Update a pull request branch with the latest changes from the base branch
+3. github / create_branch: Create a new branch in a GitHub repository
+4. git / git_branch: List Git branches
+5. kubernetes / uninstall_helm_chart: Uninstall a Helm chart release
+6. kubernetes / upgrade_helm_chart: Upgrade an existing Helm chart release
+7. github / list_commits: Get list of commits of a branch in a GitHub repository
+8. firecrawl / firecrawl_interact_stop: Stop the live interact session associated with a `scrapeId` and release its resources.
+9. time / get_current_time: Get current time in a specific timezone
+10. time / convert_time: Convert time between timezones
+11. tavily / tavily_search: Search the web for current information on any topic.
+12. tavily / tavily_research: Perform comprehensive research on a given topic or question.
+13. tavily / tavily_map: Map a website's structure.
+14. tavily / tavily_extract: Extract content from URLs.
+15. tavily / tavily_crawl: Crawl a website starting from a URL.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

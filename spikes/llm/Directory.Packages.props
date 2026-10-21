@@ -1,0 +1,4 @@
+<Project>
+  <!-- Throwaway spike (ROADMAP §11.1): stands outside the solution and outside the repo's build
+       settings, so nothing here can leak into what humcp ships. -->
+</Project>

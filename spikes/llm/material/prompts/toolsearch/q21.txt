@@ -1,0 +1,23 @@
+Someone using an app that lists tools wants to do this:
+
+"take a picture of the web page"
+
+Here are the candidate tools, numbered:
+
+1. playwright / browser_take_screenshot: Take a screenshot of the current page.
+2. puppeteer / puppeteer_screenshot: Take a screenshot of the current page or a specific element
+3. playwright / browser_click: Perform click on a web page
+4. exa / web_fetch_exa: Read a webpage's full content as clean markdown.
+5. exa / web_search_exa: Search the web for any topic and get clean, ready-to-use content.
+6. brave-search / brave_web_search: Performs a web search using the Brave Search API, ideal for general queries, news, articles, and online content.
+7. notion / API-retrieve-a-page: Notion | Retrieve a page Error Responses: 400: Bad request
+8. notion / API-post-page: Notion | Create a page Error Responses: 400: Bad request
+9. notion / API-move-page: Notion | Move a page Error Responses: 400: Bad request
+10. tavily / tavily_search: Search the web for current information on any topic.
+11. notion / API-patch-page: Notion | Update page properties Error Responses: 400: Bad request
+12. notion / API-retrieve-a-page-property: Notion | Retrieve a page property item Error Responses: 400: Bad request
+13. notion / API-retrieve-page-markdown: Notion | Retrieve a page as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+14. notion / API-update-page-markdown: Notion | Update a page's content as Markdown Error Responses: 400: Bad request 403: The integration lacks the read/update content capability required for this page.
+15. firecrawl / firecrawl_search: Search web, news, or image sources and return ranked results.
+
+Which three tools best match what they want to do, best first? Answer with the three numbers only, separated by commas, and nothing else.

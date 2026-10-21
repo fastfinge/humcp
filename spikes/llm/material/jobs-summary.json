@@ -1,0 +1,27 @@
+[
+ {
+  "label": "sum:open-meteo-forecast-week",
+  "prompt": "material/prompts/summary-open-meteo-forecast-week.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "sum:fetch-wcag-understanding",
+  "prompt": "material/prompts/summary-fetch-wcag-understanding.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "sum:fetch-wikipedia-screen-reader",
+  "prompt": "material/prompts/summary-fetch-wikipedia-screen-reader.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "sum:fetch-nvda-whatsnew",
+  "prompt": "material/prompts/summary-fetch-nvda-whatsnew.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "sum:playwright-snapshot-github",
+  "prompt": "material/prompts/summary-playwright-snapshot-github.txt",
+  "maxNew": 300
+ }
+]

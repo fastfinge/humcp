@@ -1,0 +1,177 @@
+[
+ {
+  "label": "q:what time is it in Tokyo right now",
+  "prompt": "material/prompts/toolsearch-full/q00.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:if it's 3pm in Toronto what time is that in London",
+  "prompt": "material/prompts/toolsearch-full/q01.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:find coffee shops near me",
+  "prompt": "material/prompts/toolsearch-full/q02.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:how do I get from the airport to downtown by car",
+  "prompt": "material/prompts/toolsearch-full/q03.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:what's the street address for these coordinates",
+  "prompt": "material/prompts/toolsearch-full/q04.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:look up news about the election",
+  "prompt": "material/prompts/toolsearch-full/q05.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:read this web page to me",
+  "prompt": "material/prompts/toolsearch-full/q06.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:rename a file",
+  "prompt": "material/prompts/toolsearch-full/q07.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:make a new folder called invoices",
+  "prompt": "material/prompts/toolsearch-full/q08.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:how big are the files in my downloads folder",
+  "prompt": "material/prompts/toolsearch-full/q09.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:find every pdf on my drive",
+  "prompt": "material/prompts/toolsearch-full/q10.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:what did I change since my last commit",
+  "prompt": "material/prompts/toolsearch-full/q11.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:undo staging my changes",
+  "prompt": "material/prompts/toolsearch-full/q12.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:switch to the release branch",
+  "prompt": "material/prompts/toolsearch-full/q13.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:open a bug report on the project",
+  "prompt": "material/prompts/toolsearch-full/q14.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:who reviewed my pull request",
+  "prompt": "material/prompts/toolsearch-full/q15.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:did the checks pass on PR 12",
+  "prompt": "material/prompts/toolsearch-full/q16.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:make a copy of someone else's repository under my account",
+  "prompt": "material/prompts/toolsearch-full/q17.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:send a message to the team channel",
+  "prompt": "material/prompts/toolsearch-full/q18.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:who is in our workspace",
+  "prompt": "material/prompts/toolsearch-full/q19.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:click the sign in button on the page",
+  "prompt": "material/prompts/toolsearch-full/q20.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:take a picture of the web page",
+  "prompt": "material/prompts/toolsearch-full/q21.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:tell me what's on the page in a way a screen reader understands",
+  "prompt": "material/prompts/toolsearch-full/q22.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:go back to the previous page",
+  "prompt": "material/prompts/toolsearch-full/q23.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:restart the web deployment with more copies",
+  "prompt": "material/prompts/toolsearch-full/q24.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:why is my pod crashing, show me its output",
+  "prompt": "material/prompts/toolsearch-full/q25.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:remember that my sister's birthday is in May",
+  "prompt": "material/prompts/toolsearch-full/q26.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:what do you remember about me",
+  "prompt": "material/prompts/toolsearch-full/q27.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:draw me a picture of a lighthouse at sunset",
+  "prompt": "material/prompts/toolsearch-full/q28.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:how do I use the useEffect hook in React, show current docs",
+  "prompt": "material/prompts/toolsearch-full/q29.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:find academic papers about screen reader usability",
+  "prompt": "material/prompts/toolsearch-full/q30.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:run a SQL query against the sales database",
+  "prompt": "material/prompts/toolsearch-full/q31.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:add a page to my notes workspace",
+  "prompt": "material/prompts/toolsearch-full/q32.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:how high above sea level is Denver",
+  "prompt": "material/prompts/toolsearch-full/q33.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:add two numbers",
+  "prompt": "material/prompts/toolsearch-full/q34.txt",
+  "maxNew": 60
+ }
+]
