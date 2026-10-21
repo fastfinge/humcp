@@ -1,0 +1,27 @@
+[
+ {
+  "label": "sum:open-meteo-forecast-week",
+  "prompt": "material/prompts/summary-open-meteo-forecast-week.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "sum:fetch-wcag-understanding",
+  "prompt": "material/prompts/summary-fetch-wcag-understanding.txt",
+  "maxNew": 300
+ },
+ {
+  "label": "q:what time is it in Tokyo right now",
+  "prompt": "material/prompts/toolsearch-full/q00.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:if it's 3pm in Toronto what time is that in London",
+  "prompt": "material/prompts/toolsearch-full/q01.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:find coffee shops near me",
+  "prompt": "material/prompts/toolsearch-full/q02.txt",
+  "maxNew": 60
+ }
+]

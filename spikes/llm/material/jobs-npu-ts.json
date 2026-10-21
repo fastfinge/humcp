@@ -1,0 +1,22 @@
+[
+ {
+  "label": "q:what time is it in Tokyo right now",
+  "prompt": "material/prompts/toolsearch-full/q00.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:if it's 3pm in Toronto what time is that in London",
+  "prompt": "material/prompts/toolsearch-full/q01.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:find coffee shops near me",
+  "prompt": "material/prompts/toolsearch-full/q02.txt",
+  "maxNew": 60
+ },
+ {
+  "label": "q:how do I get from the airport to downtown by car",
+  "prompt": "material/prompts/toolsearch-full/q03.txt",
+  "maxNew": 60
+ }
+]

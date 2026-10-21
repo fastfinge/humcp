@@ -6,3 +6,4 @@ out/*
 builder-venv/
 ortdml-venv/
 .playwright-mcp/
+genai07-venv/

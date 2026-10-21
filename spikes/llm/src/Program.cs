@@ -63,7 +63,7 @@ static void Bench(Dictionary<string, string> o)
     if (ep != "asis") config.Overlay("{\"model\":{" + string.Join(",", sessions) + "}}");
     if (o.TryGetValue("register", out var register)) RegisterWinMl(register);
     if (ep != "cpu" && o.TryGetValue("vendor", out var vendor))
-        config.SetDecoderProviderOptionsHardwareVendorId(ep, Convert.ToUInt32(vendor, 16));
+        config.SetDecoderProviderOptionsHardwareVendorId(ep == "asis" ? "dml" : ep, Convert.ToUInt32(vendor, 16));
     if (o.GetValueOrDefault("share") == "false")
         config.Overlay("{\"search\":{\"past_present_share_buffer\":false}}");
     if (ep == "NvTensorRtRtx") RegisterWinMl("NvTensorRTRTXExecutionProvider");
@@ -72,11 +72,13 @@ static void Bench(Dictionary<string, string> o)
     var loadMs = load.Elapsed.TotalMilliseconds;
     Console.WriteLine($"=== {tag}: loaded in {loadMs:F0} ms");
 
-    using var processor = new MultiModalProcessor(model);
+    // A text-only model (the NPU builds) has no processor; its prompts go in through AppendTokens.
+    using var processor = raw.ContainsKey("vision") ? new MultiModalProcessor(model) : null;
     using var tokenizer = new Tokenizer(model);
     var chunk = int.Parse(o.GetValueOrDefault("chunk", "0"));
     // Each family has its own turn markers and its own image placeholder, which the processor expands.
-    Chat.Family = raw["type"]!.ToString().StartsWith("gemma") ? "gemma" : "qwen";
+    var type = raw["type"]!.ToString();
+    Chat.Family = type.StartsWith("gemma") ? "gemma" : type.StartsWith("phi") ? "phi" : "qwen";
     var meta = new { tag, model = modelDir, ep, threads = threads ?? "default", chunk, loadMs = Math.Round(loadMs) };
 
     if (o.TryGetValue("jobs", out var jobsFile))
@@ -94,16 +96,26 @@ static void Bench(Dictionary<string, string> o)
     }
 }
 
-static Dictionary<string, object?> RunOne(Model model, MultiModalProcessor processor, Tokenizer tokenizer, string promptFile, string? image, int maxNew, int ctx, int chunk)
+static Dictionary<string, object?> RunOne(Model model, MultiModalProcessor? processor, Tokenizer tokenizer, string promptFile, string? image, int maxNew, int ctx, int chunk)
 {
     var prompt = Chat.UserStart + (image is null ? "" : Chat.Image) + File.ReadAllText(promptFile) + Chat.UserEnd;
-    using var stream = processor.CreateStream();
+    using var stream = processor?.CreateStream() ?? tokenizer.CreateStream();
     var sw = Stopwatch.StartNew();
     using var gp = new GeneratorParams(model);
     gp.SetSearchOption("do_sample", false);
     // The config says 262,144, and a shared KV buffer is allocated for all of it up front.
     gp.SetSearchOption("max_length", ctx);
     using var gen = new Generator(model, gp);
+    // Phi-4-multimodal reads images through a LoRA adapter on the language model, which GenAI does
+    // not switch on by itself.
+    var adapterFile = Environment.GetEnvironmentVariable("SPIKE_VISION_ADAPTER");
+    using var adapters = image is null || adapterFile is null ? null : new Adapters(model);
+    if (adapters is not null)
+    {
+        adapters.LoadAdapter(adapterFile!, "vision");
+        gen.SetActiveAdapter(adapters, "vision");
+    }
+    if (processor is null && chunk == 0) chunk = int.MaxValue;
     if (image is null && chunk > 0)
     {
         // Prefill in pieces: one pass over the whole prompt holds attention for all of it at once,
@@ -227,7 +239,7 @@ static async Task Probe()
 static class Chat
 {
     public static string Family = "qwen";
-    public static string UserStart => Family == "gemma" ? "<start_of_turn>user\n" : "<|im_start|>user\n";
-    public static string UserEnd => Family == "gemma" ? "<end_of_turn>\n<start_of_turn>model\n" : "<|im_end|>\n<|im_start|>assistant\n";
-    public static string Image => Family == "gemma" ? "<start_of_image>" : "<|vision_start|><|image_pad|><|vision_end|>";
+    public static string UserStart => Family switch { "gemma" => "<start_of_turn>user\n", "phi" => "<|user|>", _ => "<|im_start|>user\n" };
+    public static string UserEnd => Family switch { "gemma" => "<end_of_turn>\n<start_of_turn>model\n", "phi" => "<|end|><|assistant|>", _ => "<|im_end|>\n<|im_start|>assistant\n" };
+    public static string Image => Family switch { "gemma" => "<start_of_image>", "phi" => "<|image_1|>", _ => "<|vision_start|><|image_pad|><|vision_end|>" };
 }

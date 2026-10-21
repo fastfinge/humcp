@@ -18,7 +18,11 @@ The spike's code is throwaway and lives in `spikes/llm/` (outside the solution, 
 - **8B over 4B is a small step** (§4.1), not a tier's worth.
 - **Gemma 3 4B runs on DirectML on both GPUs, up to about 1,000 prompt tokens** — DirectML ignores
   its sliding window past that — **but is worse than Qwen3-VL 4B at everything** (§5.3).
-- **The NPU installs, but runs no vision model through Windows ML** (§5.4).
+- **The NPU installs, but runs no vision model through Windows ML**, and its text model decodes at
+  1–4 tok/s and stops at about 4,096 tokens (§5.4). Not a tier.
+- **Phi-4-multimodal avoids both DirectML bugs and hangs the GPU instead**; its images are wrong on
+  GenAI 0.18 and weak on 0.7 (§5.5). Every vision model tried on DirectML has now failed for a
+  different reason.
 
 ## 1. The machine
 
@@ -283,7 +287,49 @@ Windows ML today:
   catalog are **text-only models** (Phi-4-mini, Qwen2.5, Mistral 7B). No vision model.
 
 So the NPU could carry summaries and tool search but not alt text, through a model and a conversion
-toolchain different from every other tier. Not measured: Foundry Local is not installed here.
+toolchain different from every other tier.
+
+**Measured with Foundry Local's `phi-4-mini-instruct-vitis-npu:2`**, run by the bench through
+GenAI with `VitisAIExecutionProvider` registered from the Windows ML catalog — no Foundry runtime,
+only its download. (Its config names `onnxruntime_vitis_ai_custom_ops.dll`, which is in the provider
+package and needs an absolute path.) It loads in 23 s and is correct:
+
+| Prompt | First word | Decode |
+|---|---|---|
+| 604 tokens | 1.3 s | 4.1 tok/s |
+| 1,663 | 3.0 s | 2.1 tok/s |
+| 2,361 | 4.7 s | 1.6 tok/s |
+| 3,542 | 8.0 s | 1.1 tok/s |
+| 4,770 | **process crashes** (access violation in `AppendTokens`) | — |
+
+Prefill is fast; **decode is slower than the CPU and gets slower with length** — a 150-word summary
+of a 3,500-token result would take three minutes after its first word. And the build stops at about
+4,096 tokens, below the 4,771 that the tool catalogue costs in Phi's tokenizer and below most of our
+results. **The NPU is not a tier**, for any task, with what is published today.
+
+### 5.5 Phi-4-multimodal — no M-RoPE, no sliding window, and still not usable
+
+The remaining family that avoids both DirectML bugs. Microsoft's one GenAI build
+(`microsoft/Phi-4-multimodal-instruct-onnx`, `gpu/gpu-int4-rtn-block-32`, fp16 activations; GenAI
+requires its speech graph to be present even when unused). Phi tiles an image at up to 36 × 448 px,
+which should have suited screenshots.
+
+- **Text on DirectML is right where Gemma's was wrong**: a 2,127-token summary correct, first word in
+  1.0 s, 64 tok/s, on either GPU.
+- **But DirectML hangs the GPU** — "The GPU will not respond to more commands" (`887A0006`) — after a
+  few long requests, on the Radeon and the RTX alike: the second summary on each, the tenth tool
+  search on the RTX. A device hang blanks the display for the length of a driver reset; a product
+  cannot cause that.
+- **Images are wrong on GenAI 0.18, CPU or GPU.** The cat photograph is "a vast field of blooming
+  flowers … a small wooden cabin"; the line chart is a "Quarterly Sales Report" that does not exist.
+  GenAI 0.7 — the release this export was made with, run from Python — does better ("a white animal
+  … among branches and leaves", then "a bird"), reads the stacked chart's axis and legend but none of
+  its values, and picks a few figures off the weather page. So 0.18 has a regression in Phi-4-mm's
+  image path, and even without it the model reads images worse than Qwen3-VL 4B.
+- **Tool search (whole catalogue, DirectML): 3 of the 9 answered before the hang**, with ids that do
+  not exist (`transportation/get_route`, `time/geocode`) and `slack_post_message` for "rename a file".
+- **On the CPU this build is unusable anyway** — fp16 activations decode at 1.2 tok/s; a CPU build
+  would have to be made from the PyTorch weights with Microsoft's custom builder script.
 
 ## 6. Tool search
 
@@ -348,9 +394,9 @@ Open, before building on it:
 - **Whether GenAI's DirectML bug is ours to wait for or to report.** Fixed, it would bring back a
   GPU path for AMD and Intel — and for 8 GB NVIDIA cards, through int4.
 - **Whether a model family without M-RoPE does better on DirectML** — Gemma 3 4B does, up to about
-  1,000 tokens (§5.3), which is enough for alt text — but it is not good enough at alt text. A vision
-  model with neither M-RoPE nor sliding-window attention is the remaining candidate (Phi-4-multimodal).
+  1,000 tokens (§5.3), which is enough for alt text — but it is not good enough at alt text.
+  Phi-4-multimodal, with neither, hangs the GPU (§5.5). Three families, three different DirectML
+  failures: **there is no low-end GPU tier to be had by choosing a different model.**
 - **The CPU tier on an ordinary machine.** These numbers are from a 12-core Ryzen AI 9; the
   4-thread rows are a stand-in, not a measurement of a four-core laptop.
-- **The NPU** (XDNA 2): installs now, runs no vision model through Windows ML (§5.4). A text-only
-  NPU model for summaries and tool search is measurable through Foundry Local.
+- **The NPU** (XDNA 2): measured (§5.4) and ruled out — no vision model, 1–4 tok/s, ~4k tokens.

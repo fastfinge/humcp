@@ -1,0 +1,22 @@
+[
+ {
+  "label": "sum:fetch-wcag-understanding",
+  "prompt": "material/prompts/summary-fetch-wcag-understanding.txt",
+  "maxNew": 80
+ },
+ {
+  "label": "wiki9000",
+  "prompt": "material/prompts/len/wiki-9000.txt",
+  "maxNew": 40
+ },
+ {
+  "label": "wiki12000",
+  "prompt": "material/prompts/len/wiki-12000.txt",
+  "maxNew": 40
+ },
+ {
+  "label": "wiki15000",
+  "prompt": "material/prompts/len/wiki-15000.txt",
+  "maxNew": 40
+ }
+]
