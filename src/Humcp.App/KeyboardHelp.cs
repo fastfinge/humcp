@@ -13,6 +13,7 @@ internal static class KeyboardHelp
         "  Ctrl+1 to Ctrl+9        Switch to that window; the Window menu lists them all",
         "  Ctrl+W, Escape          Close the current window (not the main one)",
         "  F1                      Full details of the tool, field or result the caret is on",
+        "  Ctrl+R                  Say the last announcement again",
         "",
         "The servers and tools tree",
         "  Ctrl+F                  Find a tool on every server; Escape clears the search",

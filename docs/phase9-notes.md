@@ -112,10 +112,34 @@ through the screen reader — the background-speech setting doing what it is for
 
 ### 5.1 Found, and older than v2 — not fixed here
 
-- **NVDA's "read status bar" (NVDA+End) says "No status line found" in humcp.** The status bar is a
+- **NVDA's "read status bar" (NVDA+End) says "No status line found" in humcp.** *Answered by 5.2.* The status bar is a
   UIA `StatusBar`, a direct child of the window, and is the application's only announcement channel —
   yet the one command a user has to hear it again cannot find it. An announcement missed (as the full
   answer was while the update notice had the foreground) is unrecoverable. True since Phase 1.
 - **A disabled menu item is skipped by the arrow keys**, so "Check the model" and "Remove the model"
   cannot be discovered until there is a model. WPF's behaviour; the Tool menu's Run has always been
   the same. The About window lists what each item does.
+
+### 5.2 Ctrl+R repeats the last announcement, through prism
+
+The developer's answer to 5.1. Every status line in humcp — the main window's and each form's,
+question's, sub-form's and result window's — now writes through one helper (`LiveRegion.Say`), which
+remembers the last thing said anywhere; <kbd>Ctrl+R</kbd>, bound in every window by `WindowManager`,
+says it again through prism (speech and braille, interrupting), and Help, Repeat last announcement
+does the same. Without a screen reader for prism to reach, it goes back into the main window's live
+region instead.
+
+It is prism's second use, after speaking from the background, and the same kind: text with no place
+on screen the user can be reading it from *at the moment they ask*. A live region is spoken once,
+when it changes, and only in the foreground window.
+
+Two things found by ear on the way:
+
+- **Ctrl+Shift+R, the first choice, never reached humcp.** Neither through NVDA nor through Windows'
+  own `SendKeys`; a log of every key the window previewed showed Ctrl, Shift and nothing, while
+  Ctrl+Shift+Y and Ctrl+R arrived. Another program on the development machine holds it as a
+  system-wide hotkey. Any key can collide with something on somebody's machine; Ctrl+R, unclaimed
+  here and unused by WPF's text boxes, is the one that was checked.
+- **From the menu, the repeat was cut off.** Closing the menu returns the focus, the screen reader
+  announces where it landed, and that interrupted the repeat. The menu route waits 600 ms; the key,
+  which closes nothing, speaks at once.

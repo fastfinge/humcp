@@ -636,11 +636,7 @@ public partial class ToolWindow : Window
     /// </remarks>
     private void SetStatus(string text)
     {
-        FormStatus.Text = text;
-
-        var peer = UIElementAutomationPeer.FromElement(FormStatus)
-                   ?? UIElementAutomationPeer.CreatePeerForElement(FormStatus);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        LiveRegion.Say(FormStatus, text);
     }
 
     private static string Count(int count, string singular, string plural) =>

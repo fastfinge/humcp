@@ -361,8 +361,11 @@ These are the rules generated WPF code most often violates. Full contract in §7
   after Phase 1). Anything that can be shown somewhere goes there — a polite live region carries
   completions, error counts and connection state, and NVDA reads it unaided. Measured by ear
   (phase1-notes 2.7): speaking the status line through prism *as well* announced every tool run
-  twice. Today nothing in the app speaks through prism; the seam exists for what Phase 6 finds
-  genuinely off-screen, such as an event arriving while humcp is in the background.
+  twice. prism speaks in exactly two places, both for text that is nowhere the user can be reading
+  it at that moment: an event arriving while humcp is in the background (Phase 6, a setting), and
+  <kbd>Ctrl+R</kbd>, which repeats the last status line on request (Phase 9). Every window writes its
+  status through `LiveRegion.Say` so that line is remembered (phase9-notes 5.2); a new status line
+  that bypasses it cannot be repeated.
 - **A live region must not carry a static `AutomationProperties.Name`** — a `TextBlock`'s name *is*
   its text, so naming it makes every announcement say the label instead of the message.
 - **Text results go in a read-only multiline `TextBox`, never a `TextBlock`.** A `TextBox` gives

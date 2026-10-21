@@ -138,10 +138,7 @@ internal static class ResultWindows
 
     private static void Say(TextBlock status, string message)
     {
-        status.Text = message;
-
-        var peer = UIElementAutomationPeer.FromElement(status) ?? UIElementAutomationPeer.CreatePeerForElement(status);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        LiveRegion.Say(status, message);
     }
 
     private static T Resource<T>(string key) where T : class =>

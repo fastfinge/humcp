@@ -721,6 +721,7 @@ what the reader was told.
 | <kbd>Ctrl+F</kbd> | Find a tool: a search box whose results take the tree's place (Phase 8) |
 | <kbd>Enter</kbd> (on a tool) | Open its form window |
 | <kbd>F1</kbd> | Full details for the focused tool or field |
+| <kbd>Ctrl+R</kbd> | Say the last status line again, through prism, in any window (Phase 9) |
 | <kbd>Ctrl+Enter</kbd> | Submit form |
 | <kbd>F2</kbd> (in a list of entries) | Change the selected entry in a window of its own (1.1) |
 | <kbd>Enter</kbd> (in a result) | Open what the caret is on in a window of its own |

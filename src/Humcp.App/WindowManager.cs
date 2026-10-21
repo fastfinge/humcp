@@ -40,7 +40,27 @@ public sealed class WindowManager
     public static readonly RoutedUICommand CloseWindow =
         new("", nameof(CloseWindow), typeof(WindowManager));
 
+    /// <summary>Says the last status line again, through prism. <kbd>Ctrl+R</kbd>, in every window.</summary>
+    /// <remarks>
+    /// Not <kbd>Ctrl+Shift+R</kbd>, the first choice: on the development machine another program holds
+    /// it as a system-wide hotkey, and humcp never received it at all (phase9-notes 5.2).
+    /// </remarks>
+    public static readonly RoutedUICommand RepeatAnnouncement =
+        new("", nameof(RepeatAnnouncement), typeof(WindowManager));
+
     private readonly ObservableCollection<Window> _windows = [];
+
+    /// <summary>
+    /// Speaks for <see cref="RepeatAnnouncement"/>: the screen reader directly, through prism. Set by
+    /// the main window, which owns the announcer.
+    /// </summary>
+    public Humcp.Speech.IAnnouncer? Announcer { get; set; }
+
+    /// <summary>
+    /// Where a repeat goes when prism has no screen reader to speak through: back into a live region,
+    /// which is read by whatever reader is there, prism or not.
+    /// </summary>
+    public Action<string>? Unspoken { get; set; }
 
     /// <summary>How many windows get a <kbd>Ctrl</kbd>+number shortcut. The rest are in the menu.</summary>
     public const int Shortcuts = 9;
@@ -116,6 +136,9 @@ public sealed class WindowManager
             });
         }
 
+        window.CommandBindings.Add(new CommandBinding(RepeatAnnouncement, (_, _) => Repeat()));
+        window.InputBindings.Add(new KeyBinding(RepeatAnnouncement, new KeyGesture(Key.R, ModifierKeys.Control)));
+
         if (!closable) return;
 
         window.CommandBindings.Add(new CommandBinding(CloseWindow, (_, _) => window.Close()));
@@ -146,6 +169,20 @@ public sealed class WindowManager
 
         Attach(window, windowMenu, closable);
         return bar;
+    }
+
+    /// <summary>
+    /// Says the last status line again — through prism, because that is the one channel that is heard
+    /// at the moment the user asks, whatever has the focus and whatever the reader was doing. A live
+    /// region is spoken once, when it changes, and only in the foreground window; this is for the time
+    /// that was missed (phase9-notes 5.1). Interrupting: the user asked for it now.
+    /// </summary>
+    public void Repeat()
+    {
+        var text = LiveRegion.Last ?? "Nothing has been announced yet.";
+
+        if (Announcer is { IsAvailable: true } announcer) announcer.Output(text, interrupt: true);
+        else Unspoken?.Invoke(text);
     }
 
     /// <summary>Brings a window to the front, un-minimising it if it needs it.</summary>

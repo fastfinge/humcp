@@ -68,7 +68,7 @@ Arrow keys move through the tree. Right arrow opens a group and Left arrow close
 
 To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are and which comes first. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it.
 
-The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes.
+The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes. If you miss something it said — because your screen reader was talking, or another program was in front — press Control plus R, in any humcp window, to hear it again.
 
 Every window humcp opens has its own menu bar, reached with Alt, and a Window menu listing every open window. Control plus 1 through 9 switches straight to a window by its number. Only the main window appears in Alt plus Tab, so a long session does not bury your other programs under humcp's windows.
 
@@ -152,6 +152,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 - Control plus 1 to 9: switch to that window.
 - Control plus W or Escape: close the current window (not the main one).
 - F1: full details of whatever the caret is on.
+- Control plus R: say the last announcement again, through your screen reader. Also Help, Repeat last announcement.
 
 ### The tree
 

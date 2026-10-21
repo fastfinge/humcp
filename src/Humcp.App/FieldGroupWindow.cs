@@ -154,11 +154,7 @@ internal static class FieldGroupWindow
 
     private static void Say(TextBlock status, string text)
     {
-        status.Text = text;
-
-        var peer = UIElementAutomationPeer.FromElement(status)
-                   ?? UIElementAutomationPeer.CreatePeerForElement(status);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        LiveRegion.Say(status, text);
     }
 
     private static void Focus(ItemsControl fields, bool caretToEnd)

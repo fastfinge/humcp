@@ -375,11 +375,7 @@ internal sealed class OwnFormWindow : Window
 
     public void SetStatus(string text)
     {
-        _status.Text = text;
-
-        var peer = UIElementAutomationPeer.FromElement(_status)
-                   ?? UIElementAutomationPeer.CreatePeerForElement(_status);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        LiveRegion.Say(_status, text);
     }
 
     private static string Count(int count, string singular, string plural) =>

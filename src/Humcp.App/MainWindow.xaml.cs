@@ -150,6 +150,8 @@ public partial class MainWindow : Window
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
         _windows.TrackMain(this);
+        _windows.Announcer = _announcer;
+        _windows.Unspoken = SetStatus;
         _windows.Attach(this, WindowMenu, closable: false);
 
         Loaded += async (_, _) =>
@@ -1258,11 +1260,7 @@ public partial class MainWindow : Window
     private void SetStatus(string text)
     {
         _statusAt = DateTime.UtcNow;
-        LiveStatus.Text = text;
-
-        var peer = UIElementAutomationPeer.FromElement(LiveStatus)
-                   ?? UIElementAutomationPeer.CreatePeerForElement(LiveStatus);
-        peer?.RaiseAutomationEvent(AutomationEvents.LiveRegionChanged);
+        LiveRegion.Say(LiveStatus, text);
     }
 
     // ------------------------------------------------------------------ the Applications key
@@ -1448,6 +1446,17 @@ public partial class MainWindow : Window
             text.Split('\n').Select(line => line.TrimEnd('\r').TrimStart('#').TrimStart()));
 
         TextWindow.Show(this, "humcp user guide", text, _windows);
+    }
+
+    /// <summary>
+    /// Help, Repeat last announcement. Said a moment after the menu closes, not at once: closing it
+    /// puts the focus back, the screen reader announces where it landed, and that would cut the
+    /// repeat off mid-word. The key has no menu to close and speaks straight away.
+    /// </summary>
+    private async void OnRepeatAnnouncement(object sender, RoutedEventArgs e)
+    {
+        await Task.Delay(600);
+        _windows.Repeat();
     }
 
     private void OnKeyboardHelp(object sender, RoutedEventArgs e)

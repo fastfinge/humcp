@@ -56,6 +56,7 @@
             <MenuItem Header="_Help">
                 <MenuItem Header="_User guide" Click="OnUserGuide" />
                 <MenuItem Header="_Keyboard shortcuts…" Click="OnKeyboardHelp" />
+                <MenuItem Header="_Repeat last announcement" InputGestureText="Ctrl+R" Click="OnRepeatAnnouncement" />
                 <MenuItem Header="_Speech diagnostics…" Click="OnSpeechDiagnostics" />
                 <MenuItem Header="_Connection diagnostics…" Click="OnConnectionDiagnostics" />
                 <Separator />
