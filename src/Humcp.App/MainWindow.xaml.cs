@@ -52,7 +52,7 @@ public partial class MainWindow : Window
 
     /// <summary>The one loaded model (Phase 10): the File menu's check and every image description share it.</summary>
     private readonly Humcp.Inference.ModelHost _modelHost = new(ModelStore.Default(), ModelCatalog.Cpu);
-    private readonly ImageDescriber _describer;
+    private readonly LocalModelFeatures _features;
 
     private CancellationTokenSource? _currentCall;
     private bool _callInFlight;
@@ -126,6 +126,14 @@ public partial class MainWindow : Window
         // is the one window Escape does not close (§8).
         PreviewKeyDown += (_, e) =>
         {
+            // Ctrl+M summarises the result pane's result from anywhere in the window (Phase 11).
+            if (e.Key == Key.M && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                MainResults.Summarise();
+                return;
+            }
+
             if (e.Key != Key.Escape || !_callInFlight || Keyboard.Modifiers != ModifierKeys.None) return;
 
             e.Handled = true;
@@ -150,8 +158,8 @@ public partial class MainWindow : Window
         MainResults.ShowMessage("Result", "No tool has been run yet.");
 
         _localModel = new LocalModelMenu(_modelHost, LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
-        _describer = new ImageDescriber(_modelHost, _settings);
-        MainResults.Describer = _describer;
+        _features = new LocalModelFeatures(_modelHost, _settings);
+        MainResults.Describer = _features;
 
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
@@ -983,7 +991,7 @@ public partial class MainWindow : Window
         var form = new ToolWindow(this, tool, connection, _settings.RememberHistory ? _history : MruHistory.None,
             _windows, _settings.ShowOptionalFields, SpeakIfAway);
 
-        form.Describer = _describer;
+        form.Describer = _features;
         _forms.Add(form);
         form.Closed += (_, _) => _forms.Remove(form);
         form.Show();
@@ -1043,6 +1051,12 @@ public partial class MainWindow : Window
     private static readonly TimeSpan SearchSettles = TimeSpan.FromMilliseconds(700);
 
     private ToolSearch _search = new([]);
+    private IReadOnlyList<ToolSearchEntry> _catalogue = [];
+
+    /// <summary>The local model's picks, and the words they answer: shown only while the box still says them.</summary>
+    private IReadOnlyList<ToolSearchEntry> _suggested = [];
+    private string? _suggestedFor;
+    private CancellationTokenSource? _asking;
     private System.Windows.Threading.DispatcherTimer? _searchSettled;
     private int _lastMatchCount;
     private string? _lastBestMatch;
@@ -1052,7 +1066,8 @@ public partial class MainWindow : Window
     /// <summary>The tools search covers changed: index them again, and search again if a search is showing.</summary>
     private void Reindex()
     {
-        _search = new ToolSearch(ToolTreeBuilder.SearchEntries(_shown.Values));
+        _catalogue = [.. ToolTreeBuilder.SearchEntries(_shown.Values)];
+        _search = new ToolSearch(_catalogue);
         if (Searching) ShowSearchResults(keepSelection: true);
     }
 
@@ -1085,7 +1100,10 @@ public partial class MainWindow : Window
         var hadFocus = SearchResults.IsKeyboardFocusWithin;
 
         var hits = _search.Search(query);
-        var nodes = ToolTreeBuilder.SearchResults(hits,
+        var suggested = _suggestedFor == query
+            ? _suggested.Where(s => _catalogue.Any(c => c.ServerId == s.ServerId && c.Tool.Name == s.Tool.Name)).ToList()
+            : [];
+        var nodes = ToolTreeBuilder.SearchResults(hits, suggested,
             $"No tools match {TextSanitizer.Clean(query, TextSanitizer.NameLength)}. Escape goes back to the search box.");
         _lastMatchCount = hits.Count;
         _lastBestMatch = hits.Count == 0 ? null : $"{hits[0].Entry.Tool.DisplayName}, {hits[0].Entry.ServerName}";
@@ -1106,6 +1124,7 @@ public partial class MainWindow : Window
     private void EndSearch()
     {
         _searchSettled?.Stop();
+        _asking?.Cancel();
 
         SearchResults.Visibility = Visibility.Collapsed;
         SearchResults.ItemsSource = null;
@@ -1139,6 +1158,9 @@ public partial class MainWindow : Window
 
     private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
     {
+        // New words: a question to the model about the old ones is no longer anybody's.
+        _asking?.Cancel();
+
         ShowSearchResults();
         if (!Searching) return;
 
@@ -1164,12 +1186,67 @@ public partial class MainWindow : Window
         });
     }
 
+    /// <summary>
+    /// Asks the local model which tools answer the words in the box, and puts its picks at the top
+    /// (Phase 11). The first time in a session it reads the whole tool list first, which is minutes on
+    /// an ordinary machine — said before it starts, with the word matches there to use meanwhile.
+    /// </summary>
+    private async Task AskModelAsync()
+    {
+        var query = SearchBox.Text;
+        var catalogue = _catalogue;
+
+        _asking?.Cancel();
+        var asking = _asking = new CancellationTokenSource();
+
+        SetStatus(_features.Suggester.HasRead(catalogue)
+            ? "Asking the local model."
+            : $"Asking the local model. It reads the list of {catalogue.Count} tools first, which takes " +
+              (_features.Suggester.LastReading is { } took ? $"about {Math.Max(1, (int)Math.Round(took.TotalSeconds)):N0} seconds" : "from half a minute to a few minutes") +
+              "; the word matches are below in the meantime.");
+
+        try
+        {
+            var picked = await _features.Suggester.SuggestAsync(query, catalogue, asking.Token);
+
+            // The words changed, or the search went, while it thought: the answer is to a question
+            // nobody is asking any more.
+            if (asking.IsCancellationRequested || SearchBox.Text != query || !Searching) return;
+
+            _suggested = picked;
+            _suggestedFor = query;
+
+            var wasHere = SearchBox.IsKeyboardFocusWithin || SearchResults.IsKeyboardFocusWithin;
+            ShowSearchResults();
+            if (wasHere) FocusSearchResults();
+
+            SetStatus(picked.Count == 0
+                ? "The local model named no tool it could match; the list is the word matches."
+                : $"The local model suggests {picked.Count} tool{(picked.Count == 1 ? "" : "s")}, at the top of the list, marked as suggested.");
+        }
+        catch (OperationCanceledException)
+        {
+            // Superseded.
+        }
+        catch (Humcp.Inference.LocalModelException ex)
+        {
+            if (!asking.IsCancellationRequested) SetStatus(ex.Message);
+        }
+    }
+
     private void OnSearchKeyDown(object sender, KeyEventArgs e)
     {
         if (Keyboard.Modifiers != ModifierKeys.None) return;
 
         switch (e.Key)
         {
+            // Enter asks the model, when there is one (Phase 11); Down Arrow never does, so the word
+            // matches are always one key away without a wait.
+            case Key.Enter or Key.Return when Searching && _features.IsDownloaded:
+                e.Handled = true;
+                _ = AskModelAsync();
+                break;
+
             case Key.Down or Key.Enter or Key.Return when Searching:
                 e.Handled = true;
                 FocusSearchResults();

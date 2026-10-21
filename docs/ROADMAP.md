@@ -727,6 +727,8 @@ what the reader was told.
 | <kbd>Enter</kbd> (in a result) | Open what the caret is on in a window of its own |
 | <kbd>Ctrl+Shift+C</kbd> | Copy the value the caret is on |
 | <kbd>Ctrl+D</kbd> (in a result) | Describe the picture the caret is on, with the local model (Phase 10) |
+| <kbd>Ctrl+M</kbd> | Summarise the window's result, with the local model (Phase 11) |
+| <kbd>Enter</kbd> (in the search box) | Ask the local model which tools are meant (Phase 11) |
 | <kbd>Esc</kbd> | Close current form / result window |
 | <kbd>Applications</kbd>, <kbd>Shift+F10</kbd> | Context menu: a tool, a server, an empty tree, a result grid's sort |
 | <kbd>Ctrl+N</kbd> | Add a server |
@@ -1204,6 +1206,12 @@ suite and an NVDA pass as v1's were:
   lexical ranking as its first implementation and the model as its second — two implementations
   before an abstraction (§12), and the catalogue prefill the spike measured (§6 of its record)
   decides the interface's shape, which nothing in Phase 8 can.
+  Decided 2026-10-21: **Enter in the search box asks the model**, whose three picks go to the top
+  of the list marked "suggested by the local model", the word matches below; Down Arrow still goes
+  straight to the word matches. The model reads the tool list **the first time it is asked** in a
+  session, and again when the list changes — 40 seconds to 2.5 minutes of processor, said before it
+  starts. **Summaries are on request** (a Summary part at the end of a long result, and
+  <kbd>Ctrl+M</kbd>), labelled as generated like alt text.
 - **Phase 12 — Prompts** as generated forms, with `completion/complete` behind their arguments.
 - **Phase 13 — Resources.**
 - **Phase 14 — Tasks** (`io.modelcontextprotocol/tasks`), with the background task list.

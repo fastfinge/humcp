@@ -326,6 +326,27 @@ public class ResultTests(AppFixture fixture, ITestOutputHelper output)
     }
 
     [Fact]
+    public void A_long_result_offers_a_summary_and_a_short_one_does_not()
+    {
+        // Phase 11. Two hundred lines is long enough to want one; the suite has no model, so the offer
+        // says where to get one, and the button says it again rather than doing nothing.
+        Run("Two hundred lines", "Two hundred lines");
+
+        var summary = Focusables().FirstOrDefault(e => UiaTree.Safe(() => e.Name) == "Summary, by the local model");
+        Assert.True(summary is not null, "No summary part: " + string.Join(" | ", Focusables().Select(e => UiaTree.Safe(() => e.Name))));
+        Assert.Contains("File, Local model", summary!.AsTextBox().Text, StringComparison.Ordinal);
+
+        var button = Focusables().First(e => UiaTree.Safe(() => e.Name) == "Summarise the result");
+        Assert.Equal("Control plus M", button.Properties.AcceleratorKey.ValueOrDefault);
+
+        button.AsButton().Invoke();
+        WaitFor(() => Status().Contains("File, Local model", StringComparison.Ordinal) ? Status() : null, "the summarise answer");
+
+        Run("Server information", "Server information");
+        Assert.DoesNotContain(Focusables(), e => UiaTree.Safe(() => e.Name) == "Summary, by the local model");
+    }
+
+    [Fact]
     public void A_picture_says_what_it_is_somewhere_a_reader_will_reach()
     {
         Run("One of everything", "One of everything");

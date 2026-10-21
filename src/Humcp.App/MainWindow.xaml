@@ -114,7 +114,7 @@
                              AutomationProperties.Name="Find a tool"
                              AutomationProperties.LabeledBy="{Binding ElementName=SearchLabel}"
                              AutomationProperties.AcceleratorKey="Control plus F"
-                             AutomationProperties.HelpText="Type what you want to do. Matching tools from every connected server take the tree's place, best first. Down Arrow moves to them; Escape clears the search and goes back to the tree."
+                             AutomationProperties.HelpText="Type what you want to do. Matching tools from every connected server take the tree's place, best first. Enter asks the local model, when it is downloaded; Down Arrow moves to the matches; Escape clears the search and goes back to the tree."
                              TextChanged="OnSearchTextChanged"
                              PreviewKeyDown="OnSearchKeyDown" />
                 </DockPanel>

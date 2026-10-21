@@ -137,6 +137,30 @@
         </StackPanel>
     </DataTemplate>
 
+    <!-- ================================================================ the summary (Phase 11) -->
+
+    <!-- humcp's part, not the server's: the offer of a summary of a long result, and then the summary
+         itself, labelled as generated in its first words. A read-only box for the reason every result
+         is one (§7.9), and the button beside it for whoever finds the key second. -->
+    <DataTemplate x:Key="Result.Summary">
+        <StackPanel Style="{StaticResource ResultPart}">
+            <TextBlock Style="{StaticResource PartHeading}" Text="{Binding Heading}" />
+
+            <TextBox Style="{StaticResource ReadOnlyText}"
+                     Text="{Binding Text, Mode=OneWay}" TextWrapping="Wrap"
+                     AutomationProperties.Name="{Binding AutomationName}"
+                     AutomationProperties.HelpText="A summary of the whole result by the local model on this computer, labelled as generated. Control plus M asks for it." />
+
+            <StackPanel Orientation="Horizontal">
+                <Button Style="{StaticResource PartButton}" Content="Summarise"
+                        Command="{x:Static local:ResultCommands.Summarise}" CommandParameter="{Binding}"
+                        AutomationProperties.Name="Summarise the result"
+                        AutomationProperties.AcceleratorKey="Control plus M"
+                        AutomationProperties.HelpText="Asks the local model for a summary of the whole result. On the processor this can take a few minutes for a long one." />
+            </StackPanel>
+        </StackPanel>
+    </DataTemplate>
+
     <!-- ================================================================ resource links -->
 
     <!-- The address goes in a read-only box rather than a label, for the same reason results do:

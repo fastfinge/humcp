@@ -30,6 +30,7 @@ public sealed class ResultTemplateSelector : DataTemplateSelector
         TextSection => "Text",
         MediaSection => "Media",
         LinkSection => "Link",
+        SummarySection => "Summary",
 
         // A table is a grid, and everything else is a tree. Both are built from the same
         // ResultNode; which one a value gets is decided by its shape and nothing else.

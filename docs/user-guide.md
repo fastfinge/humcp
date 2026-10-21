@@ -66,7 +66,7 @@ The main window has two panes. F6 moves between them, and Shift plus F6 goes bac
 
 Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it.
 
-To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are and which comes first. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it.
+To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are and which comes first. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it. If you have downloaded the local model (File, Local model), press Enter instead of Down arrow: the model reads what you typed and puts the three tools it thinks you mean at the top of the list, each marked "suggested by the local model", with the word matches below. The first time you ask in a session it reads the whole list of tools first, which takes from half a minute to a few minutes, and says so; after that an answer takes a second or two. The model can be wrong.
 
 The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes. If you miss something it said — because your screen reader was talking, or another program was in front — press Control plus R, in any humcp window, to hear it again.
 
@@ -100,6 +100,8 @@ A result is made of parts, and each part has a control suited to it.
 - Anything else structured is a tree, read as "name, value". Right arrow opens a branch.
 - A picture, a sound or a file has Save and Open buttons. humcp decides the file type from what the server says it is, and never opens a file it does not recognise.
 - A picture also has a Describe button. Servers never say what a picture shows, so humcp can ask its local model, on your computer, to describe it (File, Local model downloads the model). Once the model is downloaded, every picture a tool returns is described as it arrives: the box under the picture says "Describing" until the description is ready, and then the status bar says so. A description takes from about 20 seconds to a minute, depending on your computer. It is generated, so it can be wrong, and it always begins by saying so; Open shows the picture itself to anyone who can see it. Control plus D describes a picture on request, and Settings can turn the automatic descriptions off.
+
+A long result ends with a Summary part. Press Control plus M, anywhere in the window, or Summarise, and the local model writes a short summary of the whole result there; the status bar says when it is ready. A long result can take a few minutes. Like a description, a summary begins by saying it is generated and can be wrong, and the result itself is unchanged above it.
 - A link has buttons to open it in your browser or copy it. humcp only opens web links; anything else can be copied but is not opened, and humcp says so.
 
 In any part, Enter opens what the caret is on in a window of its own, and Control plus Shift plus C copies it. F1 shows everything about the result, including the raw data the server sent.
@@ -157,7 +159,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 
 ### The tree
 
-- Control plus F: find a tool, on every server.
+- Control plus F: find a tool, on every server. Enter in the search box asks the local model.
 - Enter: run the tool, or open its form.
 - A letter: the next item starting with it.
 - Control plus N: add a server.
@@ -185,6 +187,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 - Enter: open what the caret is on in its own window.
 - Control plus Shift plus C: copy it.
 - Control plus D: describe the picture the caret is on, with the local model.
+- Control plus M: summarise the result, with the local model.
 - Shift plus F10 or Applications in a table: sort by the current column.
 
 ### A question from a server

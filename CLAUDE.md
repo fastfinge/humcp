@@ -102,7 +102,9 @@ not, one of them in the main window's tab order since Phase 1. **Phase 9, the mo
 (CPU tier only), is complete** — **`docs/phase9-notes.md`**: pinned download, `Humcp.Inference`,
 File, Local model, and Windows ML shipped with its licence terms. **Phase 10, alt text, is
 complete** — **`docs/phase10-notes.md`**: every returned image described as it arrives (a setting turns
-it off; Ctrl+D on request), through one shared `ModelHost`.
+it off; Ctrl+D on request), through one shared `ModelHost`. **Phase 11, the model's tool search and summaries, is complete** —
+**`docs/phase11-notes.md`**: `IToolSuggester` with its two implementations (33 of 35 against word
+matching's 21), Enter in the search box asks the model, Ctrl+M summarises on request.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that

@@ -145,13 +145,30 @@ public static class ToolTreeBuilder
     /// empty tree has its message).
     /// </summary>
     public static IReadOnlyList<CatalogueNode> SearchResults(IReadOnlyList<ToolSearchHit> hits, string noMatches)
+        => SearchResults(hits, [], noMatches);
+
+    /// <summary>
+    /// The same, with the local model's picks first (Phase 11). Each is named as suggested — the
+    /// choice is the model's, and a choice a user cannot check is labelled as one (§11.0) — and a tool
+    /// it picked is not listed a second time among the word matches.
+    /// </summary>
+    public static IReadOnlyList<CatalogueNode> SearchResults(
+        IReadOnlyList<ToolSearchHit> hits, IReadOnlyList<ToolSearchEntry> suggested, string noMatches)
     {
         ArgumentNullException.ThrowIfNull(hits);
+        ArgumentNullException.ThrowIfNull(suggested);
 
-        return hits.Count == 0
-            ? [new CatalogueNode(CatalogueNodeKind.Message, noMatches)]
-            : [.. hits.Select(h => new CatalogueNode(CatalogueNodeKind.Tool, h.Entry.Tool.Describe(h.Entry.ServerName),
-                tool: h.Entry.Tool, helpText: h.Entry.Tool.Summary, serverId: h.Entry.ServerId))];
+        CatalogueNode Node(ToolSearchEntry entry, string suffix = "")
+            => new(CatalogueNodeKind.Tool, entry.Tool.Describe(entry.ServerName) + suffix,
+                tool: entry.Tool, helpText: entry.Tool.Summary, serverId: entry.ServerId);
+
+        var nodes = new List<CatalogueNode>();
+        nodes.AddRange(suggested.Select(e => Node(e, ", suggested by the local model")));
+        nodes.AddRange(hits
+            .Where(h => !suggested.Any(s => s.ServerId == h.Entry.ServerId && s.Tool.Name == h.Entry.Tool.Name))
+            .Select(h => Node(h.Entry)));
+
+        return nodes.Count == 0 ? [new CatalogueNode(CatalogueNodeKind.Message, noMatches)] : nodes;
     }
 
     /// <summary>

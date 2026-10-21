@@ -147,6 +147,35 @@ internal sealed class MediaSection : ResultSection, System.ComponentModel.INotif
     }
 }
 
+/// <summary>
+/// The local model's summary of a long result, or the offer of one (Phase 11). Not a part the server
+/// sent: humcp's own, at the end, so the server's parts keep their places and their numbers.
+/// </summary>
+internal sealed class SummarySection(string text) : ResultSection("Summary"), System.ComponentModel.INotifyPropertyChanged
+{
+    private string _text = text;
+
+    /// <summary>The offer, "summarising", or the summary itself with its label (<see cref="ResultSummary"/>).</summary>
+    public string Text
+    {
+        get => _text;
+        set
+        {
+            if (_text == value) return;
+            _text = value;
+            PropertyChanged?.Invoke(this, new(nameof(Text)));
+        }
+    }
+
+    public bool IsSummarised { get; set; }
+
+    public bool IsSummarising { get; set; }
+
+    public override string AutomationName => "Summary, by the local model";
+
+    public event System.ComponentModel.PropertyChangedEventHandler? PropertyChanged;
+}
+
 /// <summary>A pointer to something the server has and did not send.</summary>
 internal sealed class LinkSection(string heading, LinkResultBlock block) : ResultSection(heading)
 {

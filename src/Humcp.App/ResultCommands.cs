@@ -50,4 +50,10 @@ public static class ResultCommands
     /// is bound by the result view, which works out which image the caret is on.
     /// </summary>
     public static readonly RoutedUICommand Describe = new("", nameof(Describe), typeof(ResultCommands));
+
+    /// <summary>
+    /// Asks the local model for a summary of the whole result (Phase 11). <kbd>Ctrl+M</kbd> is bound by
+    /// the result view, from anywhere in it.
+    /// </summary>
+    public static readonly RoutedUICommand Summarise = new("", nameof(Summarise), typeof(ResultCommands));
 }

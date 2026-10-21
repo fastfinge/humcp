@@ -236,6 +236,96 @@ public sealed class LocalModel : IDisposable
         return new Generation(text.ToString().Trim(), ids.Length, produced, first, clock.Elapsed);
     }
 
+    // ------------------------------------------------------------------ read once, ask many times (Phase 11)
+
+    private readonly List<Prefill> _prefills = [];
+
+    /// <summary>
+    /// Reads the start of a user turn — a tool catalogue — and keeps it, so that each later request
+    /// costs only its own tokens (v2-llm-spike §6: 41 s to read the corpus's catalogue once, half a
+    /// second a question after). <paramref name="room"/> is how many tokens a question and its answer
+    /// may take beyond it.
+    /// </summary>
+    public async Task<Prefill> PrefillAsync(string turnStart, int room, CancellationToken cancellation)
+    {
+        ArgumentNullException.ThrowIfNull(turnStart);
+        ObjectDisposedException.ThrowIf(_disposed, this);
+
+        await _one.WaitAsync(cancellation).ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() =>
+            {
+                var clock = Stopwatch.StartNew();
+                var ids = _tokenizer.Encode($"<|im_start|>user\n{turnStart}")[0].ToArray();
+
+                var parameters = new GeneratorParams(_model);
+                parameters.SetSearchOption("do_sample", false);
+                parameters.SetSearchOption("max_length", ids.Length + room);
+
+                var generator = new Generator(_model, parameters);
+                for (var i = 0; i < ids.Length; i += PrefillChunk)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+                    generator.AppendTokens(ids.AsSpan(i, Math.Min(PrefillChunk, ids.Length - i)));
+                }
+
+                var prefill = new Prefill(parameters, generator, ids.Length, clock.Elapsed);
+                lock (_prefills) _prefills.Add(prefill);
+                return prefill;
+            }, cancellation).ConfigureAwait(false);
+        }
+        finally
+        {
+            _one.Release();
+        }
+    }
+
+    /// <summary>
+    /// Finishes the user turn begun by <paramref name="prefill"/> with <paramref name="turnEnd"/> and
+    /// answers it — then forgets the question, so the next one starts from the catalogue again.
+    /// </summary>
+    public async Task<Generation> ContinueAsync(Prefill prefill, string turnEnd, int maxTokens, CancellationToken cancellation)
+    {
+        ArgumentNullException.ThrowIfNull(prefill);
+        ArgumentNullException.ThrowIfNull(turnEnd);
+        ObjectDisposedException.ThrowIf(_disposed || prefill.IsDisposed, this);
+
+        await _one.WaitAsync(cancellation).ConfigureAwait(false);
+        try
+        {
+            return await Task.Run(() =>
+            {
+                var clock = Stopwatch.StartNew();
+                var generator = prefill.Generator;
+
+                generator.RewindTo((ulong)prefill.Tokens);
+                var ids = _tokenizer.Encode($"{turnEnd}<|im_end|>\n<|im_start|>assistant\n")[0].ToArray();
+                generator.AppendTokens(ids);
+
+                using var stream = _tokenizer.CreateStream();
+                var text = new StringBuilder();
+                var first = TimeSpan.Zero;
+                var produced = 0;
+
+                while (!generator.IsDone() && produced < maxTokens)
+                {
+                    cancellation.ThrowIfCancellationRequested();
+
+                    generator.GenerateNextToken();
+                    if (produced++ == 0) first = clock.Elapsed;
+                    text.Append(stream.Decode(generator.GetNextTokens()[0]));
+                }
+
+                return new Generation(text.ToString().Trim(), ids.Length, produced, first, clock.Elapsed);
+            }, cancellation).ConfigureAwait(false);
+        }
+        finally
+        {
+            _one.Release();
+        }
+    }
+
     public void Dispose()
     {
         if (_disposed) return;
@@ -243,6 +333,13 @@ public sealed class LocalModel : IDisposable
 
         // Waits for a generation in flight: disposing the model under it would crash the process.
         _one.Wait();
+
+        lock (_prefills)
+        {
+            foreach (var prefill in _prefills) prefill.Dispose();
+            _prefills.Clear();
+        }
+
         _processor?.Dispose();
         _tokenizer.Dispose();
         _model.Dispose();
@@ -252,3 +349,39 @@ public sealed class LocalModel : IDisposable
 
 /// <summary>A model that would not load or run, with a sentence that says so.</summary>
 public sealed class LocalModelException(string message, Exception? inner = null) : Exception(message, inner);
+
+/// <summary>
+/// The start of a turn the model has already read (<see cref="LocalModel.PrefillAsync"/>): a generator
+/// holding it, and how many tokens it is, so a question can be appended and then rewound away.
+/// Belongs to the model that made it, which disposes it with itself.
+/// </summary>
+public sealed class Prefill : IDisposable
+{
+    internal Prefill(GeneratorParams parameters, Generator generator, int tokens, TimeSpan took)
+    {
+        Parameters = parameters;
+        Generator = generator;
+        Tokens = tokens;
+        Took = took;
+    }
+
+    internal GeneratorParams Parameters { get; }
+
+    internal Generator Generator { get; }
+
+    public int Tokens { get; }
+
+    /// <summary>How long the reading took — what the next reading will take, near enough.</summary>
+    public TimeSpan Took { get; }
+
+    public bool IsDisposed { get; private set; }
+
+    public void Dispose()
+    {
+        if (IsDisposed) return;
+        IsDisposed = true;
+
+        Generator.Dispose();
+        Parameters.Dispose();
+    }
+}

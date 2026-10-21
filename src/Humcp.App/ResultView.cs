@@ -35,6 +35,7 @@ public sealed class ResultView : ContentControl
     };
 
     private ToolCallOutcome? _outcome;
+    private ToolInfo? _tool;
 
     public ResultView()
     {
@@ -61,15 +62,28 @@ public sealed class ResultView : ContentControl
         {
             if (e.Parameter is MediaSection media) _ = DescribeAsync(media, asked: true);
         });
+        Bind(ResultCommands.Summarise, (_, e) =>
+        {
+            if (e.Parameter is SummarySection summary) _ = SummariseAsync(summary);
+        });
 
-        // Ctrl+D anywhere in the result: the image the caret is on, or the only one there is.
+        // Ctrl+D anywhere in the result: the image the caret is on, or the only one there is. Ctrl+M:
+        // a summary of the whole result.
         PreviewKeyDown += (_, e) =>
         {
-            if (e.Key != Key.D || Keyboard.Modifiers != ModifierKeys.Control) return;
+            if (Keyboard.Modifiers != ModifierKeys.Control) return;
 
-            e.Handled = true;
-            if (ImageAtCaret() is { } media) _ = DescribeAsync(media, asked: true);
-            else Say("There is no image here to describe.");
+            if (e.Key == Key.D)
+            {
+                e.Handled = true;
+                if (ImageAtCaret() is { } media) _ = DescribeAsync(media, asked: true);
+                else Say("There is no image here to describe.");
+            }
+            else if (e.Key == Key.M)
+            {
+                e.Handled = true;
+                Summarise();
+            }
         };
     }
 
@@ -77,7 +91,7 @@ public sealed class ResultView : ContentControl
     public void StopDescribing() => _describing?.Cancel();
 
     /// <summary>The local model, for alt text (Phase 10). Null in a view that has none to offer.</summary>
-    internal ImageDescriber? Describer { get; set; }
+    internal LocalModelFeatures? Describer { get; set; }
 
     /// <summary>Stopped when the result is replaced: a description of a picture no longer on screen is said to nobody.</summary>
     private CancellationTokenSource? _describing;
@@ -103,7 +117,13 @@ public sealed class ResultView : ContentControl
         ArgumentNullException.ThrowIfNull(outcome);
 
         _outcome = outcome;
+        _tool = tool;
         var sections = ResultSections.Build(tool, outcome);
+
+        // The offer of a summary, at the end, for a result long enough to want one (Phase 11).
+        if (Describer is { } features && ResultSummary.IsWorthSummarising(outcome))
+            sections = [.. sections, new SummarySection(features.IsDownloaded ? ResultSummary.Offer : ResultSummary.NotDownloaded)];
+
         _parts.ItemsSource = sections;
 
         StartDescribing(sections);
@@ -221,6 +241,75 @@ public sealed class ResultView : ContentControl
         finally
         {
             image.IsDescribing = false;
+        }
+    }
+
+    /// <summary>
+    /// <kbd>Ctrl+M</kbd>: the summary of whatever result is on screen. Public because the window binds
+    /// it too — from a form's fields or the main window's tree, not only from inside the result
+    /// (found by ear, phase11-notes).
+    /// </summary>
+    public void Summarise()
+    {
+        if (Describer is null || _outcome is null) return;
+
+        if ((_parts.ItemsSource as IEnumerable<object> ?? []).OfType<SummarySection>().FirstOrDefault() is { } summary)
+            _ = SummariseAsync(summary);
+        else
+            Say("This result is short enough to read whole, so there is no summary to make.");
+    }
+
+    /// <summary>
+    /// Asks the model for a summary of the result on screen. On request only (Phase 11): a long
+    /// result is minutes of processor, and nothing runs that nobody asked for. Said when it is ready;
+    /// the caret stays where it is.
+    /// </summary>
+    private async Task SummariseAsync(SummarySection summary)
+    {
+        if (Describer is not { } features || _outcome is not { } outcome) return;
+
+        if (summary.IsSummarised)
+        {
+            Say("It is already summarised: the summary is the last part of the result.");
+            return;
+        }
+
+        if (summary.IsSummarising)
+        {
+            Say("It is being summarised now.");
+            return;
+        }
+
+        if (!features.IsDownloaded)
+        {
+            Say(ResultSummary.NotDownloaded);
+            return;
+        }
+
+        summary.IsSummarising = true;
+        summary.Text = ResultSummary.Summarising;
+        Say("Summarising the result. The summary will be announced when it is ready.");
+
+        try
+        {
+            var text = await features.SummariseAsync(_tool?.DisplayName ?? "a tool", outcome, _describing?.Token ?? CancellationToken.None);
+
+            summary.IsSummarised = true;
+            summary.Text = text;
+            Say(ResultSummary.Ready("as the last part of the result"));
+        }
+        catch (OperationCanceledException)
+        {
+            // The result was replaced.
+        }
+        catch (Humcp.Inference.LocalModelException ex)
+        {
+            summary.Text = ResultSummary.Failed(ex.Message);
+            Say(summary.Text);
+        }
+        finally
+        {
+            summary.IsSummarising = false;
         }
     }
 

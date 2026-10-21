@@ -160,6 +160,15 @@ public partial class ToolWindow : Window
         // running, closes the window as it always has (Phase 7).
         PreviewKeyDown += (_, e) =>
         {
+            // Ctrl+M summarises this form's result from anywhere in the window (Phase 11), not only
+            // from inside the result: found by ear, from a form field, where it did nothing at all.
+            if (e.Key == Key.M && Keyboard.Modifiers == ModifierKeys.Control)
+            {
+                e.Handled = true;
+                FormResults.Summarise();
+                return;
+            }
+
             if (e.Key != Key.Escape || !_callInFlight || Keyboard.Modifiers != ModifierKeys.None) return;
 
             e.Handled = true;
@@ -186,7 +195,7 @@ public partial class ToolWindow : Window
     public string ToolName => _tool.Name;
 
     /// <summary>Alt text for the images this form's calls return (Phase 10), shared with the main window.</summary>
-    internal ImageDescriber? Describer
+    internal LocalModelFeatures? Describer
     {
         get => FormResults.Describer;
         set => FormResults.Describer = value;
