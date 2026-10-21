@@ -97,7 +97,8 @@ returns focus to humcp when one of its windows closes. NVDA pass and its two def
 from there unsigned as v1.1.0 on 2026-10-21. First piece of v2: the local-LLM
 spike, §11.0–11.1, done: two tiers of one model, recorded in **`docs/v2-llm-spike.md`**.
 v2 is built in phases numbered on from v1's (§11, "Built in this order"). **Phase 8, tool search with
-no model, is built and its suite green; its NVDA pass is outstanding** — **`docs/phase8-notes.md`**.
+no model, is complete** — **`docs/phase8-notes.md`**. Its NVDA pass found three defects the suite had
+not, one of them in the main window's tab order since Phase 1.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -519,6 +520,9 @@ in; nothing under `src/` knows it exists.
   fourteen tools exist for the form generator: `demo_search` has fifteen parameters, two required,
   one of them an enum, and covers every control the renderer knows; `demo_wide` has forty, and is
   the virtualization guard.
+- **Assert a tab order as an order, not a set.** The main window's buttons came before the tree they
+  sit under from Phase 1 to Phase 8 while the test that every control was reachable passed
+  (phase8-notes 4.2). A `DockPanel` declares its docked edges first; use rows.
 - **A cycle asserted at one end is not asserted.** The F6 test looked for the result pane and passed
   for a whole phase while the tree had dropped out of the cycle.
 - **A `DataGrid` refuses `SetFocus` through UI Automation**, exactly as a `TreeView` does. **A bare
@@ -536,7 +540,7 @@ in; nothing under `src/` knows it exists.
   A shared helper that typed made every test in a file fail together whenever something else on the
   desktop held focus.
 - **A synthetic arrow key never reaches humcp while NVDA is running** (phase8-notes 3.1) — Control,
-  letters, Enter and Escape do. A test that presses an arrow and asserts only what did *not* happen
+  letters, Enter and Escape do, and arrows sent through the screen reader bridge do. A test that presses an arrow and asserts only what did *not* happen
   passes without the key arriving; assert what did, or reach the same path another way and leave the
   arrow to the NVDA pass.
 - **Collapse what you expand.** `ComboBox.Select` opens the drop-down, and a WPF popup left open

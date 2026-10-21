@@ -66,7 +66,7 @@ The main window has two panes. F6 moves between them, and Shift plus F6 goes bac
 
 Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it.
 
-To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it.
+To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are and which comes first. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it.
 
 The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes.
 

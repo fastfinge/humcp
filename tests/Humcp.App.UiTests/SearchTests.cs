@@ -43,7 +43,8 @@ public class SearchTests(AppFixture fixture, ITestOutputHelper output)
             Assert.Null(UiaTree.Safe(() => Main.FindFirstDescendant(cf => cf.ByControlType(ControlType.Tree))));
 
             // The count, once typing has stopped.
-            WaitFor(() => Status().EndsWith("match.", StringComparison.Ordinal) || Status().EndsWith("matches.", StringComparison.Ordinal)
+            // The count once typing has stopped, naming the best match (phase8-notes).
+            WaitFor(() => Status().StartsWith("1 tool matches: List colours, humcp test server", StringComparison.Ordinal)
                 ? Status() : null, "the match count");
 
             // The keyboard half: from the box to the best match, Escape back, Escape out.
@@ -67,6 +68,30 @@ public class SearchTests(AppFixture fixture, ITestOutputHelper output)
             Assert.Equal(ControlType.TreeItem, UiaTree.Safe(() => fixture.Automation.FocusedElement()?.ControlType));
             Assert.Equal("", Box().Patterns.Value.Pattern.Value.Value);
             Assert.Null(Results());
+        }
+        finally
+        {
+            Search("");
+        }
+    }
+
+    [Fact]
+    public void New_words_select_the_new_best_match()
+    {
+        // Found by ear (phase8-notes): the selection was kept across a change of words, so Enter from
+        // the box went to a tool from the search before, twenty-first of forty-one.
+        try
+        {
+            Search("forecast");
+            var results = WaitFor(Results, "the results to appear");
+            UiaTree.Children(results).Last().Patterns.SelectionItem.Pattern.Select();
+            Input.Settle(100);
+
+            Search("colours");
+            var selected = WaitFor(() => UiaTree.Children(Results()!).FirstOrDefault(
+                i => i.Patterns.SelectionItem.Pattern.IsSelected.Value), "a selected result");
+
+            Assert.StartsWith("List colours", selected.Name);
         }
         finally
         {

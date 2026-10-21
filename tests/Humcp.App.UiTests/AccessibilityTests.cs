@@ -159,6 +159,16 @@ public class AccessibilityTests(AppFixture fixture, ITestOutputHelper output)
         Assert.DoesNotContain(stops, s => s.StartsWith("MenuItem:"));
 
         Assert.True(cycled, "The tab order never returned to its first stop.");
+
+        // …and in the order they are on screen: the search box, the tree under it, the buttons under
+        // that, then the result. A DockPanel put the buttons first for seven phases (phase8-notes).
+        var start = stops.FindIndex(s => s == "Edit:Find a tool");
+        var order = stops.Skip(start).Concat(stops.Take(start)).ToList();
+        int At(Func<string, bool> match) => order.FindIndex(s => match(s));
+
+        Assert.True(At(s => s.StartsWith("TreeItem:")) < At(s => s == "Button:Run tool")
+                    && At(s => s == "Button:Reconnect") < At(s => s.StartsWith("Edit:") && s != "Edit:Find a tool"),
+            "Out of screen order: " + string.Join(" | ", order));
     }
 
     /// <summary>

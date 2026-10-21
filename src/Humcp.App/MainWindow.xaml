@@ -85,22 +85,26 @@
             </Grid.ColumnDefinitions>
 
             <!-- ================================================== pane 1: servers and tools -->
-            <DockPanel Grid.Column="0">
-                <TextBlock DockPanel.Dock="Top" Text="Servers and tools" FontWeight="Bold"
-                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+            <!-- Rows, not a DockPanel, and that is a tab-order decision: a DockPanel declares what it
+                 docks at the bottom before what fills the middle, and tab order follows the
+                 declaration, so Run tool and Reconnect came before the tree they sit under — and,
+                 from Phase 8, before the search box above it. Found by ear in Phase 8; the tool form
+                 had the same defect in Phase 3 (phase3-notes 4.3, phase8-notes). -->
+            <Grid Grid.Column="0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
 
-                <StackPanel DockPanel.Dock="Bottom" Orientation="Horizontal" Margin="0,8,0,0">
-                    <Button x:Name="RunButton" Content="R_un tool" Click="OnRun"
-                            Padding="12,4" Margin="0,0,8,0" IsEnabled="False"
-                            AutomationProperties.HelpText="Runs the selected tool. A tool with parameters opens a form first. Enter does the same from the tree." />
-                    <Button Content="Re_connect" Click="OnReconnect" Padding="12,4"
-                            AutomationProperties.HelpText="Restarts the selected server and lists its tools again. F5." />
-                </StackPanel>
+                <TextBlock Grid.Row="0" Text="Servers and tools" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
 
                 <!-- Phase 8: §8's filter box, as a search. While it holds text, the ranked list below
                      takes the tree's place; the tree is untouched behind it and comes back on Escape.
                      No access key on the label: Alt+F is the File menu, and Ctrl+F is the key. -->
-                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                <DockPanel Grid.Row="1" Margin="0,0,0,6">
                     <Label x:Name="SearchLabel" DockPanel.Dock="Left" Content="Find a tool:" Target="{Binding ElementName=SearchBox}"
                            Padding="0,0,6,0" VerticalAlignment="Center" />
                     <TextBox x:Name="SearchBox"
@@ -112,7 +116,7 @@
                              PreviewKeyDown="OnSearchKeyDown" />
                 </DockPanel>
 
-                <Grid>
+                <Grid Grid.Row="2">
                     <!-- What a search found. Tool nodes like the tree's, named with their server, so every
                          command that works on the tree's selection works here unchanged. -->
                     <ListBox x:Name="SearchResults" Visibility="Collapsed"
@@ -157,7 +161,15 @@
                         </local:TypeAheadTreeView.ItemTemplate>
                     </local:TypeAheadTreeView>
                 </Grid>
-            </DockPanel>
+
+                <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,8,0,0">
+                    <Button x:Name="RunButton" Content="R_un tool" Click="OnRun"
+                            Padding="12,4" Margin="0,0,8,0" IsEnabled="False"
+                            AutomationProperties.HelpText="Runs the selected tool. A tool with parameters opens a form first. Enter does the same from the tree." />
+                    <Button Content="Re_connect" Click="OnReconnect" Padding="12,4"
+                            AutomationProperties.HelpText="Restarts the selected server and lists its tools again. F5." />
+                </StackPanel>
+            </Grid>
 
             <!-- For the mouse only. The keyboard route §7.14 requires is View, Servers pane width,
                  a generated form with a number in it: a focused GridSplitter never receives an

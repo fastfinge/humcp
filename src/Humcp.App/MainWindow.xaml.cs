@@ -513,7 +513,9 @@ public partial class MainWindow : Window
     /// </summary>
     private void FitPanes()
     {
-        if (_settings.TreePaneWidth is not null) return;
+        // A search hides the tree, and a hidden tree measures nothing: the pane would shrink to its
+        // minimum under the results. It is fitted again when the tree comes back.
+        if (_settings.TreePaneWidth is not null || Searching) return;
 
         var available = TreeColumn.ActualWidth + ResultColumn.ActualWidth;
         if (available <= 0) return;
@@ -1027,6 +1029,7 @@ public partial class MainWindow : Window
     private ToolSearch _search = new([]);
     private System.Windows.Threading.DispatcherTimer? _searchSettled;
     private int _lastMatchCount;
+    private string? _lastBestMatch;
 
     private bool Searching => SearchResults.Visibility == Visibility.Visible;
 
@@ -1034,7 +1037,7 @@ public partial class MainWindow : Window
     private void Reindex()
     {
         _search = new ToolSearch(ToolTreeBuilder.SearchEntries(_shown.Values));
-        if (Searching) ShowSearchResults();
+        if (Searching) ShowSearchResults(keepSelection: true);
     }
 
     private void FocusSearch()
@@ -1044,11 +1047,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
-    /// Runs the search in the box and puts its results in the tree's place, keeping the selected
-    /// tool if it is still found — the catalogue changes under a search when a server reconnects —
-    /// and the caret with it if the caret was in the list (§7.25).
+    /// Runs the search in the box and puts its results in the tree's place, with the caret kept in
+    /// the list if it was there (§7.25).
     /// </summary>
-    private void ShowSearchResults()
+    /// <param name="keepSelection">
+    /// True when the catalogue changed under the same words — a server reconnecting — and the tool
+    /// the user had selected should stay selected. False when the words changed: then the best match
+    /// is selected, because it is what Enter from the box goes to. Found by ear (phase8-notes): a
+    /// selection kept across new words sent Enter to a tool from the search before.
+    /// </param>
+    private void ShowSearchResults(bool keepSelection = false)
     {
         var query = SearchBox.Text;
         if (string.IsNullOrWhiteSpace(query))
@@ -1057,13 +1065,14 @@ public partial class MainWindow : Window
             return;
         }
 
-        var previous = Searching ? SearchResults.SelectedItem as CatalogueNode : null;
+        var previous = keepSelection && Searching ? SearchResults.SelectedItem as CatalogueNode : null;
         var hadFocus = SearchResults.IsKeyboardFocusWithin;
 
         var hits = _search.Search(query);
         var nodes = ToolTreeBuilder.SearchResults(hits,
             $"No tools match {TextSanitizer.Clean(query, TextSanitizer.NameLength)}. Escape goes back to the search box.");
         _lastMatchCount = hits.Count;
+        _lastBestMatch = hits.Count == 0 ? null : $"{hits[0].Entry.Tool.DisplayName}, {hits[0].Entry.ServerName}";
 
         SearchResults.ItemsSource = nodes;
         SearchResults.SelectedItem =
@@ -1087,6 +1096,7 @@ public partial class MainWindow : Window
         Tree.Visibility = Visibility.Visible;
 
         UpdateRunAvailability();
+        FitPanesSoon();
     }
 
     /// <summary>
@@ -1128,11 +1138,13 @@ public partial class MainWindow : Window
         _searchSettled?.Stop();
         if (!Searching) return;
 
+        // The best match is named, so the words can be judged without leaving the box: a count alone
+        // said "41 tools match" for a search whose first result was exactly right (phase8-notes).
         SetStatus(_lastMatchCount switch
         {
             0 => "No tools match.",
-            1 => "1 tool matches.",
-            var n => $"{n} tools match.",
+            1 => $"1 tool matches: {_lastBestMatch}.",
+            var n => $"{n} tools match. First: {_lastBestMatch}.",
         });
     }
 
