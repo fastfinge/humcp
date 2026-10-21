@@ -22,6 +22,17 @@
     <PackageVersion Include="JsonSchema.Net" Version="9.4.0" />
   </ItemGroup>
 
+  <!-- The local model (ROADMAP §11.0): ONNX Runtime GenAI on Windows ML, as the v2 spike measured
+       it. Windows ML is under Microsoft's own licence terms rather than an open-source one, shipped
+       knowingly (Phase 9): the installer's licence page and the user guide's privacy section say
+       what that means for the person using humcp. -->
+  <ItemGroup>
+    <PackageVersion Include="Microsoft.ML.OnnxRuntimeGenAI.WinML" Version="0.18.0" />
+    <!-- Named rather than left transitive: GenAI asks for 2.1.1 or later, NuGet would take 2.1.1, and
+         2.4.89 is the runtime the spike's numbers come from. -->
+    <PackageVersion Include="Microsoft.Windows.AI.MachineLearning" Version="2.4.89" />
+  </ItemGroup>
+
   <ItemGroup>
     <PackageVersion Include="FlaUI.UIA3" Version="5.0.0" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />

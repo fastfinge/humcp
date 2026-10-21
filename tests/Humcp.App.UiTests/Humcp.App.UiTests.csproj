@@ -17,8 +17,12 @@
   <ItemGroup>
     <!-- Build order only. The suite launches the built executable and walks its live UIA tree; it
          does not link against the app. -->
+    <!-- SkipGetTargetFrameworkProperties: since Phase 9 the app targets a versioned Windows
+         framework this project has no need of, and a build-order reference is still checked for
+         compatibility unless told it is only that. -->
     <ProjectReference Include="..\..\src\Humcp.App\Humcp.App.csproj"
-                      ReferenceOutputAssembly="false" Private="false" />
+                      ReferenceOutputAssembly="false" Private="false"
+                      SkipGetTargetFrameworkProperties="true" />
 
     <!-- Build order only, and since Phase 6 here rather than on the app: the app connects to
          whatever its configuration names, and the suite writes a configuration naming this. -->

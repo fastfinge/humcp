@@ -287,6 +287,7 @@ Humcp.slnx
 │   ├── Humcp.Core/        Server registry, connection lifecycle, tool catalogue,
 │   │                      MRTR orchestration, MRU history. No UI.
 │   ├── Humcp.Speech/      IAnnouncer over prismatoid; no-op fallback.
+│   ├── Humcp.Inference/   v2: the local model, ONNX Runtime GenAI on Windows ML.
 │   └── Humcp.App/         WPF. Views, templates, view-models, window manager.
 ├── tools/
 │   └── Humcp.Harvester/   Starts real MCP servers and writes down what they publish (§9)
@@ -1189,6 +1190,13 @@ suite and an NVDA pass as v1's were:
 - **Phase 9 — The model on the machine.** ONNX Runtime GenAI on Windows ML inside humcp: the tier
   setting, the pinned download with its SHA-256 check and announced progress, and both through the
   MSI and the x64 and ARM64 zips. The packaging is the part the spike did not test.
+  **The CPU tier only** (decided 2026-10-21): the NVIDIA tier's model is the spike's own patched build,
+  which has nowhere to be downloaded from and has never run on the 12 GB card it is for. It is
+  deferred, not dropped — it returns when it has a host and a card to be measured on, and the tier
+  setting waits for it, since a setting with one choice is noise. Windows ML is shipped as decided,
+  against the alternative of the MIT-licensed plain ONNX Runtime GenAI for the CPU tier: its
+  licence binds end users to Microsoft's terms and says the runtime may send usage data to Microsoft,
+  so the installer's licence page and the user guide's privacy section say both.
 - **Phase 10 — Alt text** for returned images, announced as generated (§11.0), which closes pitfall 6.
 - **Phase 11 — The model's tool search and summaries.** `IToolSuggester` is defined here, with the
   lexical ranking as its first implementation and the model as its second — two implementations

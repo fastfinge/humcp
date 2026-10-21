@@ -200,7 +200,12 @@ Environment variables, which are often API keys, are stored in servers.json in p
 
 If humcp ever hits an error it did not expect, it writes the details to %LOCALAPPDATA%\humcp\errors.log and tells you.
 
-humcp sends nothing anywhere except to the servers you configure. It has no telemetry, no update check and no account.
+humcp's own code sends nothing anywhere except to the servers you configure. It has no telemetry, no update check and no account.
+
+Two things are different, and you should know about both:
+
+- **Downloading the local model.** File, Local model, Download the model fetches about 2.9 gigabytes from Hugging Face (huggingface.co), only when you choose it. Every file is checked against a checksum built into humcp, and one that does not match is deleted rather than used. The model is kept in %LOCALAPPDATA%\humcp\models; File, Local model, Remove the model deletes it.
+- **Windows ML.** The model runs on your computer through Windows ML, which is Microsoft's software under Microsoft's licence terms, not open source. What you give the model stays on your computer. But those terms say that Windows ML "may collect information about you and your use of the software, and send that to Microsoft", and that you can opt out of many of these scenarios, but not all, through Windows' own privacy settings. Microsoft's privacy statement is at https://aka.ms/privacy. The terms are in licenses\WindowsML.txt beside humcp, and by using humcp you agree to them for that part of it.
 
 When humcp closes, or crashes, every server it started is stopped with it.
 

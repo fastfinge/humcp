@@ -110,7 +110,10 @@ jobs:
           $target = Join-Path $env:LOCALAPPDATA 'Programs\humcp'
           $install = Start-Process msiexec -ArgumentList "/i `"$msi`" /qn /norestart" -Wait -PassThru
           if ($install.ExitCode -ne 0) { throw "Install exited with $($install.ExitCode)." }
-          foreach ($file in 'Humcp.App.exe', 'prism.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md', 'user-guide.md') {
+          # Since v2: the local model's runtime beside the executable, where Windows finds it before its
+          # own older onnxruntime.dll, and the Windows ML terms the licence page binds users to.
+          foreach ($file in 'Humcp.App.exe', 'prism.dll', 'LICENSE.txt', 'THIRD-PARTY-NOTICES.md', 'user-guide.md',
+                            'onnxruntime.dll', 'onnxruntime-genai.dll', 'licenses\WindowsML.txt') {
             if (-not (Test-Path (Join-Path $target $file))) { throw "The installer did not install $file." }
           }
           $uninstall = Start-Process msiexec -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru

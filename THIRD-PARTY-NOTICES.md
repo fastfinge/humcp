@@ -12,6 +12,25 @@ this repository and beside `Humcp.App.exe` in every release.
 | JsonSchema.Net, JsonPointer.Net, Json.More.Net | 9.4.0, 7.0.2, 3.0.1 | MIT (source); see below for the binaries | https://github.com/json-everything/json-everything | `json-everything.txt` |
 | Humanizer.Core | 3.0.10 | MIT | https://github.com/Humanizr/Humanizer | `Humanizer.txt` |
 | Microsoft.Extensions.AI.Abstractions, .DependencyInjection.Abstractions, .Logging.Abstractions | 10.x | MIT | https://github.com/dotnet/extensions, https://github.com/dotnet/runtime | `dotnet-runtime.txt` |
+| ONNX Runtime GenAI (Microsoft.ML.OnnxRuntimeGenAI.WinML and .Managed) | 0.18.0 | MIT | https://github.com/microsoft/onnxruntime-genai | `OnnxRuntimeGenAI.txt`, `OnnxRuntimeGenAI-third-party-notices.txt` |
+| **Microsoft Windows ML Runtime** (Microsoft.Windows.AI.MachineLearning: ONNX Runtime, DirectML, the Windows ML projection) | 2.4.89 | **Microsoft Software License Terms — not open source** | https://learn.microsoft.com/windows/ai/new-windows-ml/overview | `WindowsML.txt`, `WindowsML-third-party-notices.txt` |
+
+## Windows ML and Microsoft's licence terms
+
+Since v2, humcp ships the Microsoft Windows ML Runtime, which runs the local model. Unlike everything
+else here it is not open source: Microsoft licenses it under its own terms (`licenses/WindowsML.txt`),
+which permit it to be redistributed with an application on conditions. **Anyone using humcp agrees to
+those terms for the Windows ML Runtime**; the installer's licence page says so. Two of them are worth
+knowing before you install:
+
+- The runtime "may collect information about you and your use of the software, and send that to
+  Microsoft", and you can opt out of many of these scenarios but not all (see https://aka.ms/privacy).
+  What you give the model stays on your computer; this is about the runtime itself.
+- You may not reverse engineer it, or share or publish it except as part of humcp.
+
+humcp's own code remains under the BSD Zero Clause License. The model it downloads, Qwen3-VL 4B, is
+not shipped with humcp; it is fetched on request from Hugging Face and is under the Apache License 2.0
+(https://huggingface.co/Qwen/Qwen3-VL-4B-Instruct).
 
 ## Prismatoid and the MPL-2.0
 

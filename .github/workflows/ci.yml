@@ -35,6 +35,11 @@ jobs:
       - name: Core tests
         run: dotnet test tests/Humcp.Core.Tests --configuration Release --no-build --logger "trx;LogFileName=core.trx" --results-directory test-results
 
+      # The local model's runtime loads, and refuses a folder with no model in a sentence. The test that
+      # runs the model skips itself: there is no 2.9 GB download here (phase9-notes).
+      - name: Inference tests
+        run: dotnet test tests/Humcp.Inference.Tests --configuration Release --no-build --logger "trx;LogFileName=inference.trx" --results-directory test-results
+
       # Humcp.App.UiTests is deliberately not run here: it drives the real application with real
       # keystrokes and needs a desktop nobody else is using. It is a local gate before each release.
 

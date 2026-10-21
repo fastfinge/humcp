@@ -48,6 +48,8 @@ public partial class MainWindow : Window
     /// <summary>What the tree last showed for each server, so a change can be said as a change.</summary>
     private readonly Dictionary<ServerConnection, ServerSnapshot> _shown = [];
 
+    private readonly LocalModelMenu _localModel;
+
     private CancellationTokenSource? _currentCall;
     private bool _callInFlight;
     private int _paneIndex;
@@ -143,6 +145,8 @@ public partial class MainWindow : Window
         MainResults.Announce = SetStatus;
         MainResults.ShowMessage("Result", "No tool has been run yet.");
 
+        _localModel = new LocalModelMenu(LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
+
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
         _windows.TrackMain(this);
@@ -163,6 +167,7 @@ public partial class MainWindow : Window
             foreach (var form in _forms.ToList()) form.Close();
 
             _history.Save();
+            _localModel.Dispose();
             _ = _registry.DisposeAsync();
             _announcer.Dispose();
         };

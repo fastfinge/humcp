@@ -3,6 +3,7 @@
     <Project Path="src/Humcp.Schema/Humcp.Schema.csproj" />
     <Project Path="src/Humcp.Core/Humcp.Core.csproj" />
     <Project Path="src/Humcp.Speech/Humcp.Speech.csproj" />
+    <Project Path="src/Humcp.Inference/Humcp.Inference.csproj" />
     <Project Path="src/Humcp.App/Humcp.App.csproj" />
   </Folder>
   <Folder Name="/tools/">
@@ -12,6 +13,7 @@
     <Project Path="tests/Humcp.TestServer/Humcp.TestServer.csproj" />
     <Project Path="tests/Humcp.Schema.Tests/Humcp.Schema.Tests.csproj" />
     <Project Path="tests/Humcp.Core.Tests/Humcp.Core.Tests.csproj" />
+    <Project Path="tests/Humcp.Inference.Tests/Humcp.Inference.Tests.csproj" />
     <Project Path="tests/Humcp.App.UiTests/Humcp.App.UiTests.csproj" />
   </Folder>
 </Solution>

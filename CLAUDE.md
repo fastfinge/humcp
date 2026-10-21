@@ -98,7 +98,9 @@ from there unsigned as v1.1.0 on 2026-10-21. First piece of v2: the local-LLM
 spike, §11.0–11.1, done: two tiers of one model, recorded in **`docs/v2-llm-spike.md`**.
 v2 is built in phases numbered on from v1's (§11, "Built in this order"). **Phase 8, tool search with
 no model, is complete** — **`docs/phase8-notes.md`**. Its NVDA pass found three defects the suite had
-not, one of them in the main window's tab order since Phase 1.
+not, one of them in the main window's tab order since Phase 1. **Phase 9, the model on the machine
+(CPU tier only), is complete** — **`docs/phase9-notes.md`**: pinned download, `Humcp.Inference`,
+File, Local model, and Windows ML shipped with its licence terms.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -187,6 +189,11 @@ without saying so is not.
   TensorRT-RTX, cards with about 12 GB). Decided 2026-10-21 against the original three tiers (CPU,
   low-end GPU, high-end GPU) on the spike's measurements — no vision model works on DirectML, 2B is
   too wrong, 8B too small a step (`docs/v2-llm-spike.md`). Windows 10 is not supported from v2.
+  **The NVIDIA tier is deferred** (Phase 9): its patched build has no host and has never run on a
+  12 GB card. **Windows ML is shipped knowingly** under the Microsoft Software License Terms —
+  chosen over the MIT plain ONNX Runtime GenAI, which runs the CPU tier as well; the terms bind
+  users (installer licence page), oblige the distributor to indemnify Microsoft, and allow the
+  runtime to send Microsoft usage data (user guide, privacy). Keep all three statements true.
 - **v1 transports: stdio + *unauthenticated* Streamable HTTP.** OAuth is v3 (§11).
 - **Do not build `ICapabilityProvider` before v4** (§12). Two implementations before an
   abstraction; extracting an interface from one implementation is guessing at the joints.
@@ -207,6 +214,9 @@ src/Humcp.Schema/   net10.0          JSON Schema -> FieldModel -> FieldState on 
 src/Humcp.Core/     net10.0          Server registry, connections, tool catalogue, MRTR, MRU,
                                      and the two shell rules (MediaTypes, LinkPolicy). No UI.
 src/Humcp.Speech/   net10.0-windows  IAnnouncer over prismatoid, plus a no-op implementation.
+src/Humcp.Inference/ net10.0-windows10.0.26100.0
+                                     The local model: ONNX Runtime GenAI on Windows ML (v2). The
+                                     manifest, store and verified download are in Core.
 src/Humcp.App/      net10.0-windows  WPF: views, templates, view-models, window manager,
                                      result view, the window a server's own question opens, and
                                      the one place that calls the shell.
@@ -539,6 +549,11 @@ in; nothing under `src/` knows it exists.
 - **Drive setup through UI Automation patterns, keystrokes only for assertions about the keyboard.**
   A shared helper that typed made every test in a file fail together whenever something else on the
   desktop held focus.
+- **`Humcp.Inference.Tests` runs the real model only when `HUMCP_MODELS` holds one** (2.9 GB, so
+  never in CI). A build without a runtime identifier keeps the natives in `runtimes\<rid>
+ative`,
+  and Windows' own older `onnxruntime.dll` in System32 is found first; `LocalModel` preloads ours by
+  full path (phase9-notes 3.1). Do not remove that because a published build works without it.
 - **A synthetic arrow key never reaches humcp while NVDA is running** (phase8-notes 3.1) — Control,
   letters, Enter and Escape do, and arrows sent through the screen reader bridge do. A test that presses an arrow and asserts only what did *not* happen
   passes without the key arriving; assert what did, or reach the same path another way and leave the

@@ -32,6 +32,8 @@
                 <MenuItem Header="Re_move server" InputGestureText="Delete" Click="OnRemoveServer" />
                 <Separator />
                 <MenuItem Header="Se_ttings…" InputGestureText="Ctrl+Comma" Click="OnSettings" />
+                <!-- Phase 9: the local model's download and check. Filled by LocalModelMenu. -->
+                <MenuItem x:Name="LocalModelMenuItem" Header="_Local model" />
                 <Separator />
                 <MenuItem Header="E_xit" Click="OnExit" />
             </MenuItem>

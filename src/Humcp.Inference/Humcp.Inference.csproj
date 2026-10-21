@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- The one project that runs a model (ROADMAP §11.0, Phase 9). Windows ML needs a versioned
+         Windows target, which Core must not take: Core stays net10.0 so "no Windows" stays checkable,
+         and only this project and the App, which references it, carry the Windows SDK projection.
+         Windows 11 and later: v2 does not support Windows 10 (§11.0). -->
+    <TargetFramework>net10.0-windows10.0.26100.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.22000.0</SupportedOSPlatformVersion>
+    <RootNamespace>Humcp.Inference</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.ML.OnnxRuntimeGenAI.WinML" />
+    <PackageReference Include="Microsoft.Windows.AI.MachineLearning" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Humcp.Core\Humcp.Core.csproj" />
+  </ItemGroup>
+
+</Project>

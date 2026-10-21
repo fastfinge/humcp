@@ -173,7 +173,7 @@ public sealed class AppFixture : IAsyncLifetime
             ? "Release" : "Debug";
 
         var executable = Path.Combine(
-            directory.FullName, "src", "Humcp.App", "bin", configuration, "net10.0-windows", "Humcp.App.exe");
+            directory.FullName, "src", "Humcp.App", "bin", configuration, "net10.0-windows10.0.26100.0", "Humcp.App.exe");
 
         if (!File.Exists(executable))
             throw new InvalidOperationException($"humcp is not built: {executable} does not exist.");
