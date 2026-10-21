@@ -49,20 +49,24 @@ public sealed record ToolInfo(
     /// What a screen reader reads when the user arrows onto this tool. Safety comes before the
     /// parameter count because it is the part that matters before pressing Enter.
     /// </summary>
-    public string AccessibleName
+    public string AccessibleName => Describe(server: null);
+
+    /// <summary>
+    /// <see cref="AccessibleName"/> with the server's name after the tool's, for a list that mixes
+    /// servers — a search's results — where the tree's nesting is not there to say it.
+    /// </summary>
+    public string Describe(string? server)
     {
-        get
-        {
-            var parts = new List<string> { DisplayName };
+        var parts = new List<string> { DisplayName };
 
-            if (Safety.ShortDescription is { } safety) parts.Add(safety);
+        if (!string.IsNullOrWhiteSpace(server)) parts.Add(server);
+        if (Safety.ShortDescription is { } safety) parts.Add(safety);
 
-            if (RequiredParameterCount > 0)
-                parts.Add($"{RequiredParameterCount} required parameter{(RequiredParameterCount == 1 ? "" : "s")}");
-            else if (ParameterCount > 0)
-                parts.Add($"{ParameterCount} optional parameter{(ParameterCount == 1 ? "" : "s")}");
+        if (RequiredParameterCount > 0)
+            parts.Add($"{RequiredParameterCount} required parameter{(RequiredParameterCount == 1 ? "" : "s")}");
+        else if (ParameterCount > 0)
+            parts.Add($"{ParameterCount} optional parameter{(ParameterCount == 1 ? "" : "s")}");
 
-            return string.Join(", ", parts);
-        }
+        return string.Join(", ", parts);
     }
 }

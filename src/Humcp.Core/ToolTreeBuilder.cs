@@ -131,6 +131,29 @@ public static class ToolTreeBuilder
 
     private static string ToolSortKey(ToolInfo tool) => tool.DisplayName;
 
+    /// <summary>What tool search searches: every tool of every connected server.</summary>
+    public static IEnumerable<ToolSearchEntry> SearchEntries(IEnumerable<ServerSnapshot> servers)
+        => servers
+            .Where(s => s.State == ServerConnectionState.Connected)
+            .SelectMany(s => s.Tools.Select(t =>
+                new ToolSearchEntry(s.Id, TextSanitizer.Clean(s.DisplayName, TextSanitizer.NameLength), t)));
+
+    /// <summary>
+    /// A search's results as nodes the tree's commands already understand: tool nodes, named with
+    /// their server because a ranked list has no nesting to say it, or one message when nothing
+    /// matched — a list with nothing in it cannot take the focus to say so (the same reason the
+    /// empty tree has its message).
+    /// </summary>
+    public static IReadOnlyList<CatalogueNode> SearchResults(IReadOnlyList<ToolSearchHit> hits, string noMatches)
+    {
+        ArgumentNullException.ThrowIfNull(hits);
+
+        return hits.Count == 0
+            ? [new CatalogueNode(CatalogueNodeKind.Message, noMatches)]
+            : [.. hits.Select(h => new CatalogueNode(CatalogueNodeKind.Tool, h.Entry.Tool.Describe(h.Entry.ServerName),
+                tool: h.Entry.Tool, helpText: h.Entry.Tool.Summary, serverId: h.Entry.ServerId))];
+    }
+
     /// <summary>
     /// The part before the first <c>_</c>, <c>.</c> or <c>-</c>, when there is enough of it to mean
     /// something. <c>list_pull_requests</c> → <c>list</c>; <c>ping</c> → no prefix.

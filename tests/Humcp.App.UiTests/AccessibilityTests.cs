@@ -145,6 +145,7 @@ public class AccessibilityTests(AppFixture fixture, ITestOutputHelper output)
         foreach (var stop in stops) output.WriteLine(stop);
 
         // Both directions of the rule (§7.7 and §7.14): everything real is reachable…
+        Assert.Contains(stops, s => s == "Edit:Find a tool");
         Assert.Contains(stops, s => s.StartsWith("TreeItem:"));
         Assert.Contains(stops, s => s == "Button:Run tool");
         Assert.Contains(stops, s => s == "Button:Reconnect");

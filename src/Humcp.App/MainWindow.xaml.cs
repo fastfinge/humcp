@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     public static readonly RoutedCommand AddServerCommand = new();
     public static readonly RoutedCommand EditServerCommand = new();
     public static readonly RoutedCommand SettingsCommand = new();
+    public static readonly RoutedCommand FindCommand = new();
 
     /// <summary>What the tree says when there is nothing in it, which is every first run.</summary>
     private const string NoServers =
@@ -101,6 +102,7 @@ public partial class MainWindow : Window
         CommandBindings.Add(new CommandBinding(AddServerCommand, (_, _) => AddServer()));
         CommandBindings.Add(new CommandBinding(EditServerCommand, (_, _) => EditServer()));
         CommandBindings.Add(new CommandBinding(SettingsCommand, (_, _) => OpenSettings()));
+        CommandBindings.Add(new CommandBinding(FindCommand, (_, _) => FocusSearch()));
 
         // Sized from the screen rather than from a constant (PaneLayout): the person most likely to
         // be at the keyboard is the one who cannot see whether the window suits the screen.
@@ -128,6 +130,8 @@ public partial class MainWindow : Window
         // Present before it is asked for, for the reason the result grid's is (phase6-notes).
         Tree.ContextMenu = new ContextMenu();
         Tree.ContextMenuOpening += OnTreeContextMenuOpening;
+        SearchResults.ContextMenu = new ContextMenu();
+        SearchResults.ContextMenuOpening += OnTreeContextMenuOpening;
         UpdateRunAvailability();
 
         // The view opens whatever windows its parts need, and says what it did through the one
@@ -707,6 +711,7 @@ public partial class MainWindow : Window
             _shown[connection] = snapshot;
         }
 
+        Reindex();
         UpdateRunAvailability();
         FitPanesSoon();
 
@@ -767,6 +772,7 @@ public partial class MainWindow : Window
 
         foreach (var node in ToolTreeBuilder.BuildForest([.. _shown.Values], NoServers)) _roots.Add(node);
         FitPanesSoon();
+        Reindex();
 
         Tree.UpdateLayout();
 
@@ -976,11 +982,15 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ selection helpers
 
-    private ToolInfo? SelectedTool() => (Tree.SelectedItem as CatalogueNode)?.Tool;
+    private ToolInfo? SelectedTool() => SelectedNode()?.Tool;
 
     /// <summary>The server the selection is in — its own node, or anything under it.</summary>
     private ServerConnection? SelectedServer()
-        => (Tree.SelectedItem as CatalogueNode)?.ServerId is { } id ? _registry.Find(id) : null;
+        => SelectedNode()?.ServerId is { } id ? _registry.Find(id) : null;
+
+    /// <summary>What the caret's list has selected: a search's results while there is a search, the tree otherwise.</summary>
+    private CatalogueNode? SelectedNode()
+        => (Searching ? SearchResults.SelectedItem : Tree.SelectedItem) as CatalogueNode;
 
     private void SelectFirstNode()
     {
@@ -1003,6 +1013,166 @@ public partial class MainWindow : Window
             container.UpdateLayout();
             foreach (var descendant in EnumerateContainers(container, node.Children))
                 yield return descendant;
+        }
+    }
+
+    // ------------------------------------------------------------------ tool search
+
+    /// <summary>
+    /// How long typing has to pause before the match count is said. Said at every keystroke, it
+    /// would talk over the screen reader echoing the letters typed, and be out of date by the next.
+    /// </summary>
+    private static readonly TimeSpan SearchSettles = TimeSpan.FromMilliseconds(700);
+
+    private ToolSearch _search = new([]);
+    private System.Windows.Threading.DispatcherTimer? _searchSettled;
+    private int _lastMatchCount;
+
+    private bool Searching => SearchResults.Visibility == Visibility.Visible;
+
+    /// <summary>The tools search covers changed: index them again, and search again if a search is showing.</summary>
+    private void Reindex()
+    {
+        _search = new ToolSearch(ToolTreeBuilder.SearchEntries(_shown.Values));
+        if (Searching) ShowSearchResults();
+    }
+
+    private void FocusSearch()
+    {
+        SearchBox.Focus();
+        SearchBox.SelectAll();
+    }
+
+    /// <summary>
+    /// Runs the search in the box and puts its results in the tree's place, keeping the selected
+    /// tool if it is still found — the catalogue changes under a search when a server reconnects —
+    /// and the caret with it if the caret was in the list (§7.25).
+    /// </summary>
+    private void ShowSearchResults()
+    {
+        var query = SearchBox.Text;
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            EndSearch();
+            return;
+        }
+
+        var previous = Searching ? SearchResults.SelectedItem as CatalogueNode : null;
+        var hadFocus = SearchResults.IsKeyboardFocusWithin;
+
+        var hits = _search.Search(query);
+        var nodes = ToolTreeBuilder.SearchResults(hits,
+            $"No tools match {TextSanitizer.Clean(query, TextSanitizer.NameLength)}. Escape goes back to the search box.");
+        _lastMatchCount = hits.Count;
+
+        SearchResults.ItemsSource = nodes;
+        SearchResults.SelectedItem =
+            nodes.FirstOrDefault(n => previous?.Tool is { } tool && n.Tool?.Name == tool.Name && n.ServerId == previous.ServerId)
+            ?? nodes[0];
+
+        SearchResults.Visibility = Visibility.Visible;
+        Tree.Visibility = Visibility.Collapsed;
+
+        if (hadFocus) FocusSearchResults();
+        UpdateRunAvailability();
+    }
+
+    /// <summary>The tree back in its place, exactly as it was left: a search never touched it.</summary>
+    private void EndSearch()
+    {
+        _searchSettled?.Stop();
+
+        SearchResults.Visibility = Visibility.Collapsed;
+        SearchResults.ItemsSource = null;
+        Tree.Visibility = Visibility.Visible;
+
+        UpdateRunAvailability();
+    }
+
+    /// <summary>
+    /// Puts the caret on the selected result. On the item, not the list: a list focused with no
+    /// current item does not handle an arrow key, and the caret leaves it (§7.29).
+    /// </summary>
+    private bool FocusSearchResults()
+    {
+        if (SearchResults.SelectedItem is null && SearchResults.Items.Count > 0) SearchResults.SelectedIndex = 0;
+
+        SearchResults.UpdateLayout();
+        if (SearchResults.ItemContainerGenerator.ContainerFromItem(SearchResults.SelectedItem) is ListBoxItem item)
+        {
+            item.BringIntoView();
+            item.Focus();
+        }
+        else
+        {
+            SearchResults.Focus();
+        }
+
+        return SearchResults.IsKeyboardFocusWithin;
+    }
+
+    private void OnSearchTextChanged(object sender, TextChangedEventArgs e)
+    {
+        ShowSearchResults();
+        if (!Searching) return;
+
+        _searchSettled ??= new System.Windows.Threading.DispatcherTimer { Interval = SearchSettles };
+        _searchSettled.Stop();
+        _searchSettled.Tick -= OnSearchSettled;
+        _searchSettled.Tick += OnSearchSettled;
+        _searchSettled.Start();
+    }
+
+    private void OnSearchSettled(object? sender, EventArgs e)
+    {
+        _searchSettled?.Stop();
+        if (!Searching) return;
+
+        SetStatus(_lastMatchCount switch
+        {
+            0 => "No tools match.",
+            1 => "1 tool matches.",
+            var n => $"{n} tools match.",
+        });
+    }
+
+    private void OnSearchKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
+
+        switch (e.Key)
+        {
+            case Key.Down or Key.Enter or Key.Return when Searching:
+                e.Handled = true;
+                FocusSearchResults();
+                break;
+
+            // Escape is "take me back": the search goes, and the caret goes to the tree it replaced.
+            case Key.Escape:
+                e.Handled = true;
+                SearchBox.Clear();
+                FocusTree();
+                break;
+        }
+    }
+
+    private void OnSearchResultsKeyDown(object sender, KeyEventArgs e)
+    {
+        if (Keyboard.Modifiers != ModifierKeys.None) return;
+
+        switch (e.Key)
+        {
+            case Key.Enter or Key.Return:
+                e.Handled = true;
+                if (SelectedTool() is not null) _ = RunSelectedToolAsync();
+                break;
+
+            // Back to the words, to change them — the search box is above the list on screen too.
+            case Key.Escape:
+            case Key.Up when SearchResults.SelectedIndex <= 0:
+                e.Handled = true;
+                FocusSearch();
+                break;
         }
     }
 
@@ -1036,6 +1206,9 @@ public partial class MainWindow : Window
     /// </remarks>
     private bool FocusTree()
     {
+        // While there is a search, its results are in the tree's place, and are the pane.
+        if (Searching) return FocusSearchResults();
+
         Tree.Focus();
         return Tree.IsKeyboardFocusWithin;
     }
@@ -1084,8 +1257,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void OnTreeContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        var node = Tree.SelectedItem as CatalogueNode;
-        var menu = Tree.ContextMenu ??= new ContextMenu();
+        var node = SelectedNode();
+        var menu = ((FrameworkElement)sender).ContextMenu ??= new ContextMenu();
         menu.Items.Clear();
 
         if (node?.Tool is { } tool)
@@ -1177,7 +1350,11 @@ public partial class MainWindow : Window
 
     // ------------------------------------------------------------------ event handlers
 
-    private void OnTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    private void OnTreeSelectionChanged(object sender, RoutedPropertyChangedEventArgs<object> e) => SelectionMoved();
+
+    private void OnSearchSelectionChanged(object sender, SelectionChangedEventArgs e) => SelectionMoved();
+
+    private void SelectionMoved()
     {
         // Deliberately silent. The tree is nouns, and UI Automation already reads the selected
         // node; speaking here would double every arrow press (§7).
@@ -1207,6 +1384,8 @@ public partial class MainWindow : Window
     }
 
     private void OnRun(object sender, RoutedEventArgs e) => _ = RunSelectedToolAsync();
+
+    private void OnFind(object sender, RoutedEventArgs e) => FocusSearch();
 
     private void OnReconnect(object sender, RoutedEventArgs e) => _ = ReconnectSelectedAsync();
 
@@ -1289,7 +1468,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (Tree.SelectedItem is not CatalogueNode node)
+        if (SelectedNode() is not { } node)
         {
             SetStatus("Nothing is selected in the tree.");
             return;

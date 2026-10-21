@@ -96,6 +96,8 @@ returns focus to humcp when one of its windows closes. NVDA pass and its two def
 **2.0 has started on `main`** (2026-10-20); `release/1.x` was cut from it carrying 1.1, released
 from there unsigned as v1.1.0 on 2026-10-21. First piece of v2: the local-LLM
 spike, §11.0–11.1, done: two tiers of one model, recorded in **`docs/v2-llm-spike.md`**.
+v2 is built in phases numbered on from v1's (§11, "Built in this order"). **Phase 8, tool search with
+no model, is built and its suite green; its NVDA pass is outstanding** — **`docs/phase8-notes.md`**.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -533,6 +535,10 @@ in; nothing under `src/` knows it exists.
 - **Drive setup through UI Automation patterns, keystrokes only for assertions about the keyboard.**
   A shared helper that typed made every test in a file fail together whenever something else on the
   desktop held focus.
+- **A synthetic arrow key never reaches humcp while NVDA is running** (phase8-notes 3.1) — Control,
+  letters, Enter and Escape do. A test that presses an arrow and asserts only what did *not* happen
+  passes without the key arriving; assert what did, or reach the same path another way and leave the
+  arrow to the NVDA pass.
 - **Collapse what you expand.** `ComboBox.Select` opens the drop-down, and a WPF popup left open
   swallows `Window.Close()` — so the window stays, the call it was waiting on stays in flight, and
   the *next* test fails on a button that never enables. The symptom is one test later than the cause.

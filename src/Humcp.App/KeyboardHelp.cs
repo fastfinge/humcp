@@ -15,6 +15,7 @@ internal static class KeyboardHelp
         "  F1                      Full details of the tool, field or result the caret is on",
         "",
         "The servers and tools tree",
+        "  Ctrl+F                  Find a tool on every server; Escape clears the search",
         "  Enter                   Run the tool, or open its form if it has parameters",
         "  A letter                Move to the next item starting with it",
         "  Ctrl+N                  Add a server",

@@ -14,6 +14,7 @@
         <KeyBinding Key="N" Modifiers="Control" Command="{x:Static local:MainWindow.AddServerCommand}" />
         <KeyBinding Key="Enter" Modifiers="Alt" Command="{x:Static local:MainWindow.EditServerCommand}" />
         <KeyBinding Key="OemComma" Modifiers="Control" Command="{x:Static local:MainWindow.SettingsCommand}" />
+        <KeyBinding Key="F" Modifiers="Control" Command="{x:Static local:MainWindow.FindCommand}" />
     </Window.InputBindings>
 
     <DockPanel>
@@ -44,6 +45,8 @@
                 <MenuItem Header="Servers pane _width…" Click="OnPaneWidth" />
             </MenuItem>
             <MenuItem Header="_Tool">
+                <MenuItem Header="_Find a tool…" InputGestureText="Ctrl+F" Click="OnFind" />
+                <Separator />
                 <MenuItem x:Name="RunMenuItem" Header="_Run" InputGestureText="Enter" Click="OnRun" />
                 <MenuItem Header="_Details" InputGestureText="F1" Click="OnDetails" />
             </MenuItem>
@@ -94,27 +97,66 @@
                             AutomationProperties.HelpText="Restarts the selected server and lists its tools again. F5." />
                 </StackPanel>
 
-                <local:TypeAheadTreeView x:Name="Tree"
-                          AutomationProperties.Name="Servers and tools"
-                          AutomationProperties.HelpText="Arrow to a tool and press Enter. A tool with parameters opens a form; one without runs straight away. F1 describes it in full."
-                          VirtualizingStackPanel.IsVirtualizing="False"
-                          SelectedItemChanged="OnTreeSelectionChanged"
-                          KeyDown="OnTreeKeyDown">
-                    <local:TypeAheadTreeView.ItemContainerStyle>
-                        <Style TargetType="TreeViewItem">
-                            <Setter Property="IsExpanded" Value="True" />
-                            <!-- The whole status is in the name, so it is heard on arrow-through
-                                 rather than hidden in a pane the user has to go and find (§8). -->
-                            <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
-                            <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
-                        </Style>
-                    </local:TypeAheadTreeView.ItemContainerStyle>
-                    <local:TypeAheadTreeView.ItemTemplate>
-                        <HierarchicalDataTemplate ItemsSource="{Binding Children}">
-                            <TextBlock Text="{Binding AccessibleName}" />
-                        </HierarchicalDataTemplate>
-                    </local:TypeAheadTreeView.ItemTemplate>
-                </local:TypeAheadTreeView>
+                <!-- Phase 8: §8's filter box, as a search. While it holds text, the ranked list below
+                     takes the tree's place; the tree is untouched behind it and comes back on Escape.
+                     No access key on the label: Alt+F is the File menu, and Ctrl+F is the key. -->
+                <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                    <Label x:Name="SearchLabel" DockPanel.Dock="Left" Content="Find a tool:" Target="{Binding ElementName=SearchBox}"
+                           Padding="0,0,6,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="SearchBox"
+                             AutomationProperties.Name="Find a tool"
+                             AutomationProperties.LabeledBy="{Binding ElementName=SearchLabel}"
+                             AutomationProperties.AcceleratorKey="Control plus F"
+                             AutomationProperties.HelpText="Type what you want to do. Matching tools from every connected server take the tree's place, best first. Down Arrow moves to them; Escape clears the search and goes back to the tree."
+                             TextChanged="OnSearchTextChanged"
+                             PreviewKeyDown="OnSearchKeyDown" />
+                </DockPanel>
+
+                <Grid>
+                    <!-- What a search found. Tool nodes like the tree's, named with their server, so every
+                         command that works on the tree's selection works here unchanged. -->
+                    <ListBox x:Name="SearchResults" Visibility="Collapsed"
+                             AutomationProperties.Name="Matching tools"
+                             AutomationProperties.HelpText="Best match first. Enter opens a tool's form, or runs a tool with no parameters. F1 describes it in full. Escape goes back to the search box."
+                             VirtualizingStackPanel.IsVirtualizing="False"
+                             SelectionMode="Single"
+                             SelectionChanged="OnSearchSelectionChanged"
+                             PreviewKeyDown="OnSearchResultsKeyDown">
+                        <ListBox.ItemContainerStyle>
+                            <Style TargetType="ListBoxItem">
+                                <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+                                <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+                            </Style>
+                        </ListBox.ItemContainerStyle>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding AccessibleName}" />
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <local:TypeAheadTreeView x:Name="Tree"
+                              AutomationProperties.Name="Servers and tools"
+                              AutomationProperties.HelpText="Arrow to a tool and press Enter. A tool with parameters opens a form; one without runs straight away. F1 describes it in full."
+                              VirtualizingStackPanel.IsVirtualizing="False"
+                              SelectedItemChanged="OnTreeSelectionChanged"
+                              KeyDown="OnTreeKeyDown">
+                        <local:TypeAheadTreeView.ItemContainerStyle>
+                            <Style TargetType="TreeViewItem">
+                                <Setter Property="IsExpanded" Value="True" />
+                                <!-- The whole status is in the name, so it is heard on arrow-through
+                                     rather than hidden in a pane the user has to go and find (§8). -->
+                                <Setter Property="AutomationProperties.Name" Value="{Binding AccessibleName}" />
+                                <Setter Property="AutomationProperties.HelpText" Value="{Binding HelpText}" />
+                            </Style>
+                        </local:TypeAheadTreeView.ItemContainerStyle>
+                        <local:TypeAheadTreeView.ItemTemplate>
+                            <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                                <TextBlock Text="{Binding AccessibleName}" />
+                            </HierarchicalDataTemplate>
+                        </local:TypeAheadTreeView.ItemTemplate>
+                    </local:TypeAheadTreeView>
+                </Grid>
             </DockPanel>
 
             <!-- For the mouse only. The keyboard route §7.14 requires is View, Servers pane width,

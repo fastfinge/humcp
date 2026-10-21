@@ -717,7 +717,7 @@ what the reader was told.
 | <kbd>F6</kbd> / <kbd>Shift+F6</kbd> | Cycle panes within a window |
 | <kbd>Ctrl+1</kbd>…<kbd>9</kbd> | Switch to nth open window (built in Phase 3, §8) |
 | <kbd>Ctrl+W</kbd> | Close the current window |
-| <kbd>Ctrl+F</kbd> | Focus tree filter box |
+| <kbd>Ctrl+F</kbd> | Find a tool: a search box whose results take the tree's place (Phase 8) |
 | <kbd>Enter</kbd> (on a tool) | Open its form window |
 | <kbd>F1</kbd> | Full details for the focused tool or field |
 | <kbd>Ctrl+Enter</kbd> | Submit form |
@@ -762,7 +762,8 @@ bar all cancel — one code path, so they cannot disagree (§10, Phase 5).
   headers. A tool whose prefix does not earn a group sits beside the groups rather than in a
   "Miscellaneous" bucket nobody asked for. Still a guess; §13 keeps it open against the corpus.
 - Server node status is part of its accessible name, so it is heard on arrow-through.
-- A filter box above the tree does type-ahead over tool names, titles, and descriptions.
+- A search box above the tree (<kbd>Ctrl+F</kbd>, Phase 8) ranks every connected server's tools by
+  their names, titles and descriptions, and the results take the tree's place until Escape.
 
 ### The window model
 
@@ -1177,6 +1178,27 @@ Activate the seams and finish the protocol surface, before widening scope.
   the path works — `Braille()` is accepted through the NVDA backend — but not yet whether a
   separate braille presentation policy is *wanted*; that needs a session with a display connected
   (§13).
+
+**Built in this order** (decided 2026-10-21), numbered on from v1's phases, each closed by the UI
+suite and an NVDA pass as v1's were:
+
+- **Phase 8 — Tool search, with no model.** §8's filter box, which v1 never built, as a search:
+  <kbd>Ctrl+F</kbd> reaches a box above the tree, and while it holds text a ranked list of tools from
+  every connected server takes the tree's place. Ranked lexically, so it works on every machine
+  before any download. First because it is useful on its own and is where the model plugs in later.
+- **Phase 9 — The model on the machine.** ONNX Runtime GenAI on Windows ML inside humcp: the tier
+  setting, the pinned download with its SHA-256 check and announced progress, and both through the
+  MSI and the x64 and ARM64 zips. The packaging is the part the spike did not test.
+- **Phase 10 — Alt text** for returned images, announced as generated (§11.0), which closes pitfall 6.
+- **Phase 11 — The model's tool search and summaries.** `IToolSuggester` is defined here, with the
+  lexical ranking as its first implementation and the model as its second — two implementations
+  before an abstraction (§12), and the catalogue prefill the spike measured (§6 of its record)
+  decides the interface's shape, which nothing in Phase 8 can.
+- **Phase 12 — Prompts** as generated forms, with `completion/complete` behind their arguments.
+- **Phase 13 — Resources.**
+- **Phase 14 — Tasks** (`io.modelcontextprotocol/tasks`), with the background task list.
+
+Braille tuning has no phase until a session with a display says whether it is wanted (§13).
 
 #### 11.0 The model runs on the user's machine
 

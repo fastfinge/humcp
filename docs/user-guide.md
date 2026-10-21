@@ -64,7 +64,11 @@ The main window has two panes. F6 moves between them, and Shift plus F6 goes bac
 - Servers and tools, on the left, is a tree. Each server is a top-level item, and its name tells you whether it is connected, how many tools it has, and the protocol version it speaks — or, if it could not start, why not. Under each server is its list of tools. A server with many tools that share a naming pattern has them grouped, for example all the issue tools together.
 - Result, on the right, shows what the last tool you ran from the tree sent back.
 
-Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it. The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes.
+Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it.
+
+To find a tool without knowing which server has it, press Control plus F and type what you want to do — "rename a file", "weather", "screenshot". The tools that match, from every connected server, take the tree's place, best match first, and once you stop typing the status bar says how many there are. Down arrow moves into them; each is read with its server's name. Enter works exactly as it does in the tree. Escape goes back to the search box, and Escape from there clears the search and brings the tree back as you left it. The search matches words in the tools' names and descriptions, so a request that shares no words with the tool it needs will not find it.
+
+The status bar at the bottom says what humcp is doing, and your screen reader reads it as it changes.
 
 Every window humcp opens has its own menu bar, reached with Alt, and a Window menu listing every open window. Control plus 1 through 9 switches straight to a window by its number. Only the main window appears in Alt plus Tab, so a long session does not bury your other programs under humcp's windows.
 
@@ -151,6 +155,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 
 ### The tree
 
+- Control plus F: find a tool, on every server.
 - Enter: run the tool, or open its form.
 - A letter: the next item starting with it.
 - Control plus N: add a server.
