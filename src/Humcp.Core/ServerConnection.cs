@@ -4,6 +4,7 @@ using System.Text.Json.Nodes;
 using Humcp.Schema;
 using ModelContextProtocol;
 using ModelContextProtocol.Client;
+using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
 
 namespace Humcp.Core;
@@ -143,6 +144,12 @@ public sealed class ServerConnection : IAsyncDisposable
     /// </summary>
     public bool SupportsCompletion { get; private set; }
 
+    /// <summary>
+    /// Whether the server offers the tasks extension on a revision that has it (Phase 14), which is
+    /// what makes humcp say on each tool call that it can take a task back instead of a result.
+    /// </summary>
+    public bool SupportsTasks { get; private set; }
+
     public ServerSnapshot Snapshot() => new(
         Descriptor.DisplayName, State, _tools, NegotiatedProtocolVersion, FailureReason)
     {
@@ -167,6 +174,7 @@ public sealed class ServerConnection : IAsyncDisposable
         _prompts = [];
         _resources = [];
         SupportsCompletion = false;
+        SupportsTasks = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         ServerTitle = null;
@@ -183,6 +191,7 @@ public sealed class ServerConnection : IAsyncDisposable
         _prompts = [];
         _resources = [];
         SupportsCompletion = false;
+        SupportsTasks = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         _state = ServerConnectionState.NotConnected;
@@ -209,6 +218,7 @@ public sealed class ServerConnection : IAsyncDisposable
         _prompts = [];
         _resources = [];
         SupportsCompletion = false;
+        SupportsTasks = false;
         _lastServerLine = null;
 
         if (Transport() is not { } transport)
@@ -231,6 +241,7 @@ public sealed class ServerConnection : IAsyncDisposable
             _prompts = await ListPromptsAsync(_client, cancellationToken).ConfigureAwait(false);
             _resources = await ListResourcesAsync(_client, cancellationToken).ConfigureAwait(false);
             SupportsCompletion = _client.ServerCapabilities?.Completions is not null;
+            SupportsTasks = OffersTasks(_client);
             Listen(_client);
             Watch(_client);
             NegotiatedProtocolVersion = _client.NegotiatedProtocolVersion;
@@ -448,11 +459,33 @@ public sealed class ServerConnection : IAsyncDisposable
     /// The whole call: arguments, a window to ask questions in, and somewhere to report progress
     /// (§4, pitfall 9). Progress arrives on whatever thread the SDK read it on.
     /// </summary>
+    public Task<ToolCallOutcome> CallAsync(
+        ToolInfo tool,
+        JsonObject? arguments,
+        ElicitationPrompter? elicit,
+        IProgress<ToolProgress>? progress,
+        CancellationToken cancellationToken = default)
+        => CallAsync(tool, arguments, elicit, progress, null, cancellationToken);
+
+    /// <summary>
+    /// The whole call, told when the server makes it a task (Phase 14).
+    /// </summary>
+    /// <param name="becameTask">
+    /// Called, on a pool thread, when the server answers with a task rather than a result. The call
+    /// goes on waiting for the task's answer; this is how the caller learns there is something it
+    /// can stop with <see cref="BackgroundTask.StopAsync"/> and leave running by not waiting.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Before a task exists, stops the call, as it always has (the SDK tells the server). Once a task
+    /// exists, stops only the waiting: the work goes on, because the extension's way to stop a task is
+    /// <c>tasks/cancel</c> and never the cancellation of the request that created it.
+    /// </param>
     public async Task<ToolCallOutcome> CallAsync(
         ToolInfo tool,
         JsonObject? arguments,
         ElicitationPrompter? elicit,
         IProgress<ToolProgress>? progress,
+        Action<BackgroundTask>? becameTask,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(tool);
@@ -468,9 +501,22 @@ public sealed class ServerConnection : IAsyncDisposable
         // request on and no further: two windows calling one server each get their own.
         _prompter.Value = elicit;
         string? token = null;
+        BackgroundTask? task = null;
 
         try
         {
+            if (SupportsTasks)
+            {
+                Track(progress, out token);
+                (var immediate, task) = await StartAsync(_client, tool, arguments, elicit, token, cancellationToken)
+                    .ConfigureAwait(false);
+
+                if (task is null) return immediate!;
+
+                becameTask?.Invoke(task);
+                return await task.Completion.WaitAsync(cancellationToken).ConfigureAwait(false);
+            }
+
             // NoArguments rather than null: an absent `arguments` member is not the same wire
             // shape as an empty object, and real servers reject the former. Verified against
             // @modelcontextprotocol/server-everything, which answers a zero-argument call with
@@ -502,8 +548,13 @@ public sealed class ServerConnection : IAsyncDisposable
             _prompter.Value = null;
             // Not forgotten yet: under load the SDK hands humcp a call's progress notifications after
             // the answer that ended it, though they came first on the wire (issue #1). Late reports
-            // are still delivered; the App says none of them once the answer is in.
-            if (token is not null) ForgetLater(token);
+            // are still delivered; the App says none of them once the answer is in. A task's progress
+            // goes on after the call stops waiting, so its token is kept until the task ends.
+            if (token is not null)
+            {
+                if (task is { IsFinished: false }) _ = task.Completion.ContinueWith(_ => ForgetLater(token), TaskScheduler.Default);
+                else ForgetLater(token);
+            }
         }
     }
 
@@ -671,6 +722,252 @@ public sealed class ServerConnection : IAsyncDisposable
         },
 #pragma warning restore MCP9005
     };
+
+    // ------------------------------------------------------------------ tasks (Phase 14)
+
+    /// <summary>
+    /// Whether to offer the server tasks. Only on a revision that has the extension, because the SDK
+    /// refuses every task request on an older one, and only to a server that said it takes them —
+    /// the offer is made per request, and making it to a server that never claimed the extension
+    /// is noise on every call.
+    /// </summary>
+    private static bool OffersTasks(McpClient client)
+        => string.CompareOrdinal(client.NegotiatedProtocolVersion, "2026-07-28") >= 0
+           && client.ServerCapabilities?.Extensions?.ContainsKey(TasksProtocol.ExtensionId) == true;
+
+    /// <summary>The soonest a task is first asked about: most calls a server makes tasks of are quick.</summary>
+    private static readonly TimeSpan FirstLook = TimeSpan.FromMilliseconds(200);
+
+    /// <summary>
+    /// The interval between asks, from what the server suggests, held between a quarter of a second
+    /// and half a minute: the number is a third party's, and zero would be a request in a loop.
+    /// </summary>
+    internal static TimeSpan PollInterval(long? suggestedMs)
+        => TimeSpan.FromMilliseconds(Math.Clamp(suggestedMs ?? 1000, 250, 30_000));
+
+    /// <summary>How many asks in a row may fail before humcp stops asking and says so.</summary>
+    private const int PollFailures = 3;
+
+    /// <summary>
+    /// Makes the call, offering the server a task (the SDK puts the extension in the request's own
+    /// <c>_meta</c>). A server can still answer at once, and most calls on most servers will.
+    /// </summary>
+    private async Task<(ToolCallOutcome? Immediate, BackgroundTask? Task)> StartAsync(
+        McpClient client, ToolInfo tool, JsonObject? arguments, ElicitationPrompter? elicit, string? progressToken,
+        CancellationToken cancellationToken)
+    {
+        var request = new CallToolRequestParams
+        {
+            Name = tool.Name,
+            // An empty object rather than none, for the reason NoArguments exists.
+            Arguments = Elements(arguments),
+            Meta = progressToken is null ? null : new JsonObject { ["progressToken"] = progressToken },
+        };
+
+        // Through SendRequestAsync, which is where the SDK resolves input_required: a server that
+        // asks a question before it decides to make a task is answered exactly as on a plain call.
+        var answer = await client.CallToolAsTaskAsync(request, cancellationToken).ConfigureAwait(false);
+
+        if (!answer.IsTask) return (MapResult(answer.Result!), null);
+
+        var created = answer.TaskCreated!;
+        var task = new BackgroundTask(created.TaskId, tool, this, DateTimeOffset.Now, elicit,
+            t => StopTaskAsync(client, t));
+
+        task.Report(BackgroundTaskState.Working, created.StatusMessage);
+        RecordDiagnostic($"{tool.Name} is running as a task.");
+
+        // Not tied to the caller's token: the window that asked may close, and the work it asked for
+        // goes on. Tied to the connection instead, which PollAsync checks on every pass.
+        _ = Task.Run(() => PollAsync(client, task, created.PollIntervalMs));
+        return (null, task);
+    }
+
+    /// <summary>
+    /// Asks how a task is going until it ends (<c>tasks/get</c>). Polling, because the SDK does not
+    /// yet deliver the extension's status notifications (its own documentation says so).
+    /// </summary>
+    private async Task PollAsync(McpClient client, BackgroundTask task, long? suggestedMs)
+    {
+        var interval = PollInterval(suggestedMs);
+        var wait = interval < FirstLook ? interval : FirstLook;
+        var answered = new HashSet<string>(StringComparer.Ordinal);
+        var failures = 0;
+        var tool = task.Tool.DisplayName;
+
+        while (!task.IsFinished)
+        {
+            await Task.Delay(wait).ConfigureAwait(false);
+            wait = interval;
+
+            if (!ReferenceEquals(Volatile.Read(ref _client), client) || client.Completion.IsCompleted)
+            {
+                Lose(task, $"The connection to {Descriptor.DisplayName} ended before {tool} finished.");
+                return;
+            }
+
+            GetTaskResult state;
+
+            try
+            {
+                state = await client.GetTaskAsync(task.Id).ConfigureAwait(false);
+                failures = 0;
+            }
+            catch (Exception) when (client.Completion.IsCompleted || !ReferenceEquals(Volatile.Read(ref _client), client))
+            {
+                Lose(task, $"The connection to {Descriptor.DisplayName} ended before {tool} finished.");
+                return;
+            }
+            catch (Exception ex)
+            {
+                RecordDiagnostic($"Asking about the task for {task.Tool.Name} failed: {ex.Message}");
+                if (++failures < PollFailures) continue;
+
+                Lose(task, $"{Descriptor.DisplayName} could not say how {tool} is going. {Describe(ex)}");
+                return;
+            }
+
+            if (state.PollIntervalMs is { } suggested) interval = PollInterval(suggested);
+
+            switch (state)
+            {
+                case CompletedTaskResult completed:
+                    task.Finish(BackgroundTaskState.Completed, Completed(task.Tool, completed.Result));
+                    return;
+
+                case FailedTaskResult failed:
+                {
+                    // A JSON-RPC error rather than a tool's own error, which arrives as a completed
+                    // result with isError set and is shown as one.
+                    var why = ErrorText(failed.Error);
+                    task.Finish(BackgroundTaskState.Failed,
+                        ToolCallOutcome.Failure($"{tool} failed on the server. {why}".Trim()), why);
+                    return;
+                }
+
+                case CancelledTaskResult:
+                    task.Finish(BackgroundTaskState.Stopped, null);
+                    return;
+
+                case InputRequiredTaskResult input:
+                    task.Report(BackgroundTaskState.NeedsAnswer, input.StatusMessage);
+                    await AnswerAsync(client, task, input, answered).ConfigureAwait(false);
+                    break;
+
+                default:
+                    task.Report(BackgroundTaskState.Working, state.StatusMessage);
+                    break;
+            }
+        }
+    }
+
+    /// <summary>
+    /// The questions a task is waiting on, each asked once (the extension says to recognise a key
+    /// already answered), through the same handler a call's questions use, and the answers sent
+    /// back with <c>tasks/update</c>.
+    /// </summary>
+    private async Task AnswerAsync(
+        McpClient client, BackgroundTask task, InputRequiredTaskResult input, HashSet<string> answered)
+    {
+        var fresh = (input.InputRequests ?? new Dictionary<string, InputRequest>())
+            .Where(r => !answered.Contains(r.Key))
+            .ToDictionary(r => r.Key, r => r.Value, StringComparer.Ordinal);
+
+        if (fresh.Count == 0) return;
+
+        // Read now, not when the task began: the window that started it may have closed since, and
+        // whoever took it over has said where its questions go.
+        _prompter.Value = task.Prompter;
+
+        try
+        {
+            var responses = await client.ResolveInputRequestsAsync(fresh, task.Abandoned).ConfigureAwait(false);
+
+            await client.UpdateTaskAsync(new UpdateTaskRequestParams { TaskId = task.Id, InputResponses = responses })
+                .ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (task.Abandoned.IsCancellationRequested)
+        {
+            // Stopped while the question was open. The question window has closed with it, and the
+            // next ask finds out how the server took the stopping.
+        }
+        catch (UnsupportedInputRequestException ex)
+        {
+            // Asked for something humcp never claimed. The task cannot go on without it, so the server
+            // is told to stop, and the user is told why in the same words a call would use.
+            await StopTaskAsync(client, task).ConfigureAwait(false);
+            var why = $"{task.Tool.DisplayName} asked humcp for {ex.What}, which it does not do, so the task was stopped.";
+            task.Finish(BackgroundTaskState.Failed, ToolCallOutcome.Failure(why), why);
+        }
+        catch (Exception ex)
+        {
+            RecordDiagnostic($"Answering the task for {task.Tool.Name} failed: {ex.Message}");
+        }
+        finally
+        {
+            _prompter.Value = null;
+            foreach (var key in fresh.Keys) answered.Add(key);
+        }
+    }
+
+    /// <summary><c>tasks/cancel</c>, which the server acknowledges and may or may not act on.</summary>
+    private async Task StopTaskAsync(McpClient client, BackgroundTask task)
+    {
+        try
+        {
+            await client.CancelTaskAsync(task.Id).ConfigureAwait(false);
+            RecordDiagnostic($"Asked the server to stop the task for {task.Tool.Name}.");
+        }
+        catch (Exception ex)
+        {
+            RecordDiagnostic($"Asking the server to stop the task for {task.Tool.Name} failed: {ex.Message}");
+        }
+    }
+
+    private void Lose(BackgroundTask task, string why)
+    {
+        RecordDiagnostic(why);
+        task.Finish(BackgroundTaskState.Lost, ToolCallOutcome.Failure(why), why);
+    }
+
+    /// <summary>A finished task's result, which is the result the call would have had.</summary>
+    private ToolCallOutcome Completed(ToolInfo tool, JsonElement result)
+    {
+        try
+        {
+            if (result.Deserialize(McpJsonUtilities.DefaultOptions.GetTypeInfo<CallToolResult>()) is { } call)
+                return MapResult(call);
+        }
+        catch (Exception ex) when (ex is JsonException or NotSupportedException)
+        {
+            RecordDiagnostic($"The result of the task for {tool.Name} could not be read: {ex.Message}");
+        }
+
+        return ToolCallOutcome.Failure($"{tool.DisplayName} finished, and its result could not be read.");
+    }
+
+    /// <summary>A JSON-RPC error object's message, in a sentence's worth of words.</summary>
+    private static string ErrorText(JsonElement error)
+    {
+        var message = error.ValueKind == JsonValueKind.Object
+                      && error.TryGetProperty("message", out var m) && m.ValueKind == JsonValueKind.String
+            ? m.GetString()
+            : null;
+
+        return TextSanitizer.Clean(message, TextSanitizer.HelpLength);
+    }
+
+    /// <summary>The arguments as the request object wants them, detached for the reason <see cref="Marshal"/> gives.</summary>
+    private static Dictionary<string, JsonElement> Elements(JsonObject? arguments)
+    {
+        var elements = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
+        if (arguments is null) return elements;
+
+        foreach (var (name, value) in arguments)
+            elements[name] = JsonSerializer.SerializeToElement(value);
+
+        return elements;
+    }
 
     // ------------------------------------------------------------------ prompts (Phase 12)
 

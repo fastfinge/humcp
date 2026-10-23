@@ -107,6 +107,19 @@ A resource template is a resource whose address you fill in, such as a file by i
 
 When a tool's result links to a resource, the link has a Read resource button: humcp asks the same server for it and shows it in a window of its own, so the result you were reading stays where it was. And where a tool asks for a resource's address, its field offers the server's resources in its drop-down, after the values you typed there before.
 
+### Background tasks
+
+Some servers run long work in the background: you run the tool as usual, and the server answers later, when the work is done. Most of the time you will not notice the difference. When you do:
+
+- **In a form**, the tool runs as any tool does, and its result appears in the form. If it is still running after a moment, humcp says so, and that closing the window will not stop it. Close the window and the work carries on; humcp says when it has finished.
+- **From the tree**, a tool with nothing to fill in that is still running after a moment is moved to the background, so you can go on running other tools. humcp says when it has finished.
+- **Escape**, while you are waiting for it, asks the server to stop it. The server decides: work that was nearly done may finish anyway.
+- If the server asks you something in the middle of the work, a question window opens, as it does for any tool.
+
+Control plus T, in any humcp window, opens Background tasks: every task a server has run for you since humcp started, newest first, each saying what it is, which server, how it stands and when it started. The result of the selected one is below the list; F6 moves between the two. Delete stops a task that is running.
+
+Closing humcp while tasks are running loses their results, so humcp says so the first time you try, and closes the second.
+
 ## 5. Reading a result
 
 A result is made of parts, and each part has a control suited to it.
@@ -172,6 +185,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 - Control plus W or Escape: close the current window (not the main one).
 - F1: full details of whatever the caret is on.
 - Control plus R: say the last announcement again, through your screen reader. Also Help, Repeat last announcement.
+- Control plus T: Background tasks, the work servers are running for you. Also the Window menu.
 
 ### The tree
 
@@ -210,6 +224,11 @@ Help, Keyboard shortcuts shows this list inside humcp.
 ### A question from a server
 
 - Control plus Enter: accept. Alt plus D: decline. Escape: cancel.
+
+### Background tasks
+
+- Delete: stop the selected task.
+- F6: between the list and the selected task's result.
 
 ## 10. Where humcp keeps things, and privacy
 

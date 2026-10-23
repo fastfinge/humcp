@@ -1,0 +1,85 @@
+<!--
+    Background tasks (ROADMAP §11, Phase 14): every tool call a server ran as a task this session,
+    and the result of the one selected. Two panes, cycled with F6, as the main window's tree and
+    result are.
+
+    Every name here starts with "Tasks": an owned window is a UIA descendant of the main window, and
+    an automation id shared with it makes every lookup from there a coin toss (§9).
+-->
+<Window x:Class="Humcp.App.TaskListWindow" x:ClassModifier="internal"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Humcp.App"
+        Title="Background tasks"
+        Height="640" Width="760" MinWidth="420"
+        WindowStartupLocation="CenterOwner">
+
+    <DockPanel>
+
+        <!-- ================================================== menu bar (§7.14) -->
+        <Menu DockPanel.Dock="Top" AutomationProperties.Name="Main menu"
+              Focusable="False" IsTabStop="False"
+              KeyboardNavigation.TabNavigation="None">
+            <MenuItem Header="_Task">
+                <MenuItem x:Name="TasksStopMenuItem" Header="_Stop task" InputGestureText="Delete" Click="OnStop" />
+                <Separator />
+                <MenuItem Header="_Close" InputGestureText="Esc"
+                          Command="{x:Static local:WindowManager.CloseWindow}" />
+            </MenuItem>
+            <MenuItem x:Name="TasksWindowMenu" Header="_Window" />
+        </Menu>
+
+        <!-- ================================================== status (§7.16: no name) -->
+        <StatusBar DockPanel.Dock="Bottom">
+            <StatusBarItem>
+                <TextBlock x:Name="TasksStatus" AutomationProperties.LiveSetting="Polite" TextWrapping="Wrap" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <Grid Margin="10,10,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="2*" MinHeight="100" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="3*" MinHeight="120" />
+            </Grid.RowDefinitions>
+
+            <TextBlock Grid.Row="0" Text="Background tasks" FontWeight="Bold" FontSize="15"
+                       AutomationProperties.HeadingLevel="Level1" Margin="0,0,0,6" />
+
+            <!-- ================================================== pane 1: the tasks -->
+            <ListBox x:Name="TasksList" Grid.Row="1"
+                     AutomationProperties.Name="Background tasks"
+                     AutomationProperties.HelpText="Arrow through the tasks. The selected one's result is below; F6 moves to it. Delete stops a task that is running."
+                     KeyboardNavigation.TabNavigation="Once">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Description}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <!-- §7.23: the item says its description, not the view-model's type name. -->
+                        <Setter Property="AutomationProperties.Name" Value="{Binding Description}" />
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
+
+            <!-- ================================================== commands -->
+            <!-- Between the panes, where it is on screen: tab order follows the tree (phase3-notes 4.3). -->
+            <StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,8,0,8">
+                <Button x:Name="TasksStopButton" Content="_Stop task" Padding="14,4" Margin="0,0,8,0"
+                        Click="OnStop"
+                        AutomationProperties.AcceleratorKey="Delete"
+                        AutomationProperties.HelpText="Asks the server to stop the selected task. The server decides; a task that was nearly done may finish anyway." />
+            </StackPanel>
+
+            <!-- ================================================== pane 2: its result -->
+            <DockPanel Grid.Row="3">
+                <TextBlock x:Name="TasksResultHeading" DockPanel.Dock="Top" Text="Result" FontWeight="Bold"
+                           AutomationProperties.HeadingLevel="Level2" Margin="0,0,0,4" />
+                <local:ResultView x:Name="TasksResults" />
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</Window>

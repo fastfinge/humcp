@@ -10,6 +10,9 @@
   <ItemGroup>
     <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
     <PackageVersion Include="ModelContextProtocol.AspNetCore" Version="2.2.0" />
+    <!-- The Tasks extension (Phase 14), from the same SDK and the same release. Pinned exactly, as the
+         package itself pins its ModelContextProtocol dependency to [2.2.0]. -->
+    <PackageVersion Include="ModelContextProtocol.Extensions.Tasks" Version="2.2.0" />
     <PackageVersion Include="Prismatoid" Version="0.4.0" />
   </ItemGroup>
 

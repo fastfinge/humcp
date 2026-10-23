@@ -25,14 +25,14 @@ public class PromptTests(AppFixture fixture, ITestOutputHelper output)
         var server = Tree().FindFirstChild(cf => cf.ByControlType(ControlType.TreeItem));
         Assert.NotNull(server);
 
-        Assert.Contains("32 tools, 4 prompts, 4 resources", server.Name);
+        Assert.Contains("36 tools, 4 prompts, 4 resources", server.Name);
 
         var categories = server.FindAllChildren(cf => cf.ByControlType(ControlType.TreeItem))
             .Select(c => UiaTree.Safe(() => c.Name))
             .ToList();
 
         output.WriteLine(string.Join(" | ", categories));
-        Assert.Equal(["Tools, 32 items", "Prompts, 4 items", "Resources, 4 items"], categories);
+        Assert.Equal(["Tools, 36 items", "Prompts, 4 items", "Resources, 4 items"], categories);
 
         // Named like a tool, in the protocol's word for what a prompt takes.
         Assert.NotNull(TreeItem("Review code, 1 required argument"));

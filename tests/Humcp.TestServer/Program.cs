@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 using System.Text.Json.Nodes;
+using ModelContextProtocol.Extensions.Tasks;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 
@@ -98,6 +100,9 @@ internal static class Program
         if (args is [.., "--exit-after", var delayText] && int.TryParse(delayText, out var delay))
             _ = Task.Run(async () => { await Task.Delay(delay); Environment.Exit(3); });
 
+        // Phase 14: the tasks extension, for the task_ tools only (TestTasks.Mode).
+        await using var tasks = Tasks(options);
+
         try
         {
             await using var transport = new StdioServerTransport(options);
@@ -133,7 +138,8 @@ internal static class Program
                 configured.Handlers = options.Handlers;
                 configured.ServerInstructions = options.ServerInstructions;
             })
-            .WithHttpTransport();
+            .WithHttpTransport()
+            .WithTasks(TaskStore, configured => configured.ExecutionModeSelector = TestTasks.Mode);
 
         var app = builder.Build();
         app.MapMcp("/mcp");
@@ -145,6 +151,35 @@ internal static class Program
     }
 
     public const string MalformedName = "broken_schema";
+
+    /// <summary>
+    /// Where tasks are kept. Asked about four times a second, so a test waits a quarter of a second
+    /// for an answer rather than the default second.
+    /// </summary>
+    private static readonly InMemoryMcpTaskStore TaskStore = new() { DefaultPollIntervalMs = 250 };
+
+    /// <summary>
+    /// Turns the tasks extension on for a server built without dependency injection. The SDK only
+    /// offers it on the DI builder, as one <see cref="IConfigureOptions{TOptions}"/>; the stdio fixture
+    /// has always been built from a bare <see cref="McpServerOptions"/>, and keeping it that way keeps
+    /// every other test's server what it was. The provider is returned to live as long as the server,
+    /// because the task runner makes a scope from it for each task.
+    /// </summary>
+    private static ServiceProvider Tasks(McpServerOptions options)
+    {
+        var services = new ServiceCollection();
+        services.AddMcpServer().WithTasks(TaskStore, configured => configured.ExecutionModeSelector = TestTasks.Mode);
+
+        var provider = services.BuildServiceProvider();
+
+        foreach (var configure in provider.GetServices<IConfigureOptions<McpServerOptions>>()
+                     .Where(c => c.GetType().Assembly == typeof(InMemoryMcpTaskStore).Assembly))
+        {
+            configure.Configure(options);
+        }
+
+        return provider;
+    }
 
     private static string ThisAssemblyVersion =>
         typeof(Program).Assembly.GetName().Version?.ToString(3) ?? "0.0.0";

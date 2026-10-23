@@ -110,7 +110,11 @@ window, its arguments a synthesised schema, its messages result parts with a `Ro
 `completion/complete` filling the argument drop-down. Its NVDA pass found four defects. **Phase 13,
 resources, is complete** — **`docs/phase13-notes.md`**: resources and templates are two more
 `OperationKind`s, a `resource_link` reads back through its server, and an address-shaped tool
-parameter offers the server's resources. Its NVDA pass found four defects too.
+parameter offers the server's resources. Its NVDA pass found four defects too. **Phase 14, tasks, is
+complete** — **`docs/phase14-notes.md`**: `ModelContextProtocol.Extensions.Tasks` 2.2.0, a neutral
+`BackgroundTask` polled by the connection, Escape stops a task and closing its window only stops
+waiting, and Background tasks (<kbd>Ctrl+T</kbd>) lists them. Its NVDA pass found three defects, one of
+them in every form since Phase 3. That is the whole of §11's v2 build order.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -213,7 +217,8 @@ without saying so is not.
 - **`oneOf` stays at Tier 3, and the `discriminator` promotion is not worth building yet** —
   measured against the corpus, not assumed: zero of the 18 real union parameters are
   constant-discriminated (phase2-notes 3.3). Re-measure at v4 by re-running the harvester.
-- Target `net10.0-windows`. Pinned: `ModelContextProtocol.Core` 2.2.0, `prismatoid` 0.4.0
+- Target `net10.0-windows`. Pinned: `ModelContextProtocol.Core` 2.2.0 (and its Tasks extension, the
+  same release), `prismatoid` 0.4.0
   (very new — wrap it, and keep the no-op fallback working), `JsonSchema.Net` 9.4.0.
 
 ## Architecture
@@ -536,10 +541,11 @@ in; nothing under `src/` knows it exists.
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
-- **The fixture server publishes 32 tools, 4 prompts and 4 resources** (Phase 12: prompts with none,
+- **The fixture server publishes 36 tools, 4 prompts and 4 resources** (Phase 12: prompts with none,
   completed arguments narrowed by context, a conversation with a picture, and `demo_echo`, which is a
   tool's name too; Phase 13: text, a picture, JSON, a completed template, and the tool
-  `result_link_to`, whose `resource_uri` parameter offers them). Seven were added in Phase 4 with the `result_` prefix,
+  `result_link_to`, whose `resource_uri` parameter offers them; Phase 14: four `task_` tools, the only
+  ones it runs as tasks — `TestTasks.Mode` keeps every other tool an ordinary call). Seven were added in Phase 4 with the `result_` prefix,
   one per shape a result can have, and an eighth in 1.1, `result_json_text`, which sends JSON as
   text the way most real servers do; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
   round trip can have; and in Phase 6 `tools_toggle`, which adds or removes `tools_appeared` so the

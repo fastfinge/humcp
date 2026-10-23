@@ -7,11 +7,11 @@ this repository and beside `Humcp.App.exe` in every release.
 | Component | Version | Licence | Source | Text |
 |---|---|---|---|---|
 | .NET runtime and Windows Desktop (WPF) | 10.0 | MIT | https://github.com/dotnet/runtime, https://github.com/dotnet/wpf | `dotnet-runtime.txt`, `dotnet-wpf.txt`, and their third-party notices |
-| ModelContextProtocol.Core (the C# MCP SDK) | 2.2.0 | Apache-2.0, with MIT for earlier contributions | https://github.com/modelcontextprotocol/csharp-sdk | `ModelContextProtocol.txt` |
+| ModelContextProtocol.Core, ModelContextProtocol and ModelContextProtocol.Extensions.Tasks (the C# MCP SDK) | 2.2.0 | Apache-2.0, with MIT for earlier contributions | https://github.com/modelcontextprotocol/csharp-sdk | `ModelContextProtocol.txt` |
 | Prismatoid (prism screen reader bridge, managed and native) | 0.4.0 | MPL-2.0 | https://github.com/the-byte-bender/Prismatoid | `Prismatoid.txt` |
 | JsonSchema.Net, JsonPointer.Net, Json.More.Net | 9.4.0, 7.0.2, 3.0.1 | MIT (source); see below for the binaries | https://github.com/json-everything/json-everything | `json-everything.txt` |
 | Humanizer.Core | 3.0.10 | MIT | https://github.com/Humanizr/Humanizer | `Humanizer.txt` |
-| Microsoft.Extensions.AI.Abstractions, .DependencyInjection.Abstractions, .Logging.Abstractions | 10.x | MIT | https://github.com/dotnet/extensions, https://github.com/dotnet/runtime | `dotnet-runtime.txt` |
+| Microsoft.Extensions.AI.Abstractions, .Caching.Abstractions, .Configuration.Abstractions, .DependencyInjection.Abstractions, .Diagnostics.Abstractions, .FileProviders.Abstractions, .Hosting.Abstractions, .Logging.Abstractions, .Options, .Primitives | 10.x | MIT | https://github.com/dotnet/extensions, https://github.com/dotnet/runtime | `dotnet-runtime.txt` |
 | ONNX Runtime GenAI (Microsoft.ML.OnnxRuntimeGenAI.WinML and .Managed) | 0.18.0 | MIT | https://github.com/microsoft/onnxruntime-genai | `OnnxRuntimeGenAI.txt`, `OnnxRuntimeGenAI-third-party-notices.txt` |
 | **Microsoft Windows ML Runtime** (Microsoft.Windows.AI.MachineLearning: ONNX Runtime, DirectML, the Windows ML projection) | 2.4.89 | **Microsoft Software License Terms — not open source** | https://learn.microsoft.com/windows/ai/new-windows-ml/overview | `WindowsML.txt`, `WindowsML-third-party-notices.txt` |
 

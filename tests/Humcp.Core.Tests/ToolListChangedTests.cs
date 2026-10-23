@@ -29,18 +29,18 @@ public class ToolListChangedTests
         await using var connection = new ServerConnection(TestServerFixture.TestServer());
         await connection.ConnectAsync(TestContext.Current.CancellationToken);
 
-        Assert.Equal(32, connection.Tools.Count);
+        Assert.Equal(36, connection.Tools.Count);
         var toggle = connection.Tools.Single(t => t.Name == "tools_toggle");
 
         await connection.CallAsync(toggle, TestContext.Current.CancellationToken);
 
-        Assert.True(await Until(connection, () => connection.Tools.Count == 33, TimeSpan.FromSeconds(15)),
+        Assert.True(await Until(connection, () => connection.Tools.Count == 37, TimeSpan.FromSeconds(15)),
             "The tool list never changed. Diagnostics: " + string.Join(" | ", connection.Diagnostics));
         Assert.Contains(connection.Tools, t => t.Name == "tools_appeared");
 
         await connection.CallAsync(toggle, TestContext.Current.CancellationToken);
 
-        Assert.True(await Until(connection, () => connection.Tools.Count == 32, TimeSpan.FromSeconds(15)),
+        Assert.True(await Until(connection, () => connection.Tools.Count == 36, TimeSpan.FromSeconds(15)),
             "The tool that appeared never went away. Diagnostics: " + string.Join(" | ", connection.Diagnostics));
         Assert.DoesNotContain(connection.Tools, t => t.Name == "tools_appeared");
     }

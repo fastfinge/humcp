@@ -43,7 +43,7 @@ internal sealed class ProblemEntry(string text, string fieldPath)
 /// Tier 3 editor that is not JSON, where there is no request to construct at all.
 /// </para>
 /// </remarks>
-public partial class ToolWindow : Window
+public partial class ToolWindow : Window, IStatusLine
 {
     private readonly ToolInfo _tool;
     private readonly ServerConnection _connection;
@@ -56,6 +56,12 @@ public partial class ToolWindow : Window
     private CancellationTokenSource? _call;
 
     /// <summary>
+    /// The task the call in flight became, when the server made it one (Phase 14). Stopping it is a
+    /// request to the server; closing the window only stops waiting for it.
+    /// </summary>
+    private BackgroundTask? _task;
+
+    /// <summary>
     /// Set by the first Run of a tool that says it is destructive, which only warns; the second runs
     /// it. Cleared after every run, so each one is asked about (ROADMAP §3).
     /// </summary>
@@ -65,6 +71,9 @@ public partial class ToolWindow : Window
     private string? _warnedAbout;
     private bool _callInFlight;
     private int _paneIndex;
+
+    /// <summary>Set when Run is pressed from its own button, whose caret then belongs on Stop.</summary>
+    private bool _toStop;
 
     /// <summary>How many questions this call has asked, so a second one is titled as a second one.</summary>
     private int _questions;
@@ -209,12 +218,32 @@ public partial class ToolWindow : Window
             _ = RunAsync();
         };
 
+        // Whichever of the two buttons WPF re-evaluates first, the caret ends on Stop: moved there
+        // from Run if Run is still enabled, or from the window if Run has already dropped it.
+        FormStopButton.IsEnabledChanged += (_, e) =>
+        {
+            if (e.NewValue is not true || !_toStop) return;
+
+            _toStop = false;
+            if (_callInFlight && (FormRunButton.IsKeyboardFocused || Keyboard.FocusedElement is Window or null))
+                FormStopButton.Focus();
+        };
+
         Closed += (_, _) =>
         {
+            // Before the waiting is cancelled: a task carries on without this window, and the list
+            // takes over its questions and says when it is done.
+            if (_task is { IsFinished: false } task) Tasks?.Release(task);
+
             _closing.Cancel();
             FormResults.StopDescribing();
         };
     }
+
+    /// <summary>The background task list (Phase 14), which a call that becomes a task joins.</summary>
+    internal BackgroundTasks? Tasks { get; set; }
+
+    void IStatusLine.Say(string text) => SetStatus(text);
 
     /// <summary>The tool this window is a form for. Used by the window manager to avoid opening two.</summary>
     public string ToolName => _tool.Name;
@@ -417,15 +446,49 @@ public partial class ToolWindow : Window
     /// </summary>
     private void Stop()
     {
+        // A task is stopped by asking the server (tasks/cancel), and the window goes on waiting to
+        // hear that it has: cancelling the wait would only leave it running unwatched.
+        if (_task is { IsFinished: false } task)
+        {
+            if (task.StopRequested) return;
+
+            _ = task.StopAsync();
+            SayLater($"Asked {_connection.Descriptor.DisplayName} to stop {_tool.DisplayName}. It has not stopped yet.");
+            return;
+        }
+
         if (_call is not { IsCancellationRequested: false } call) return;
 
         call.Cancel();
+    }
+
+    /// <summary>
+    /// The server made this call a task. It joins the list, and — only if it is still running a
+    /// moment later, since most tasks are quick — the window says that closing it will not stop it.
+    /// </summary>
+    private void OnBecameTask(BackgroundTask task)
+    {
+        // Listed even when it has already finished: it was a task, and the list is the record of them.
+        Tasks?.Add(task, this);
+        if (!_callInFlight || task.IsFinished) return;
+
+        _task = task;
+
+        // Later and shorter than the first version, which the result cut off for any task of two or
+        // three seconds (phase14-notes): most tasks are done before this is worth saying.
+        SayLater($"{_tool.DisplayName} is running in the background. Closing this window will not stop it.",
+            TimeSpan.FromSeconds(3));
     }
 
     private async Task SendAsync(FormSubmission submission)
     {
         _callInFlight = true;
         CommandManager.InvalidateRequerySuggested();
+
+        // Run is about to be disabled under the caret, which would drop focus to the window — heard
+        // as "unavailable" and the window's title (phase14-notes, §7.25). Stop is what can be done
+        // next, so the caret goes there as soon as it is enabled (see the handler in the constructor).
+        _toStop = FormRunButton.IsKeyboardFocused;
 
         var started = DateTimeOffset.Now;
         _questions = 0;
@@ -443,7 +506,8 @@ public partial class ToolWindow : Window
         try
         {
             _call = CancellationTokenSource.CreateLinkedTokenSource(_closing.Token);
-            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, progress, _call.Token);
+            var outcome = await _connection.CallAsync(_tool, submission.Arguments, AskAsync, progress,
+                task => Dispatcher.BeginInvoke(() => OnBecameTask(task)), _call.Token);
             throttle.Finish();
 
             ShowResult(outcome, started);
@@ -467,6 +531,7 @@ public partial class ToolWindow : Window
         {
             _call?.Dispose();
             _call = null;
+            _task = null;
             _callInFlight = false;
             CommandManager.InvalidateRequerySuggested();
 
@@ -527,9 +592,9 @@ public partial class ToolWindow : Window
     /// carries the result — was never heard at all (phase5-notes 4.4). "Still running" is only
     /// worth saying while it is still running, so it waits to find out.
     /// </remarks>
-    private void SayLater(string text)
+    private void SayLater(string text, TimeSpan? after = null)
     {
-        var timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1.2) };
+        var timer = new DispatcherTimer { Interval = after ?? TimeSpan.FromSeconds(1.2) };
 
         timer.Tick += (_, _) =>
         {

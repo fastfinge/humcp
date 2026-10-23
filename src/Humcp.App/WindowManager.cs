@@ -48,7 +48,17 @@ public sealed class WindowManager
     public static readonly RoutedUICommand RepeatAnnouncement =
         new("", nameof(RepeatAnnouncement), typeof(WindowManager));
 
+    /// <summary>Opens the background task list (Phase 14). <kbd>Ctrl+T</kbd>, in every window.</summary>
+    public static readonly RoutedUICommand ShowTasks =
+        new("", nameof(ShowTasks), typeof(WindowManager));
+
     private readonly ObservableCollection<Window> _windows = [];
+
+    /// <summary>
+    /// What <see cref="ShowTasks"/> does. Set by the main window, which owns the list; tasks belong to
+    /// the whole application, so the list is reached from every window rather than from one menu.
+    /// </summary>
+    public Action? TasksRequested { get; set; }
 
     /// <summary>
     /// Speaks for <see cref="RepeatAnnouncement"/>: the screen reader directly, through prism. Set by
@@ -139,6 +149,9 @@ public sealed class WindowManager
         window.CommandBindings.Add(new CommandBinding(RepeatAnnouncement, (_, _) => Repeat()));
         window.InputBindings.Add(new KeyBinding(RepeatAnnouncement, new KeyGesture(Key.R, ModifierKeys.Control)));
 
+        window.CommandBindings.Add(new CommandBinding(ShowTasks, (_, _) => TasksRequested?.Invoke()));
+        window.InputBindings.Add(new KeyBinding(ShowTasks, new KeyGesture(Key.T, ModifierKeys.Control)));
+
         if (!closable) return;
 
         window.CommandBindings.Add(new CommandBinding(CloseWindow, (_, _) => window.Close()));
@@ -200,6 +213,14 @@ public sealed class WindowManager
     private void Fill(MenuItem menu, Window current)
     {
         menu.Items.Clear();
+
+        // First, and not numbered: the list of tasks is not a window that is open, and the numbers
+        // belong to Ctrl+1 to Ctrl+9.
+        var tasks = new MenuItem { Header = "_Background tasks", InputGestureText = "Ctrl+T" };
+        AutomationProperties.SetName(tasks, "Background tasks");
+        tasks.Click += (_, _) => TasksRequested?.Invoke();
+        menu.Items.Add(tasks);
+        menu.Items.Add(new Separator());
 
         for (var index = 0; index < _windows.Count; index++)
         {

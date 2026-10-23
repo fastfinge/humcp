@@ -17,7 +17,7 @@ namespace Humcp.App;
 /// was last run from it (ROADMAP §8). Servers come from <c>servers.json</c> through a
 /// <see cref="ServerRegistry"/> since Phase 6.
 /// </summary>
-public partial class MainWindow : Window
+public partial class MainWindow : Window, IStatusLine
 {
     public static readonly RoutedCommand NextPaneCommand = new();
     public static readonly RoutedCommand PreviousPaneCommand = new();
@@ -56,6 +56,21 @@ public partial class MainWindow : Window
 
     private CancellationTokenSource? _currentCall;
     private bool _callInFlight;
+
+    /// <summary>Every task a server ran this session, and the window that lists them (Phase 14).</summary>
+    private readonly BackgroundTasks _tasks;
+
+    /// <summary>The task the call run from the tree became, while this window is still waiting for it.</summary>
+    private BackgroundTask? _currentTask;
+
+    /// <summary>That task, once it has been handed to the background list so the tree is free again.</summary>
+    private BackgroundTask? _handedOver;
+
+    /// <summary>
+    /// Set by a first attempt to close humcp while tasks are running, which only warns: closing loses
+    /// their results, and that is said once and then done, as a second Delete removes a server.
+    /// </summary>
+    private bool _closeAnyway;
     private int _paneIndex;
 
     /// <summary>
@@ -140,6 +155,15 @@ public partial class MainWindow : Window
             if (e.Key != Key.Escape || !_callInFlight || Keyboard.Modifiers != ModifierKeys.None) return;
 
             e.Handled = true;
+
+            // A task is stopped by asking its server; the wait goes on until the server says it has.
+            if (_currentTask is { IsFinished: false, StopRequested: false } task)
+            {
+                _ = task.StopAsync();
+                SetStatus($"Asking the server to stop {task.Tool.DisplayName}.");
+                return;
+            }
+
             _currentCall?.Cancel();
         };
 
@@ -167,6 +191,30 @@ public partial class MainWindow : Window
         _localModel = new LocalModelMenu(_modelHost, LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
         _features = new LocalModelFeatures(_modelHost, _settings);
         MainResults.Describer = _features;
+
+        _tasks = new BackgroundTasks(this, _windows, SayWhereTheUserIs, SpeakIfAway)
+        {
+            Describer = _features,
+            ReadResource = (connection, uri, label, from) => OpenLinkedResource(connection, uri, label, from),
+        };
+        _windows.TasksRequested = () => _tasks.Show();
+
+        // Running tasks are lost when humcp closes — a server humcp started goes with it, and nothing
+        // is left waiting for one it did not — so the first attempt says so and the second closes.
+        Closing += (_, e) =>
+        {
+            var running = _tasks.Running;
+            if (running.Count == 0 || _closeAnyway) return;
+
+            e.Cancel = true;
+            _closeAnyway = true;
+
+            var names = ServerAnnouncements.List(running.Take(3).Select(t => t.Tool.DisplayName));
+            SetStatus(running.Count == 1
+                ? $"{names} is still running in the background, and closing humcp loses its result. Close humcp again to close it anyway."
+                : $"{running.Count} background tasks are still running, {names}, and closing humcp loses their results. " +
+                  "Close humcp again to close it anyway.");
+        };
 
         // The main window keeps its place in the task bar; everything humcp opens beside it does
         // not, and every window carries the same Window menu (§8).
@@ -933,7 +981,8 @@ public partial class MainWindow : Window
         {
             // Nothing here blocks the UI thread: the window stays responsive, which is what the
             // fixture's two-second tool is for (ROADMAP §4, pitfall 9).
-            var outcome = await connection.CallAsync(tool, null, AskAsync, progress, _currentCall.Token);
+            var outcome = await connection.CallAsync(tool, null, AskAsync, progress,
+                task => Dispatcher.BeginInvoke(() => OnBecameTask(task)), _currentCall.Token);
             throttle.Finish();
 
             async Task<ElicitationAnswer> AskAsync(ElicitationRequest request, CancellationToken token)
@@ -961,6 +1010,12 @@ public partial class MainWindow : Window
             SetStatus(ResultFormatter.Announcement(outcome, tool));
             SpeakIfAway($"{tool.DisplayName}: {ResultFormatter.Announcement(outcome, tool)}");
         }
+        catch (OperationCanceledException) when (_handedOver is not null)
+        {
+            throttle.Finish();
+            // Short, because the ending may follow it in a second or two and must not be the half heard.
+            SetStatus($"{tool.DisplayName} is running in the background. Control plus T lists it.");
+        }
         catch (OperationCanceledException) when (!_shutdown.IsCancellationRequested)
         {
             SetStatus($"Stopped {tool.DisplayName}. The server was told; anything it had already done stays done.");
@@ -973,9 +1028,62 @@ public partial class MainWindow : Window
         {
             _currentCall?.Dispose();
             _currentCall = null;
+            _currentTask = null;
+            _handedOver = null;
             _callInFlight = false;
             UpdateRunAvailability();
         }
+    }
+
+    /// <summary>How long a task run from the tree is waited for here before it goes to the background list.</summary>
+    /// <remarks>
+    /// Three seconds, not the one and a half first tried: found by ear, a three-second task was
+    /// handed over and then finished while the sentence saying so was still being spoken, and the
+    /// second announcement cut the first off (phase14-notes).
+    /// </remarks>
+    private static readonly TimeSpan HandOverAfter = TimeSpan.FromSeconds(3);
+
+    /// <summary>
+    /// The call run from the tree became a task. Waited for here for a moment, because most are
+    /// quick and their result belongs in this pane; one still running after that is handed to the
+    /// background list, because a tool with no form has nowhere else to wait, and waiting here would
+    /// keep every other such tool from being run until it finished.
+    /// </summary>
+    private void OnBecameTask(BackgroundTask task)
+    {
+        _tasks.Add(task, this);
+        if (!_callInFlight || task.IsFinished) return;
+
+        _currentTask = task;
+
+        var timer = new System.Windows.Threading.DispatcherTimer { Interval = HandOverAfter };
+        timer.Tick += (_, _) =>
+        {
+            // Not while it is asking something: the question's window has the user, and "still
+            // running in the background" said over it would be news about the wrong thing.
+            if (task.State == BackgroundTaskState.NeedsAnswer && ReferenceEquals(_currentTask, task)) return;
+
+            timer.Stop();
+            if (!ReferenceEquals(_currentTask, task) || task.IsFinished || task.StopRequested) return;
+
+            _handedOver = task;
+            _tasks.Release(task);
+            _currentCall?.Cancel();
+        };
+        timer.Start();
+    }
+
+    void IStatusLine.Say(string text) => SetStatus(text);
+
+    /// <summary>
+    /// Says something unprompted in whichever humcp window has the focus, since a live region is read
+    /// only there; in the main window when that window has no status line of its own; and through
+    /// the screen reader as well when humcp is in the background and the user asked for that.
+    /// </summary>
+    private void SayWhereTheUserIs(string text)
+    {
+        var active = Application.Current.Windows.OfType<Window>().FirstOrDefault(w => w.IsActive);
+        (active as IStatusLine ?? this).Say(text);
     }
 
     /// <summary>
@@ -1020,6 +1128,7 @@ public partial class MainWindow : Window
             _windows, _settings.ShowOptionalFields, SpeakIfAway);
 
         form.Describer = _features;
+        form.Tasks = _tasks;
         // Owned by the window whose link was followed, so closing it puts the caret back there
         // rather than in the main window: found by ear, where it lost the reader's place (phase13-notes).
         form.ReadResource = (c, uri, label) => OpenLinkedResource(c, uri, label, form);

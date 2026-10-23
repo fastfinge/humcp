@@ -1222,7 +1222,12 @@ suite and an NVDA pass as v1's were:
   `ref/resource` completion behind them; a `resource_link` in any result reads back through its
   server in a window of its own; a tool parameter that wants an address offers the server's
   resources.
-- **Phase 14 — Tasks** (`io.modelcontextprotocol/tasks`), with the background task list.
+- **Phase 14 — Tasks** (`io.modelcontextprotocol/tasks`), with the background task list. ✅ done
+  (`docs/phase14-notes.md`): through the SDK's own extension package, offered per request to a server
+  that claims it and polled at its suggested interval; a task's questions answered through the same
+  handler as MRTR's; Escape asks the server to stop it and closing its window only stops waiting; a
+  task left running in the main window goes to the list after three seconds, and Background tasks
+  (<kbd>Ctrl+T</kbd>, in every window) lists them all with the selected one's result.
 
 Braille tuning has no phase until a session with a display says whether it is wanted (§13).
 

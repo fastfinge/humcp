@@ -14,6 +14,7 @@
     <!-- Test-only. The fixture serves Streamable HTTP as well as stdio since Phase 7, so the
          client's HTTP transport is tested against a real server over a real socket. -->
     <PackageReference Include="ModelContextProtocol.AspNetCore" />
+    <PackageReference Include="ModelContextProtocol.Extensions.Tasks" />
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

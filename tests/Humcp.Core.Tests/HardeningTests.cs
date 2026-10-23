@@ -35,7 +35,7 @@ public class HardeningTests
 
         Assert.True(connection.State == ServerConnectionState.Connected,
             $"Did not connect over HTTP: {connection.FailureReason}");
-        Assert.Equal(32, connection.Tools.Count);
+        Assert.Equal(36, connection.Tools.Count);
 
         var outcome = await connection.CallAsync(connection.Tools.Single(t => t.Name == "demo_echo"),
             new System.Text.Json.Nodes.JsonObject { ["text"] = "over the wire" },
@@ -43,6 +43,14 @@ public class HardeningTests
 
         Assert.False(outcome.IsError);
         Assert.Contains("over the wire", Assert.IsType<TextResultBlock>(outcome.Blocks[0]).Text);
+
+        // A task over HTTP, where every ask after it is a request of its own (Phase 14).
+        BackgroundTask? task = null;
+        var report = await connection.CallAsync(connection.Tools.Single(t => t.Name == "task_slow_report"),
+            null, null, null, t => task = t, TestContext.Current.CancellationToken);
+
+        Assert.NotNull(task);
+        Assert.Contains("three sections", report.CombinedText);
     }
 
     [Theory]
@@ -131,7 +139,7 @@ public class HardeningTests
 
         // Every ordinary tool, and the broken one too — as a JSON editor, which is what humcp does
         // with any schema it cannot draw (§5, Tier 3).
-        Assert.Equal(33, connection.Tools.Count);
+        Assert.Equal(37, connection.Tools.Count);
 
         var broken = connection.Tools.Single(t => t.Name == "broken_schema");
         Assert.Equal("A tool with a broken schema", broken.DisplayName);
