@@ -32,6 +32,9 @@ public sealed record ServerSnapshot(
 
     /// <summary>False for a server the configuration marks disabled, which is not started at all.</summary>
     public bool Enabled { get; init; } = true;
+
+    /// <summary>The server's prompts (Phase 12), each an operation of kind <see cref="OperationKind.Prompt"/>.</summary>
+    public IReadOnlyList<ToolInfo> Prompts { get; init; } = [];
 }
 
 /// <summary>
@@ -70,6 +73,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
     private McpClient? _client;
     private IReadOnlyList<ToolInfo> _tools = [];
+    private IReadOnlyList<ToolInfo> _prompts = [];
 
     /// <summary>The held-open <c>subscriptions/listen</c> request, cancelled on disconnect.</summary>
     private CancellationTokenSource? _listening;
@@ -123,11 +127,21 @@ public sealed class ServerConnection : IAsyncDisposable
 
     public IReadOnlyList<ToolInfo> Tools => _tools;
 
+    /// <summary>The server's prompts, empty for one that publishes none (Phase 12).</summary>
+    public IReadOnlyList<ToolInfo> Prompts => _prompts;
+
+    /// <summary>
+    /// Whether the server said it answers <c>completion/complete</c>, which is what puts a drop-down
+    /// behind a prompt's arguments. Asking a server that never claimed it is an error for nothing.
+    /// </summary>
+    public bool SupportsCompletion { get; private set; }
+
     public ServerSnapshot Snapshot() => new(
         Descriptor.DisplayName, State, _tools, NegotiatedProtocolVersion, FailureReason)
     {
         Id = Descriptor.Id,
         Enabled = Descriptor.Enabled,
+        Prompts = _prompts,
     };
 
     /// <summary>
@@ -142,6 +156,8 @@ public sealed class ServerConnection : IAsyncDisposable
 
         Descriptor = descriptor;
         _tools = [];
+        _prompts = [];
+        SupportsCompletion = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         ServerTitle = null;
@@ -155,6 +171,8 @@ public sealed class ServerConnection : IAsyncDisposable
         await DisconnectAsync().ConfigureAwait(false);
 
         _tools = [];
+        _prompts = [];
+        SupportsCompletion = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         _state = ServerConnectionState.NotConnected;
@@ -178,6 +196,8 @@ public sealed class ServerConnection : IAsyncDisposable
         FailureReason = null;
         NegotiatedProtocolVersion = null;
         _tools = [];
+        _prompts = [];
+        SupportsCompletion = false;
         _lastServerLine = null;
 
         if (Transport() is not { } transport)
@@ -197,6 +217,8 @@ public sealed class ServerConnection : IAsyncDisposable
                 .ConfigureAwait(false);
 
             _tools = await ListToolsAsync(_client, cancellationToken).ConfigureAwait(false);
+            _prompts = await ListPromptsAsync(_client, cancellationToken).ConfigureAwait(false);
+            SupportsCompletion = _client.ServerCapabilities?.Completions is not null;
             Listen(_client);
             Watch(_client);
             NegotiatedProtocolVersion = _client.NegotiatedProtocolVersion;
@@ -208,6 +230,7 @@ public sealed class ServerConnection : IAsyncDisposable
         {
             await DisconnectAsync().ConfigureAwait(false);
             _tools = [];
+            _prompts = [];
             State = ServerConnectionState.NotConnected;
             throw;
         }
@@ -219,6 +242,7 @@ public sealed class ServerConnection : IAsyncDisposable
             // without the reason.
             FailureReason = Describe(ex);
             _tools = [];
+            _prompts = [];
             State = ServerConnectionState.Failed;
         }
     }
@@ -295,6 +319,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
             FailureReason = Stopped(details);
             _tools = [];
+            _prompts = [];
             NegotiatedProtocolVersion = null;
             State = ServerConnectionState.Failed;
 
@@ -419,6 +444,9 @@ public sealed class ServerConnection : IAsyncDisposable
 
         if (_client is null || State != ServerConnectionState.Connected)
             return ToolCallOutcome.Failure($"Not connected to {Descriptor.DisplayName}.");
+
+        // The same window runs both, and the difference is the request (Phase 12).
+        if (tool.IsPrompt) return await GetPromptAsync(tool, arguments, elicit, cancellationToken).ConfigureAwait(false);
 
         // Set before the await, so that it flows into whatever thread the SDK resolves an input
         // request on and no further: two windows calling one server each get their own.
@@ -602,6 +630,13 @@ public sealed class ServerConnection : IAsyncDisposable
                     return ValueTask.CompletedTask;
                 }),
 
+                // Prompts change the same way, and one re-listing covers both (Phase 12).
+                new(NotificationMethods.PromptListChangedNotification, (_, _) =>
+                {
+                    _ = RelistAsync();
+                    return ValueTask.CompletedTask;
+                }),
+
                 // Progress for every call on this connection, routed by humcp's own token (Track).
                 new(NotificationMethods.ProgressNotification, (notification, _) => OnProgress(notification)),
             ],
@@ -613,6 +648,184 @@ public sealed class ServerConnection : IAsyncDisposable
         },
 #pragma warning restore MCP9005
     };
+
+    // ------------------------------------------------------------------ prompts (Phase 12)
+
+    /// <summary>
+    /// Every prompt the server publishes, or none. A server that does not claim prompts is not
+    /// asked, and one whose listing fails keeps its tools: prompts are the smaller half of a server,
+    /// and losing the larger to them would be phase2-notes 3.1 over again.
+    /// </summary>
+    private async Task<IReadOnlyList<ToolInfo>> ListPromptsAsync(McpClient client, CancellationToken cancellationToken)
+    {
+        if (client.ServerCapabilities?.Prompts is null) return [];
+
+        try
+        {
+            var prompts = await client.ListPromptsAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+
+            var mapped = prompts
+                .Select(p => PromptForm.Build(
+                    p.Name, p.Title, p.Description,
+                    (p.ProtocolPrompt.Arguments ?? []).Select(a =>
+                        new PromptArgumentInfo(a.Name, a.Title, a.Description, a.Required == true))))
+                .ToList();
+
+            if (mapped.Count <= MaxTools) return mapped;
+
+            RecordDiagnostic($"The server published {mapped.Count} prompts; humcp shows the first {MaxTools}.");
+            return [.. mapped.Take(MaxTools)];
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            RecordDiagnostic("The server's prompts could not be listed, so none are shown: " + ex.Message);
+            return [];
+        }
+    }
+
+    /// <summary>
+    /// Fetches a prompt's messages with the arguments a form assembled. Shaped as a call's outcome,
+    /// one part per message with its speaker on it, so the result view shows it without knowing it
+    /// is not a tool's.
+    /// </summary>
+    /// <remarks>
+    /// A server can stop in the middle of <c>prompts/get</c> to ask a question exactly as it can in
+    /// <c>tools/call</c>; the SDK resolves both the same way (phase5-notes 3.1), so the window's
+    /// prompter is set here too.
+    /// </remarks>
+    private async Task<ToolCallOutcome> GetPromptAsync(
+        ToolInfo prompt, JsonObject? arguments, ElicitationPrompter? elicit, CancellationToken cancellationToken)
+    {
+        if (_client is null || State != ServerConnectionState.Connected)
+            return ToolCallOutcome.Failure($"Not connected to {Descriptor.DisplayName}.");
+
+        _prompter.Value = elicit;
+
+        try
+        {
+            var result = await _client
+                .GetPromptAsync(prompt.Name, PromptArguments(arguments), cancellationToken: cancellationToken)
+                .ConfigureAwait(false);
+
+            return MapPrompt(result);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (UnsupportedInputRequestException ex)
+        {
+            return ToolCallOutcome.Failure(
+                $"{prompt.DisplayName} asked humcp for {ex.What}, which it does not do, so the prompt was not fetched.");
+        }
+        catch (Exception ex)
+        {
+            return ToolCallOutcome.Failure($"{prompt.DisplayName} could not be fetched. {Describe(ex)}");
+        }
+        finally
+        {
+            _prompter.Value = null;
+        }
+    }
+
+    /// <summary>
+    /// A prompt's arguments are strings, every one (the protocol says so). The form only produces
+    /// strings for a prompt, because its schema has nothing else in it; anything else is sent as
+    /// its JSON text rather than refused.
+    /// </summary>
+    private static IReadOnlyDictionary<string, object?> PromptArguments(JsonObject? arguments)
+    {
+        var values = new Dictionary<string, object?>(StringComparer.Ordinal);
+        if (arguments is null) return values;
+
+        foreach (var (name, value) in arguments)
+        {
+            if (value is null) continue;
+
+            values[name] = value is JsonValue v && v.GetValueKind() == JsonValueKind.String
+                ? v.GetValue<string>()
+                : value.ToJsonString();
+        }
+
+        return values;
+    }
+
+    private static ToolCallOutcome MapPrompt(GetPromptResult result)
+    {
+        var blocks = new List<ResultBlock>();
+
+        foreach (var message in result.Messages ?? [])
+        {
+            blocks.Add(Block(message.Content) with
+            {
+                Role = message.Role == Role.Assistant ? "Assistant" : "User",
+            });
+        }
+
+        if (blocks.Count == 0)
+            blocks.Add(new TextResultBlock("The server sent this prompt with no messages in it."));
+
+        return new ToolCallOutcome(IsError: false, Blocks: blocks);
+    }
+
+    /// <summary>The most suggestions one argument's drop-down holds. The protocol's own ceiling.</summary>
+    public const int MaxCompletions = 100;
+
+    /// <summary>
+    /// What the server suggests for one argument of a prompt, given what is typed into it and into
+    /// the others (<c>completion/complete</c>, <c>ref/prompt</c>). The one place MCP can autocomplete
+    /// at all — there is no <c>ref/tool</c> (§4, pitfall 3).
+    /// </summary>
+    /// <returns>
+    /// The suggestions, sanitised and capped — or empty, for a server that does not complete, an
+    /// argument it has nothing for, or an answer that failed. An empty drop-down is the ordinary
+    /// case and nothing to report.
+    /// </returns>
+    public async Task<IReadOnlyList<string>> CompleteAsync(
+        ToolInfo prompt,
+        string argument,
+        string value,
+        IReadOnlyDictionary<string, string>? others = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(prompt);
+        ArgumentNullException.ThrowIfNull(argument);
+
+        if (!prompt.IsPrompt || !SupportsCompletion || _client is not { } client) return [];
+
+        var request = new CompleteRequestParams
+        {
+            Ref = new PromptReference { Name = prompt.Name },
+            Argument = new Argument { Name = argument, Value = value ?? "" },
+            Context = others is { Count: > 0 }
+                ? new CompleteContext { Arguments = others.ToDictionary(p => p.Key, p => p.Value) }
+                : null,
+        };
+
+        try
+        {
+            var result = await client.CompleteAsync(request, cancellationToken).ConfigureAwait(false);
+
+            return [.. (result.Completion?.Values ?? [])
+                .Select(v => TextSanitizer.Clean(v, TextSanitizer.NameLength))
+                .Where(v => v.Length > 0)
+                .Distinct(StringComparer.Ordinal)
+                .Take(MaxCompletions)];
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            RecordDiagnostic($"Suggestions for {argument} of {prompt.Name} could not be fetched: {ex.Message}");
+            return [];
+        }
+    }
 
     // ------------------------------------------------------------------ the tool list changing
 
@@ -629,7 +842,9 @@ public sealed class ServerConnection : IAsyncDisposable
     /// </remarks>
     private void Listen(McpClient client)
     {
-        if (client.ServerCapabilities?.Tools?.ListChanged != true) return;
+        var tools = client.ServerCapabilities?.Tools?.ListChanged == true;
+        var prompts = client.ServerCapabilities?.Prompts?.ListChanged == true;
+        if (!tools && !prompts) return;
         if (string.CompareOrdinal(client.NegotiatedProtocolVersion, "2026-07-28") < 0) return;
 
         var listening = new CancellationTokenSource();
@@ -641,7 +856,11 @@ public sealed class ServerConnection : IAsyncDisposable
             Params = JsonSerializer.SerializeToNode(
                 new SubscriptionsListenRequestParams
                 {
-                    Notifications = new SubscriptionsListenNotifications { ToolsListChanged = true },
+                    Notifications = new SubscriptionsListenNotifications
+                    {
+                        ToolsListChanged = tools ? true : null,
+                        PromptsListChanged = prompts ? true : null,
+                    },
                 },
                 McpJsonUtilities.DefaultOptions),
         };
@@ -684,8 +903,9 @@ public sealed class ServerConnection : IAsyncDisposable
                 if (_client is not { } client || State != ServerConnectionState.Connected) return;
 
                 _tools = await ListToolsAsync(client, CancellationToken.None).ConfigureAwait(false);
+                _prompts = await ListPromptsAsync(client, CancellationToken.None).ConfigureAwait(false);
 
-                RecordDiagnostic($"The server said its tools changed. It now publishes {_tools.Count}.");
+                RecordDiagnostic($"The server said its list changed. It now publishes {_tools.Count} tools and {_prompts.Count} prompts.");
                 RaiseChanged();
             }
         }
@@ -896,35 +1116,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
     private static ToolCallOutcome MapResult(CallToolResult result)
     {
-        var blocks = new List<ResultBlock>();
-
-        foreach (var block in result.Content ?? [])
-        {
-            blocks.Add(block switch
-            {
-                TextContentBlock text => Text(text.Text),
-
-                // §4, pitfall 6: nothing in the protocol carries alt text, so what crosses is the
-                // bytes and what is known about them. Phase 4's window offers Save and Open; v2's
-                // IResultSummarizer seam is where a description would come from.
-                ImageContentBlock image =>
-                    new MediaResultBlock(MediaKind.Image, Mime(image.MimeType), image.DecodedData),
-
-                AudioContentBlock audio =>
-                    new MediaResultBlock(MediaKind.Audio, Mime(audio.MimeType), audio.DecodedData),
-
-                ResourceLinkBlock link => new LinkResultBlock(
-                    Uri: TextSanitizer.Clean(link.Uri, TextSanitizer.NameLength),
-                    Label: NameHumanizer.DisplayName(link.Title, link.Name),
-                    Description: TextSanitizer.FirstSentence(link.Description),
-                    MimeType: Mime(link.MimeType),
-                    Size: link.Size),
-
-                EmbeddedResourceBlock embedded => Embedded(embedded),
-
-                _ => Unknown(block),
-            });
-        }
+        var blocks = (result.Content ?? []).Select(Block).ToList();
 
         // §4, pitfall 8: a result carrying anything other than "complete" is not something this
         // build understands, and pretending otherwise would show the user a half-answer as a whole
@@ -945,6 +1137,32 @@ public sealed class ServerConnection : IAsyncDisposable
             Blocks: blocks,
             Structured: Structured(result));
     }
+
+    /// <summary>One content block as a neutral part. Tools and prompts send the same kinds.</summary>
+    private static ResultBlock Block(ContentBlock block) => block switch
+    {
+        TextContentBlock text => Text(text.Text),
+
+        // §4, pitfall 6: nothing in the protocol carries alt text, so what crosses is the
+        // bytes and what is known about them. Phase 4's window offers Save and Open; v2's
+        // IResultSummarizer seam is where a description would come from.
+        ImageContentBlock image =>
+            new MediaResultBlock(MediaKind.Image, Mime(image.MimeType), image.DecodedData),
+
+        AudioContentBlock audio =>
+            new MediaResultBlock(MediaKind.Audio, Mime(audio.MimeType), audio.DecodedData),
+
+        ResourceLinkBlock link => new LinkResultBlock(
+            Uri: TextSanitizer.Clean(link.Uri, TextSanitizer.NameLength),
+            Label: NameHumanizer.DisplayName(link.Title, link.Name),
+            Description: TextSanitizer.FirstSentence(link.Description),
+            MimeType: Mime(link.MimeType),
+            Size: link.Size),
+
+        EmbeddedResourceBlock embedded => Embedded(embedded),
+
+        _ => Unknown(block),
+    };
 
     /// <summary>
     /// Text as a result rather than as a description: line structure kept (§7.19), and capped at a

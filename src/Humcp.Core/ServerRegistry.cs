@@ -184,10 +184,17 @@ public static class ServerAnnouncements
         var connected = enabled.Where(s => s.State == ServerConnectionState.Connected).ToList();
         var failed = enabled.Where(s => s.State == ServerConnectionState.Failed).ToList();
         var tools = connected.Sum(s => s.Tools.Count);
+        var prompts = connected.Sum(s => s.Prompts.Count);
+
+        // Prompts only when there are some, as on a server's own node. Found by ear: the one-server
+        // sentence said them and this one did not (phase12-notes).
+        var contents = prompts > 0
+            ? $"{Count(tools, "tool", "tools")}, {Count(prompts, "prompt", "prompts")}"
+            : Count(tools, "tool", "tools");
 
         var opening = connected.Count == enabled.Count
-            ? $"Connected to {enabled.Count} servers, {Count(tools, "tool", "tools")}."
-            : $"Connected to {connected.Count} of {enabled.Count} servers, {Count(tools, "tool", "tools")}.";
+            ? $"Connected to {enabled.Count} servers, {contents}."
+            : $"Connected to {connected.Count} of {enabled.Count} servers, {contents}.";
 
         return failed.Count == 0
             ? opening
@@ -203,6 +210,7 @@ public static class ServerAnnouncements
         {
             ServerConnectionState.Connected =>
                 $"Connected to {Name(server)}. {Count(server.Tools.Count, "tool", "tools")}" +
+                (server.Prompts.Count > 0 ? $", {Count(server.Prompts.Count, "prompt", "prompts")}" : "") +
                 (string.IsNullOrWhiteSpace(server.NegotiatedProtocolVersion)
                     ? "."
                     : $", protocol {TextSanitizer.Clean(server.NegotiatedProtocolVersion, 40)}."),
@@ -222,7 +230,9 @@ public static class ServerAnnouncements
     /// Names are given up to three at a time. A server that swaps twenty tools at once is a server
     /// whose tree wants looking at, and twenty names read aloud is not a way to look at it.
     /// </remarks>
-    public static string ToolsChanged(string server, IReadOnlyList<ToolInfo> before, IReadOnlyList<ToolInfo> after)
+    /// <param name="noun">"tool", or "prompt" for the prompt list (Phase 12), which changes the same way.</param>
+    public static string ToolsChanged(
+        string server, IReadOnlyList<ToolInfo> before, IReadOnlyList<ToolInfo> after, string noun = "tool")
     {
         ArgumentNullException.ThrowIfNull(before);
         ArgumentNullException.ThrowIfNull(after);
@@ -244,8 +254,8 @@ public static class ServerAnnouncements
 
         var parts = new[] { Part(added, "added"), Part(removed, "removed") }.Where(p => p.Length > 0);
 
-        return $"{TextSanitizer.Clean(server, TextSanitizer.NameLength)} changed its tools: {string.Join("; ", parts)}. " +
-               $"{Count(after.Count, "tool", "tools")} now.";
+        return $"{TextSanitizer.Clean(server, TextSanitizer.NameLength)} changed its {noun}s: {string.Join("; ", parts)}. " +
+               $"{Count(after.Count, noun, noun + "s")} now.";
     }
 
     /// <summary>

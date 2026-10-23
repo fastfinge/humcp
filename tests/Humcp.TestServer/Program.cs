@@ -28,6 +28,9 @@ internal static class Program
         foreach (var tool in TestTools.All()) tools.Add(tool);
         ListChangeTools.Collection = tools;
 
+        var prompts = new McpServerPrimitiveCollection<McpServerPrompt>();
+        foreach (var prompt in TestPrompts.All()) prompts.Add(prompt);
+
         var options = new McpServerOptions
         {
             ServerInfo = new Implementation
@@ -40,8 +43,14 @@ internal static class Program
             {
                 // True since Phase 6: tools_toggle changes the list, and the client is told.
                 Tools = new ToolsCapability { ListChanged = true },
+
+                // Phase 12: prompts, and completion for their arguments.
+                Prompts = new PromptsCapability(),
+                Completions = new CompletionsCapability(),
             },
             ToolCollection = tools,
+            PromptCollection = prompts,
+            Handlers = new McpServerHandlers { CompleteHandler = TestPrompts.CompleteAsync },
             ServerInstructions =
                 "A fixture server for humcp's own tests. Nothing here touches anything outside this process.",
         };
@@ -112,6 +121,8 @@ internal static class Program
                 configured.ServerInfo = options.ServerInfo;
                 configured.Capabilities = options.Capabilities;
                 configured.ToolCollection = options.ToolCollection;
+                configured.PromptCollection = options.PromptCollection;
+                configured.Handlers = options.Handlers;
                 configured.ServerInstructions = options.ServerInstructions;
             })
             .WithHttpTransport();

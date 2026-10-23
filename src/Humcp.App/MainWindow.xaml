@@ -144,7 +144,7 @@
 
                     <local:TypeAheadTreeView x:Name="Tree"
                               AutomationProperties.Name="Servers and tools"
-                              AutomationProperties.HelpText="Arrow to a tool and press Enter. A tool with parameters opens a form; one without runs straight away. F1 describes it in full."
+                              AutomationProperties.HelpText="Arrow to a tool or prompt and press Enter. One that takes arguments opens a form; one without runs straight away. F1 describes it in full."
                               VirtualizingStackPanel.IsVirtualizing="False"
                               SelectedItemChanged="OnTreeSelectionChanged"
                               KeyDown="OnTreeKeyDown">
@@ -168,7 +168,7 @@
                 <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,8,0,0">
                     <Button x:Name="RunButton" Content="R_un tool" Click="OnRun"
                             Padding="12,4" Margin="0,0,8,0" IsEnabled="False"
-                            AutomationProperties.HelpText="Runs the selected tool. A tool with parameters opens a form first. Enter does the same from the tree." />
+                            AutomationProperties.HelpText="Runs the selected tool, or fetches the selected prompt. One that takes arguments opens a form first. Enter does the same from the tree." />
                     <Button Content="Re_connect" Click="OnReconnect" Padding="12,4"
                             AutomationProperties.HelpText="Restarts the selected server and lists its tools again. F5." />
                 </StackPanel>

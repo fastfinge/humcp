@@ -17,6 +17,13 @@ public abstract record ResultBlock
 {
     /// <summary>What this part is called where a window needs a heading for it.</summary>
     public abstract string Heading { get; }
+
+    /// <summary>
+    /// Who says it, for a prompt's messages — "User" or "Assistant" — and empty for a tool's result,
+    /// whose parts have no speaker (Phase 12). A prompt is a conversation to hand to a model, and
+    /// which side a message is on is half of what it means.
+    /// </summary>
+    public string Role { get; init; } = "";
 }
 
 /// <summary>Text, ready for the read-only result box (ROADMAP §7.9).</summary>

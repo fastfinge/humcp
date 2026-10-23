@@ -53,6 +53,13 @@ public static class AccessKeys
     public static readonly IReadOnlyList<char> QuestionCommands = ['q', 'w', 'a', 'd', 'c'];
 
     /// <summary>
+    /// The same list for a prompt's form (Phase 12): the <b>P</b>rompt and <b>W</b>indow menus, and
+    /// <b>G</b>et prompt, <b>C</b>lose and show <b>o</b>ptional. Found by ear: the prompt form kept
+    /// the tool form's list, so an argument called "Goal" would have shared G with the button.
+    /// </summary>
+    public static readonly IReadOnlyList<char> PromptCommands = ['p', 'w', 'g', 'c', 'o'];
+
+    /// <summary>
     /// One index per label, in the same order, or null where nothing was left to give it.
     /// </summary>
     public static IReadOnlyList<int?> Assign(IReadOnlyList<string> labels, IEnumerable<char>? reserved = null)

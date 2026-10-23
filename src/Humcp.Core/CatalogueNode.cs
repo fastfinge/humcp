@@ -6,7 +6,7 @@ public enum CatalogueNodeKind
     /// <summary>One configured server, carrying its connection status in its name.</summary>
     Server,
 
-    /// <summary>Tools, Prompts, Resources. Phase 1 only ever builds Tools.</summary>
+    /// <summary>Tools, Prompts, Resources. Resources arrive in Phase 13.</summary>
     Category,
 
     /// <summary>A prefix group, when a server's tool names share one (§8).</summary>
@@ -14,6 +14,12 @@ public enum CatalogueNodeKind
 
     /// <summary>An invocable tool.</summary>
     Tool,
+
+    /// <summary>
+    /// A prompt (Phase 12). Its node carries a <see cref="ToolInfo"/> of kind
+    /// <see cref="OperationKind.Prompt"/>, so every command that opens a form opens one for it.
+    /// </summary>
+    Prompt,
 
     /// <summary>
     /// A sentence where nodes would be — "No servers are configured" — because an empty tree cannot
@@ -61,7 +67,7 @@ public sealed class CatalogueNode
     /// </summary>
     public string? ServerId { get; }
 
-    /// <summary>Set on <see cref="CatalogueNodeKind.Tool"/> nodes only.</summary>
+    /// <summary>Set on <see cref="CatalogueNodeKind.Tool"/> and <see cref="CatalogueNodeKind.Prompt"/> nodes only.</summary>
     public ToolInfo? Tool { get; }
 
     public IReadOnlyList<CatalogueNode> Children { get; }

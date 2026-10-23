@@ -22,10 +22,10 @@
         <Menu DockPanel.Dock="Top" AutomationProperties.Name="Main menu"
               Focusable="False" IsTabStop="False"
               KeyboardNavigation.TabNavigation="None">
-            <MenuItem Header="_Tool">
-                <MenuItem Header="_Run" InputGestureText="Ctrl+Enter"
+            <MenuItem x:Name="OperationMenu" Header="_Tool">
+                <MenuItem x:Name="RunMenuItem" Header="_Run" InputGestureText="Ctrl+Enter"
                           Command="{x:Static local:FormCommands.Submit}" />
-                <MenuItem Header="Show _optional parameters" InputGestureText="Ctrl+O"
+                <MenuItem x:Name="OptionalMenuItem" Header="Show _optional parameters" InputGestureText="Ctrl+O"
                           IsCheckable="True" IsChecked="{Binding ShowOptional, Mode=TwoWay}" />
                 <MenuItem Header="_Details of this field" InputGestureText="F1"
                           Command="{x:Static local:FormCommands.Details}" />
@@ -45,7 +45,7 @@
             <CheckBox x:Name="OptionalToggle" Margin="0,8,0,0"
                       Content="Show _optional parameters"
                       AutomationProperties.Name="Show optional parameters"
-                      AutomationProperties.HelpText="Optional parameters start hidden, because most tools have far more of them than required ones. Control plus O does the same."
+                      AutomationProperties.HelpText="Optional ones start hidden, because most tools have far more of them than required ones. Control plus O does the same."
                       IsChecked="{Binding ShowOptional, Mode=TwoWay}" />
         </StackPanel>
 

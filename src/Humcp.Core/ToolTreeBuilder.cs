@@ -40,8 +40,9 @@ public static class ToolTreeBuilder
 
         var children = new List<CatalogueNode>();
 
-        // §8: category nodes appear only when non-empty. Prompts and Resources arrive in v2.
-        if (server.Tools.Count > 0) children.Add(BuildToolsCategory(server.Id, server.Tools));
+        // §8: category nodes appear only when non-empty. Resources arrive in Phase 13.
+        if (server.Tools.Count > 0) children.Add(BuildCategory("Tools", server.Id, server.Tools));
+        if (server.Prompts.Count > 0) children.Add(BuildCategory("Prompts", server.Id, server.Prompts));
 
         return new CatalogueNode(CatalogueNodeKind.Server, DescribeServer(server), children, serverId: server.Id);
     }
@@ -58,11 +59,8 @@ public static class ToolTreeBuilder
         {
             ServerConnectionState.Connecting => $"{name}, connecting",
 
-            ServerConnectionState.Connected when server.Tools.Count == 0 =>
-                $"{name}, connected, no tools{ProtocolSuffix(server)}",
-
             ServerConnectionState.Connected =>
-                $"{name}, connected, {server.Tools.Count} tool{(server.Tools.Count == 1 ? "" : "s")}{ProtocolSuffix(server)}",
+                $"{name}, connected, {Contents(server)}{ProtocolSuffix(server)}",
 
             ServerConnectionState.Failed =>
                 $"{name}, error: {TextSanitizer.Clean(server.FailureReason, TextSanitizer.NameLength)}",
@@ -73,6 +71,21 @@ public static class ToolTreeBuilder
         };
     }
 
+    /// <summary>
+    /// "12 tools", "12 tools, 3 prompts", "no tools". Prompts are mentioned only when there are
+    /// some: most servers have none, and "no prompts" on every node would be said on every arrow.
+    /// </summary>
+    private static string Contents(ServerSnapshot server)
+    {
+        var tools = server.Tools.Count == 0
+            ? "no tools"
+            : $"{server.Tools.Count} tool{(server.Tools.Count == 1 ? "" : "s")}";
+
+        return server.Prompts.Count == 0
+            ? tools
+            : $"{tools}, {server.Prompts.Count} prompt{(server.Prompts.Count == 1 ? "" : "s")}";
+    }
+
     private static string ProtocolSuffix(ServerSnapshot server)
         => string.IsNullOrWhiteSpace(server.NegotiatedProtocolVersion)
             ? ""
@@ -80,10 +93,10 @@ public static class ToolTreeBuilder
             // server misbehaves, so it is on the node rather than in a log.
             : $", protocol {TextSanitizer.Clean(server.NegotiatedProtocolVersion, 40)}";
 
-    private static CatalogueNode BuildToolsCategory(string serverId, IReadOnlyList<ToolInfo> tools)
+    private static CatalogueNode BuildCategory(string name, string serverId, IReadOnlyList<ToolInfo> tools)
     {
         var children = Group(tools, serverId);
-        var label = $"Tools, {tools.Count} item{(tools.Count == 1 ? "" : "s")}";
+        var label = $"{name}, {tools.Count} item{(tools.Count == 1 ? "" : "s")}";
         return new CatalogueNode(CatalogueNodeKind.Category, label, children, serverId: serverId);
     }
 
@@ -95,7 +108,7 @@ public static class ToolTreeBuilder
     public static IReadOnlyList<CatalogueNode> Group(IReadOnlyList<ToolInfo> tools, string? serverId = null)
     {
         CatalogueNode ToolNode(ToolInfo tool)
-            => new(CatalogueNodeKind.Tool, tool.AccessibleName, tool: tool, helpText: tool.Summary, serverId: serverId);
+            => new(tool.IsPrompt ? CatalogueNodeKind.Prompt : CatalogueNodeKind.Tool, tool.AccessibleName, tool: tool, helpText: tool.Summary, serverId: serverId);
 
         var byPrefix = tools
             .GroupBy(PrefixOf, StringComparer.OrdinalIgnoreCase)

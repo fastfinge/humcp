@@ -130,13 +130,14 @@ public sealed class ResultView : ContentControl
     }
 
     /// <summary>Shows a single line of text — "no tool has been run yet", and the like.</summary>
-    public void ShowMessage(string heading, string text)
+    /// <param name="help">What the box is for, said on focus. A prompt's window says "fetched", not "runs" (Phase 12).</param>
+    public void ShowMessage(string heading, string text, string help = "Results appear here when a tool runs.")
     {
         _outcome = null;
         _describing?.Cancel();
         // Help text even here: a box with neither help nor a label is one a reader announces as a bare
         // name, and this is the first thing F6 lands on in a window that has run nothing yet.
-        _parts.ItemsSource = new[] { new TextSection(heading, text) { HelpText = "Results appear here when a tool runs." } };
+        _parts.ItemsSource = new[] { new TextSection(heading, text) { HelpText = help } };
     }
 
     /// <summary>

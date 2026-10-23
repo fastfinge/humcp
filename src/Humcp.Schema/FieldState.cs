@@ -256,6 +256,14 @@ public sealed class TextFieldState : FieldState
 
     public bool HasHistory => _history.Count > 0;
 
+    /// <summary>
+    /// True when the source can suggest values for this field as it is typed — a prompt argument on
+    /// a server that answers <c>completion/complete</c> (Phase 12). Set before the form is shown, so
+    /// the field is a drop-down from the start rather than turning into one under the user's hands;
+    /// the suggestions themselves arrive in <see cref="History"/>, ahead of what was typed before.
+    /// </summary>
+    public bool HasServerSuggestions { get; set; }
+
     /// <summary>The JSON skeleton a Tier 3 editor started with, so an untouched one can be recognised.</summary>
     public string Seed => _initial;
 

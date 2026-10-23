@@ -61,7 +61,7 @@ Press Control plus Enter to save. humcp adds the server, puts the caret on it in
 
 The main window has two panes. F6 moves between them, and Shift plus F6 goes back.
 
-- Servers and tools, on the left, is a tree. Each server is a top-level item, and its name tells you whether it is connected, how many tools it has, and the protocol version it speaks — or, if it could not start, why not. Under each server is its list of tools. A server with many tools that share a naming pattern has them grouped, for example all the issue tools together.
+- Servers and tools, on the left, is a tree. Each server is a top-level item, and its name tells you whether it is connected, how many tools it has, and the protocol version it speaks — or, if it could not start, why not. Under each server is its list of tools, and, for a server that publishes any, its list of prompts. A server with many tools that share a naming pattern has them grouped, for example all the issue tools together.
 - Result, on the right, shows what the last tool you ran from the tree sent back.
 
 Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it.
@@ -90,6 +90,14 @@ Press Control plus Enter to run. If humcp thinks something is wrong — a requir
 While a tool runs, the window stays usable, and long-running tools report their progress every few seconds. Press Escape to stop a tool that is running; the server is told to stop. Press Escape again, with nothing running, to close the window.
 
 A tool that says it can delete or change things that cannot be undone asks first: the first Enter or Control plus Enter tells you so, and the second runs it. This is the server's own description of itself, so it is a warning, not a guarantee in either direction.
+
+### Prompts
+
+Some servers also publish prompts: ready-made requests to give to an AI assistant, such as "review this code" or "summarise this issue", with blanks for you to fill in. They are under Prompts in the tree, after the server's tools, and work the way tools do. A prompt with nothing to fill in is fetched straight away; one with arguments opens a form, and Control plus Enter, or the Get prompt button, fetches it. Fetching a prompt changes nothing on the server.
+
+Where the server can suggest values for a prompt's arguments, each argument is a drop-down. Its suggestions follow what you type, and what you filled into the other arguments, and Alt plus Down arrow opens them; values you typed before are listed under the server's suggestions.
+
+What comes back is a short conversation: one or more messages, each named with who says it — "User message 1 of 2", "Assistant message 2 of 2". Control plus A and Control plus C in a message copy it, ready to paste into whichever AI assistant you use.
 
 ## 5. Reading a result
 
@@ -160,7 +168,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 ### The tree
 
 - Control plus F: find a tool, on every server. Enter in the search box asks the local model.
-- Enter: run the tool, or open its form.
+- Enter: run the tool or fetch the prompt, or open its form.
 - A letter: the next item starting with it.
 - Control plus N: add a server.
 - Alt plus Enter: settings of the selected server.
@@ -172,8 +180,9 @@ Help, Keyboard shortcuts shows this list inside humcp.
 
 ### A form
 
-- Control plus Enter: run the tool.
+- Control plus Enter: run the tool, or fetch the prompt.
 - Control plus O: show or hide the optional parameters.
+- Alt plus Down arrow, on a field with a drop-down: values typed there before, or a prompt argument's suggestions from the server.
 - Escape: stop the running tool; with nothing running, close the window.
 
 ### A list of entries in a form

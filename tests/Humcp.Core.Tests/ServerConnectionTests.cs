@@ -319,7 +319,10 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
         Assert.Equal(31, tools.Count);
-        Assert.Contains(server.Children.Single().Children, c => c.Kind == CatalogueNodeKind.Group);
+
+        // Tools first, then the fixture's prompts (Phase 12).
+        Assert.Equal(2, server.Children.Count);
+        Assert.Contains(server.Children[0].Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 
     // ------------------------------------------------------------------ the schema engine, on the wire

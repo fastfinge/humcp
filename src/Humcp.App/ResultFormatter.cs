@@ -39,9 +39,11 @@ internal static class ResultFormatter
         {
             var block = outcome.Blocks[i];
 
+            var heading = block.Role.Length > 0 ? $"{block.Role}: {block.Heading}" : block.Heading;
+
             sb.AppendLine(outcome.Blocks.Count == 1
-                ? block.Heading
-                : $"Part {i + 1} of {outcome.Blocks.Count}: {block.Heading}");
+                ? heading
+                : $"Part {i + 1} of {outcome.Blocks.Count}: {heading}");
 
             switch (block)
             {
@@ -104,6 +106,16 @@ internal static class ResultFormatter
             return first.Length > 0
                 ? $"Tool returned an error. {TextSanitizer.Clean(first, 200)}"
                 : "Tool returned an error.";
+        }
+
+        // A prompt's messages (Phase 12): how many, and who says each, because which side of the
+        // conversation a message is on is the first thing to know about it.
+        if (outcome.Blocks.Count > 0 && outcome.Blocks.All(b => b.Role.Length > 0))
+        {
+            var messages = outcome.Blocks.Select(b => $"{b.Role.ToLowerInvariant()}, {Describe(b)}");
+
+            return $"Prompt fetched. {Count(outcome.Blocks.Count, "message", "messages")}: " +
+                   $"{string.Join("; ", messages)}. Press F6 to review it.";
         }
 
         var parts = outcome.Blocks.Select(Describe).Where(p => p.Length > 0).ToList();

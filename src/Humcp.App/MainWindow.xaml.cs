@@ -613,7 +613,7 @@ public partial class MainWindow : Window
     {
         if (SelectedTool() is not { } tool)
         {
-            SetStatus("Select a tool in the tree first.");
+            SetStatus("Select a tool or prompt in the tree first.");
             return;
         }
 
@@ -760,7 +760,11 @@ public partial class MainWindow : Window
 
         return after.State switch
         {
-            ServerConnectionState.Connected => ServerAnnouncements.ToolsChanged(after.DisplayName, before.Tools, after.Tools),
+            ServerConnectionState.Connected => string.Join(" ", new[]
+            {
+                ServerAnnouncements.ToolsChanged(after.DisplayName, before.Tools, after.Tools),
+                ServerAnnouncements.ToolsChanged(after.DisplayName, before.Prompts, after.Prompts, "prompt"),
+            }.Where(c => c.Length > 0)),
             ServerConnectionState.Failed => ServerAnnouncements.Stopped(after),
             _ => "",
         };
@@ -772,9 +776,10 @@ public partial class MainWindow : Window
         // A server that stopped has withdrawn nothing; its forms find out when they run.
         if (snapshot.State != ServerConnectionState.Connected) return;
 
-        var published = snapshot.Tools.Select(t => t.Name).ToHashSet(StringComparer.Ordinal);
+        bool Published(ToolWindow form)
+            => (form.IsPrompt ? snapshot.Prompts : snapshot.Tools).Any(t => t.Name == form.ToolName);
 
-        foreach (var form in _forms.Where(f => ReferenceEquals(f.Connection, connection) && !published.Contains(f.ToolName)))
+        foreach (var form in _forms.Where(f => ReferenceEquals(f.Connection, connection) && !Published(f)))
             form.Withdrawn();
     }
 
@@ -816,7 +821,7 @@ public partial class MainWindow : Window
         Tree.UpdateLayout();
 
         var target = previous.Tool is { } tool
-            ? server.SelfAndDescendants().FirstOrDefault(n => n.Tool?.Name == tool.Name)
+            ? server.SelfAndDescendants().FirstOrDefault(n => n.Tool?.Name == tool.Name && n.Kind == previous.Kind)
             : server.SelfAndDescendants().FirstOrDefault(n => n.Kind == previous.Kind && n.AccessibleName == previous.AccessibleName);
 
         target ??= server;
@@ -863,7 +868,7 @@ public partial class MainWindow : Window
         var tool = SelectedTool();
         if (tool is null || SelectedServer() is not { } connection)
         {
-            SetStatus("Select a tool in the tree first.");
+            SetStatus("Select a tool or prompt in the tree first.");
             return;
         }
 
@@ -892,7 +897,7 @@ public partial class MainWindow : Window
         _callInFlight = true;
         var questions = 0;
         UpdateRunAvailability();
-        SetStatus($"Running {tool.DisplayName}.");
+        SetStatus(tool.IsPrompt ? $"Getting {tool.DisplayName}." : $"Running {tool.DisplayName}.");
 
         var started = DateTimeOffset.Now;
         _currentCall = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
@@ -980,7 +985,8 @@ public partial class MainWindow : Window
     /// </summary>
     private void OpenForm(ServerConnection connection, ToolInfo tool)
     {
-        if (_forms.FirstOrDefault(f => ReferenceEquals(f.Connection, connection) && f.ToolName == tool.Name) is { } existing)
+        if (_forms.FirstOrDefault(f => ReferenceEquals(f.Connection, connection) && f.ToolName == tool.Name
+                                        && f.IsPrompt == tool.IsPrompt) is { } existing)
         {
             WindowManager.Activate(existing);
             SetStatus($"{tool.DisplayName} is already open.");
@@ -1110,7 +1116,8 @@ public partial class MainWindow : Window
 
         SearchResults.ItemsSource = nodes;
         SearchResults.SelectedItem =
-            nodes.FirstOrDefault(n => previous?.Tool is { } tool && n.Tool?.Name == tool.Name && n.ServerId == previous.ServerId)
+            nodes.FirstOrDefault(n => previous?.Tool is { } tool && n.Tool?.Name == tool.Name && n.Kind == previous.Kind
+                                      && n.ServerId == previous.ServerId)
             ?? nodes[0];
 
         SearchResults.Visibility = Visibility.Visible;
@@ -1364,9 +1371,10 @@ public partial class MainWindow : Window
 
         if (node?.Tool is { } tool)
         {
-            menu.Items.Add(Item(tool.ParameterCount > 0 ? "_Open form" : "_Run", "Enter", () => _ = RunSelectedToolAsync()));
+            menu.Items.Add(Item(tool.ParameterCount > 0 ? "_Open form" : tool.IsPrompt ? "_Get prompt" : "_Run", "Enter",
+                () => _ = RunSelectedToolAsync()));
             menu.Items.Add(Item("_Details", "F1", ShowDetails));
-            menu.Items.Add(Item("Copy tool _schema", "", CopyToolSchema));
+            menu.Items.Add(Item($"Copy {tool.Noun} _schema", "", CopyToolSchema));
         }
         else if (node?.ServerId is not null)
         {
@@ -1595,20 +1603,26 @@ public partial class MainWindow : Window
         var text = new StringBuilder()
             .AppendLine(tool.DisplayName)
             .AppendLine(new string('-', 60))
+            .AppendLine($"Kind:       {(tool.IsPrompt ? "Prompt" : "Tool")}")
             .AppendLine($"Name:       {tool.Name}")
-            .AppendLine($"Parameters: {tool.ParameterCount} ({tool.RequiredParameterCount} required)")
-            .AppendLine($"Read-only:  {Describe(tool.Safety.IsReadOnly)}")
-            .AppendLine($"Destructive:{Describe(tool.Safety.IsDestructive)}")
-            .AppendLine($"Idempotent: {Describe(tool.Safety.IsIdempotent)}")
-            .AppendLine()
+            .AppendLine($"{(tool.IsPrompt ? "Arguments: " : "Parameters:")} {tool.ParameterCount} ({tool.RequiredParameterCount} required)");
+
+        // A prompt makes no claims about what it does to the world, because fetching it does nothing.
+        if (!tool.IsPrompt)
+        {
+            text.AppendLine($"Read-only:  {Describe(tool.Safety.IsReadOnly)}")
+                .AppendLine($"Destructive:{Describe(tool.Safety.IsDestructive)}")
+                .AppendLine($"Idempotent: {Describe(tool.Safety.IsIdempotent)}");
+        }
+
+        text.AppendLine()
             .AppendLine("Description")
             .AppendLine(tool.FullDescription.Length > 0 ? tool.FullDescription : "(the server supplied none)")
             .AppendLine()
-            .AppendLine("Input schema")
-            .AppendLine(Pretty(tool.InputSchema))
-            .ToString();
+            .AppendLine(tool.IsPrompt ? "Arguments, as the schema humcp built from them" : "Input schema")
+            .AppendLine(Pretty(tool.InputSchema));
 
-        TextWindow.Show(this, $"Details: {tool.DisplayName}", text, _windows);
+        TextWindow.Show(this, $"Details: {tool.DisplayName}", text.ToString(), _windows);
     }
 
     private void OnSpeechDiagnostics(object sender, RoutedEventArgs e)

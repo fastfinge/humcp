@@ -250,9 +250,11 @@ internal static class ResultSections
 
             // Numbered only when there is more than one. A single text result is the overwhelmingly
             // common case, and it reads best as "Result" — which is what it has been since Phase 1.
-            var heading = count == 1 ? block.Heading : $"{block.Heading}, part {i + 1} of {count}";
+            var heading = block.Role.Length > 0
+                ? MessageHeading(block, i, count)
+                : count == 1 ? block.Heading : $"{block.Heading}, part {i + 1} of {count}";
 
-            var label = count == 1 && block is TextResultBlock ? "Result" : heading;
+            var label = count == 1 && block is TextResultBlock && block.Role.Length == 0 ? "Result" : heading;
 
             if (block switch
                 {
@@ -267,7 +269,7 @@ internal static class ResultSections
 
             sections.Add(block switch
             {
-                TextResultBlock text => new TextSection(count == 1 ? "Result" : heading, text.Text)
+                TextResultBlock text => new TextSection(label, text.Text)
                 {
                     HelpText = text.IsTruncated
                         ? $"This was cut short at {text.Text.Length:N0} characters; " +
@@ -323,6 +325,17 @@ internal static class ResultSections
             sections[0].HelpText = $"The tool reported an error. {sections[0].HelpText}".TrimEnd();
 
         return sections;
+    }
+
+    /// <summary>
+    /// A prompt's message (Phase 12): "User message 1 of 3", and what it is when it is not text —
+    /// "Assistant message 2 of 3, Image, PNG, 4 KB". Text is what a message nearly always is, so it
+    /// is not said.
+    /// </summary>
+    private static string MessageHeading(ResultBlock block, int index, int count)
+    {
+        var name = count == 1 ? $"{block.Role} message" : $"{block.Role} message {index + 1} of {count}";
+        return block is TextResultBlock ? name : $"{name}, {block.Heading}";
     }
 
     /// <summary>

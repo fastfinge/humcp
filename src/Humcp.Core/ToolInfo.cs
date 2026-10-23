@@ -4,6 +4,21 @@ using Humcp.Schema;
 namespace Humcp.Core;
 
 /// <summary>
+/// What running an operation does: call a tool, or fetch a prompt's messages (Phase 12). The two
+/// share a form, a window and a result view, and differ in the request and in a handful of words.
+/// </summary>
+public enum OperationKind
+{
+    Tool,
+
+    /// <summary>
+    /// A prompt: arguments in, messages out. Every argument is a string (the protocol has no schema
+    /// for them), and fetching one changes nothing, so there is no safety to state.
+    /// </summary>
+    Prompt,
+}
+
+/// <summary>
 /// One invocable operation, in terms the UI can use. Everything here has already been through
 /// <see cref="TextSanitizer"/>: it arrived from a third party and is on its way to UI Automation
 /// and a speech synthesiser (ROADMAP §4, pitfall 5).
@@ -23,6 +38,17 @@ public sealed record ToolInfo(
     FormModel Form,
     JsonElement? OutputSchema = null)
 {
+    /// <summary>A tool unless said otherwise. A prompt is built by <see cref="PromptForm"/>.</summary>
+    public OperationKind Kind { get; init; } = OperationKind.Tool;
+
+    public bool IsPrompt => Kind == OperationKind.Prompt;
+
+    /// <summary>What it is called in a sentence: "tool" or "prompt".</summary>
+    public string Noun => IsPrompt ? "prompt" : "tool";
+
+    /// <summary>The words of the run command, which for a prompt fetches rather than runs anything.</summary>
+    public string RunVerb => IsPrompt ? "Get prompt" : "Run tool";
+
     /// <summary>The schema exactly as the server sent it, for Copy Schema and for validation.</summary>
     public JsonElement InputSchema => Form.Schema;
 
@@ -62,10 +88,13 @@ public sealed record ToolInfo(
         if (!string.IsNullOrWhiteSpace(server)) parts.Add(server);
         if (Safety.ShortDescription is { } safety) parts.Add(safety);
 
+        // A prompt's are "arguments" in the protocol and in every client that shows them.
+        var word = IsPrompt ? "argument" : "parameter";
+
         if (RequiredParameterCount > 0)
-            parts.Add($"{RequiredParameterCount} required parameter{(RequiredParameterCount == 1 ? "" : "s")}");
+            parts.Add($"{RequiredParameterCount} required {word}{(RequiredParameterCount == 1 ? "" : "s")}");
         else if (ParameterCount > 0)
-            parts.Add($"{ParameterCount} optional parameter{(ParameterCount == 1 ? "" : "s")}");
+            parts.Add($"{ParameterCount} optional {word}{(ParameterCount == 1 ? "" : "s")}");
 
         return string.Join(", ", parts);
     }

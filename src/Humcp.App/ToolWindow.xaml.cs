@@ -97,10 +97,11 @@ public partial class ToolWindow : Window
         _history = history;
         _windows = windows;
         _speakIfAway = speakIfAway ?? (_ => { });
-        _state = FormState.Create(tool.Form);
+        _state = FormState.Create(tool.Form, tool.IsPrompt ? AccessKeys.PromptCommands : AccessKeys.WindowCommands);
         _state.ShowOptional = showOptional;
 
         ApplyHistory();
+        OfferSuggestions();
 
         Owner = owner;
         DataContext = _state;
@@ -109,12 +110,17 @@ public partial class ToolWindow : Window
         AutomationProperties.SetName(this, Title);
 
         Heading.Text = tool.DisplayName;
-        AutomationProperties.SetName(Fields, $"{tool.DisplayName} parameters");
+        AutomationProperties.SetName(Fields, $"{tool.DisplayName} {Words}");
+        ApplyKind();
 
         FormResults.Owner = this;
         FormResults.Windows = windows;
         FormResults.Announce = SetStatus;
-        FormResults.ShowMessage("Result", "This tool has not been run yet.");
+        if (tool.IsPrompt)
+            FormResults.ShowMessage("Result", "This prompt has not been fetched yet.",
+                "The prompt's messages appear here when it is fetched.");
+        else
+            FormResults.ShowMessage("Result", "This tool has not been run yet.");
 
         if (tool.Summary.Length > 0)
         {
@@ -194,6 +200,36 @@ public partial class ToolWindow : Window
     /// <summary>The tool this window is a form for. Used by the window manager to avoid opening two.</summary>
     public string ToolName => _tool.Name;
 
+    /// <summary>Whether this window is a prompt's (Phase 12): a prompt and a tool can share a name.</summary>
+    public bool IsPrompt => _tool.IsPrompt;
+
+    /// <summary>"parameters", or "arguments" for a prompt — the protocol's word, and every other client's.</summary>
+    private string Words => _tool.IsPrompt ? "arguments" : "parameters";
+
+    private string Word => _tool.IsPrompt ? "argument" : "parameter";
+
+    /// <summary>"Running", or "Getting" for a prompt, which runs nothing.</summary>
+    private string Doing => _tool.IsPrompt ? "Getting" : "Running";
+
+    /// <summary>
+    /// The handful of words that differ for a prompt (Phase 12). Everything else in this window is
+    /// the same for both, because a prompt is arguments in and content out, as a tool is.
+    /// </summary>
+    private void ApplyKind()
+    {
+        if (!_tool.IsPrompt) return;
+
+        OperationMenu.Header = "_Prompt";
+        RunMenuItem.Header = "_Get prompt";
+        OptionalMenuItem.Header = "Show _optional arguments";
+        OptionalToggle.Content = "Show _optional arguments";
+        AutomationProperties.SetName(OptionalToggle, "Show optional arguments");
+        ParametersHeading.Text = "Arguments";
+        FormRunButton.Content = "_Get prompt";
+        AutomationProperties.SetHelpText(FormRunButton,
+            "Fetches the prompt's messages with what is on this form. Control plus Enter does the same.");
+    }
+
     /// <summary>Alt text for the images this form's calls return (Phase 10), shared with the main window.</summary>
     internal LocalModelFeatures? Describer
     {
@@ -215,7 +251,7 @@ public partial class ToolWindow : Window
 
         Title += " — withdrawn";
         AutomationProperties.SetName(this, Title);
-        SetStatus($"{_connection.Descriptor.DisplayName} no longer publishes {_tool.DisplayName}. Running it will probably fail.");
+        SetStatus($"{_connection.Descriptor.DisplayName} no longer publishes {_tool.DisplayName}. {Doing} it will probably fail.");
     }
 
     // ------------------------------------------------------------------ commands
@@ -287,7 +323,7 @@ public partial class ToolWindow : Window
     {
         if (_callInFlight)
         {
-            SetStatus("A tool call is already running.");
+            SetStatus(_tool.IsPrompt ? "The prompt is already being fetched." : "A tool call is already running.");
             return;
         }
 
@@ -349,8 +385,8 @@ public partial class ToolWindow : Window
         var started = DateTimeOffset.Now;
         _questions = 0;
         SetStatus(submission.Report.WasChecked
-            ? $"Running {_tool.DisplayName}."
-            : $"Running {_tool.DisplayName}. {submission.Report.Summary}");
+            ? $"{Doing} {_tool.DisplayName}."
+            : $"{Doing} {_tool.DisplayName}. {submission.Report.Summary}");
 
         // Created on the UI thread, so each report is posted back to it (§4, pitfall 9).
         var throttle = new ProgressThrottle();
@@ -374,7 +410,9 @@ public partial class ToolWindow : Window
         catch (OperationCanceledException) when (!_closing.IsCancellationRequested)
         {
             throttle.Finish();
-            SetStatus($"Stopped {_tool.DisplayName}. The server was told; anything it had already done stays done.");
+            SetStatus(_tool.IsPrompt
+                ? $"Stopped fetching {_tool.DisplayName}."
+                : $"Stopped {_tool.DisplayName}. The server was told; anything it had already done stays done.");
         }
         catch (OperationCanceledException)
         {
@@ -500,10 +538,17 @@ public partial class ToolWindow : Window
     {
         foreach (var field in _state.AllFields().OfType<TextFieldState>())
         {
-            var values = _history.For(_connection.Descriptor.Id, _tool.Name, field.Path);
+            var values = _history.For(_connection.Descriptor.Id, HistoryKey, field.Path);
             if (values.Count > 0) field.History = values;
         }
     }
+
+    /// <summary>
+    /// What history is filed under. A prompt's name is prefixed, because a server can publish a tool
+    /// and a prompt with the same name and their fields are not the same fields. A colon cannot
+    /// appear in a tool's name, so the two can never meet.
+    /// </summary>
+    private string HistoryKey => _tool.IsPrompt ? "prompt:" + _tool.Name : _tool.Name;
 
     private void Remember()
     {
@@ -514,10 +559,127 @@ public partial class ToolWindow : Window
             if (field.Field.Kind is FieldKind.Raw or FieldKind.MultilineText) continue;
             if (!field.IsSet) continue;
 
-            recorded |= _history.Record(_connection.Descriptor.Id, _tool.Name, field.Path, field.Text);
+            recorded |= _history.Record(_connection.Descriptor.Id, HistoryKey, field.Path, field.Text);
         }
 
         if (recorded) _history.Save();
+    }
+
+    // ------------------------------------------------------------------ the server's suggestions (Phase 12)
+
+    /// <summary>What each field held from history before the server said anything, kept to go under its suggestions.</summary>
+    private readonly Dictionary<TextFieldState, IReadOnlyList<string>> _past = [];
+
+    private readonly DispatcherTimer _suggestionDelay = new() { Interval = TimeSpan.FromMilliseconds(300) };
+    private TextFieldState? _suggestFor;
+    private CancellationTokenSource? _suggesting;
+
+    /// <summary>
+    /// Puts the server's suggestions behind a prompt's arguments, on a server that answers
+    /// <c>completion/complete</c> — the one place MCP can autocomplete at all (§4, pitfall 3).
+    /// </summary>
+    /// <remarks>
+    /// Asked when a field takes the focus, and again when typing in it pauses. Nothing is announced
+    /// when they arrive: the drop-down says it has values when it is opened, the field's help text says
+    /// how to open it, and a status line on every pause in typing would talk over the typing.
+    /// </remarks>
+    private void OfferSuggestions()
+    {
+        if (!_tool.IsPrompt || !_connection.SupportsCompletion) return;
+
+        // A prompt's arguments are flat strings, so its top-level fields are all of them.
+        foreach (var field in _state.Fields.OfType<TextFieldState>())
+        {
+            field.HasServerSuggestions = true;
+            _past[field] = field.History;
+
+            field.PropertyChanged += (_, e) =>
+            {
+                if (e.PropertyName != nameof(TextFieldState.Text)) return;
+
+                // Arrowing through a closed drop-down puts each value in the box in turn. Asking
+                // again then would replace the list being arrowed through with one narrowed to the
+                // value just reached, so a value that came from the list is not typing.
+                if (field.History.Contains(field.Text, StringComparer.Ordinal)) return;
+
+                Suggest(field);
+            };
+        }
+
+        // An empty drop-down opens in silence: NVDA says "blank" and nothing else, while the field's
+        // help has just promised suggestions. Found by ear on server-everything's Resource Prompt,
+        // whose resource id has none until something is typed (phase12-notes). Said, not fixed by
+        // hiding the drop-down, because whether the server has anything changes as the user types.
+        Fields.PreviewKeyDown += (_, e) =>
+        {
+            var opens = (e.Key == Key.System && e.SystemKey == Key.Down && Keyboard.Modifiers == ModifierKeys.Alt)
+                        || (e.Key == Key.F4 && Keyboard.Modifiers == ModifierKeys.None);
+
+            if (opens && FocusedField() is TextFieldState { HasServerSuggestions: true, History.Count: 0 } field)
+            {
+                SetStatus(field.Text.Trim().Length == 0
+                    ? $"The server has no suggestions for {field.Label} yet. Type something and try again."
+                    : $"The server has no suggestions for {field.Label} that match what is typed.");
+            }
+        };
+
+        Fields.GotKeyboardFocus += (_, e) =>
+        {
+            if ((e.NewFocus as FrameworkElement)?.DataContext is TextFieldState { HasServerSuggestions: true } field
+                && !ReferenceEquals(field, _suggestFor))
+            {
+                Suggest(field);
+            }
+        };
+
+        _suggestionDelay.Tick += async (_, _) =>
+        {
+            _suggestionDelay.Stop();
+            if (_suggestFor is { } field) await FetchSuggestionsAsync(field);
+        };
+
+        Closed += (_, _) =>
+        {
+            _suggestionDelay.Stop();
+            _suggesting?.Cancel();
+        };
+    }
+
+    private void Suggest(TextFieldState field)
+    {
+        _suggestFor = field;
+        _suggestionDelay.Stop();
+        _suggestionDelay.Start();
+    }
+
+    private async Task FetchSuggestionsAsync(TextFieldState field)
+    {
+        _suggesting?.Cancel();
+        var cancel = _suggesting = CancellationTokenSource.CreateLinkedTokenSource(_closing.Token);
+
+        var typed = field.Text;
+
+        // What the other arguments hold, so a server can narrow one by another — a repository's
+        // branches once the repository is known.
+        var others = _state.Fields.OfType<TextFieldState>()
+            .Where(f => !ReferenceEquals(f, field) && f.Text.Trim().Length > 0)
+            .ToDictionary(f => f.Field.Name, f => f.Text.Trim(), StringComparer.Ordinal);
+
+        IReadOnlyList<string> suggestions;
+
+        try
+        {
+            suggestions = await _connection.CompleteAsync(_tool, field.Field.Name, typed, others, cancel.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        // An answer to a question that is no longer being asked is not shown.
+        if (cancel.IsCancellationRequested || field.Text != typed) return;
+
+        field.History = [.. suggestions.Concat(_past[field]).Distinct(StringComparer.Ordinal)];
     }
 
     // ------------------------------------------------------------------ announcements and focus
@@ -528,7 +690,7 @@ public partial class ToolWindow : Window
 
         if (_tool.Safety.ShortDescription is { } safety) parts.Add(safety);
 
-        parts.Add(Count(_state.Fields.Count, "parameter", "parameters") +
+        parts.Add(Count(_state.Fields.Count, Word, Words) +
                   $", {_state.RequiredCount} required");
 
         if (_state.HiddenCount > 0)
@@ -542,14 +704,16 @@ public partial class ToolWindow : Window
         UpdateParametersHeading();
 
         SetStatus(_state.ShowOptional
-            ? $"Showing all {Count(_state.Fields.Count, "parameter", "parameters")}."
-            : $"{Count(_state.HiddenCount, "optional parameter", "optional parameters")} hidden.");
+            ? $"Showing all {Count(_state.Fields.Count, Word, Words)}."
+            : $"{Count(_state.HiddenCount, "optional " + Word, "optional " + Words)} hidden.");
     }
 
     private void UpdateParametersHeading() =>
         ParametersHeading.Text = _state.HiddenCount > 0
-            ? $"Parameters — {_state.VisibleFields.Count} of {_state.Fields.Count}"
-            : "Parameters";
+            ? $"{Heading2} — {_state.VisibleFields.Count} of {_state.Fields.Count}"
+            : Heading2;
+
+    private string Heading2 => _tool.IsPrompt ? "Arguments" : "Parameters";
 
     private void ShowProblems(FormSubmission submission)
     {
@@ -691,12 +855,12 @@ public partial class ToolWindow : Window
         .AppendLine(_tool.DisplayName)
         .AppendLine(new string('-', 60))
         .AppendLine($"Name:       {_tool.Name}")
-        .AppendLine($"Parameters: {_tool.ParameterCount} ({_tool.RequiredParameterCount} required)")
+        .AppendLine($"{(_tool.IsPrompt ? "Arguments: " : "Parameters:")} {_tool.ParameterCount} ({_tool.RequiredParameterCount} required)")
         .AppendLine()
         .AppendLine("Description")
         .AppendLine(_tool.FullDescription.Length > 0 ? _tool.FullDescription : "(the server supplied none)")
         .AppendLine()
-        .AppendLine("Input schema")
+        .AppendLine(_tool.IsPrompt ? "Arguments, as the schema humcp built from them" : "Input schema")
         .AppendLine(FieldDetails.Pretty(_tool.InputSchema))
         .ToString();
 }

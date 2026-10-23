@@ -104,7 +104,10 @@ File, Local model, and Windows ML shipped with its licence terms. **Phase 10, al
 complete** — **`docs/phase10-notes.md`**: every returned image described as it arrives (a setting turns
 it off; Ctrl+D on request), through one shared `ModelHost`. **Phase 11, the model's tool search and summaries, is complete** —
 **`docs/phase11-notes.md`**: `IToolSuggester` with its two implementations (33 of 35 against word
-matching's 21), Enter in the search box asks the model, Ctrl+M summarises on request.
+matching's 21), Enter in the search box asks the model, Ctrl+M summarises on request. **Phase 12, prompts, is complete** —
+**`docs/phase12-notes.md`**: a prompt is a `ToolInfo` of `OperationKind.Prompt` in the same form
+window, its arguments a synthesised schema, its messages result parts with a `Role`, and
+`completion/complete` filling the argument drop-down. Its NVDA pass found four defects.
 
 **Versioning:** 1.x releases are bug fixes from user reports; 2.0 and 3.0 follow §11. A fix that
 visibly changes what a user sees for the same call is a minor release (1.1), not a patch; one that
@@ -530,7 +533,8 @@ in; nothing under `src/` knows it exists.
   `HUMCP_UPDATE_GOLDEN=1 dotnet test tests/Humcp.Schema.Tests`, which rewrites them **and still
   fails**, so a regeneration cannot pass unreviewed. Read the diff. `coverage.txt` carries the
   headline metric and is regenerated with them.
-- **The fixture server publishes 31 tools.** Seven were added in Phase 4 with the `result_` prefix,
+- **The fixture server publishes 31 tools and 4 prompts** (Phase 12: none, completed arguments
+  narrowed by context, a conversation with a picture, and `demo_echo`, which is a tool's name too). Seven were added in Phase 4 with the `result_` prefix,
   one per shape a result can have, and an eighth in 1.1, `result_json_text`, which sends JSON as
   text the way most real servers do; seven more in Phase 5 with the `mrtr_` prefix, one per shape a
   round trip can have; and in Phase 6 `tools_toggle`, which adds or removes `tools_appeared` so the

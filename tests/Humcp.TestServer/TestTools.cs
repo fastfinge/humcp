@@ -715,7 +715,7 @@ internal static class TestTools
     private static JsonElement Schema(string json) => JsonDocument.Parse(json).RootElement;
 
     /// <summary>One transparent pixel. The smallest honest PNG there is.</summary>
-    private static byte[] TinyPng() => Convert.FromBase64String(
+    internal static byte[] TinyPng() => Convert.FromBase64String(
         "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==");
 
     /// <summary>A quarter of a second of silence, as a real RIFF/WAVE file.</summary>

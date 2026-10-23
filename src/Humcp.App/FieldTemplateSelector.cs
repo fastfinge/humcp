@@ -43,6 +43,10 @@ public sealed class FieldTemplateSelector : DataTemplateSelector
         // through; one without stays a plain text box. MCP cannot autocomplete a tool argument at
         // all (§4, pitfall 3), and 48.8% of the corpus's top-level parameters are plain text, so
         // this is the single most-used control in the application.
+        // A prompt argument the server can complete (Phase 12) is a drop-down from the start, and
+        // says where its values come from — which is not only this user's past.
+        TextFieldState { HasServerSuggestions: true } => "Suggestions",
+
         TextFieldState { HasHistory: true } => "History",
 
         TextFieldState text => text.Field.Kind switch
