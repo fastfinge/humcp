@@ -73,6 +73,9 @@ public partial class MainWindow : Window
 
     /// <summary>What is in the result pane, for the details window (F1) to write out in full.</summary>
     private ToolInfo? _lastTool;
+
+    /// <summary>The server the result in the main pane came from, which a resource link in it is read through.</summary>
+    private ServerConnection? _lastConnection;
     private DateTimeOffset _lastCallAt;
 
     public MainWindow()
@@ -155,6 +158,10 @@ public partial class MainWindow : Window
         MainResults.Owner = this;
         MainResults.Windows = _windows;
         MainResults.Announce = SetStatus;
+        MainResults.ReadResource = (uri, label) =>
+        {
+            if (_lastConnection is { } connection) OpenLinkedResource(connection, uri, label);
+        };
         MainResults.ShowMessage("Result", "No tool has been run yet.");
 
         _localModel = new LocalModelMenu(_modelHost, LocalModelMenuItem, this, _windows, SetStatus, SpeakIfAway);
@@ -764,6 +771,7 @@ public partial class MainWindow : Window
             {
                 ServerAnnouncements.ToolsChanged(after.DisplayName, before.Tools, after.Tools),
                 ServerAnnouncements.ToolsChanged(after.DisplayName, before.Prompts, after.Prompts, "prompt"),
+                ServerAnnouncements.ToolsChanged(after.DisplayName, before.Resources, after.Resources, "resource"),
             }.Where(c => c.Length > 0)),
             ServerConnectionState.Failed => ServerAnnouncements.Stopped(after),
             _ => "",
@@ -777,7 +785,20 @@ public partial class MainWindow : Window
         if (snapshot.State != ServerConnectionState.Connected) return;
 
         bool Published(ToolWindow form)
-            => (form.IsPrompt ? snapshot.Prompts : snapshot.Tools).Any(t => t.Name == form.ToolName);
+        {
+            // A single resource's window may have come from a link and never been listed, and it
+            // has nothing typed into it to keep; only the operations with forms are told.
+            if (form.Kind == OperationKind.Resource) return true;
+
+            var listed = form.Kind switch
+            {
+                OperationKind.Tool => snapshot.Tools,
+                OperationKind.Prompt => snapshot.Prompts,
+                _ => snapshot.Resources,
+            };
+
+            return listed.Any(t => t.Name == form.ToolName && t.Kind == form.Kind);
+        }
 
         foreach (var form in _forms.Where(f => ReferenceEquals(f.Connection, connection) && !Published(f)))
             form.Withdrawn();
@@ -897,7 +918,7 @@ public partial class MainWindow : Window
         _callInFlight = true;
         var questions = 0;
         UpdateRunAvailability();
-        SetStatus(tool.IsPrompt ? $"Getting {tool.DisplayName}." : $"Running {tool.DisplayName}.");
+        SetStatus($"{tool.Doing} {tool.DisplayName}.");
 
         var started = DateTimeOffset.Now;
         _currentCall = CancellationTokenSource.CreateLinkedTokenSource(_shutdown.Token);
@@ -935,9 +956,10 @@ public partial class MainWindow : Window
                 return await ElicitationWindow.AskAsync(this, title, request, _windows, token);
             }
 
+            _lastConnection = connection;
             ShowResult(tool, outcome, started);
-            SetStatus(ResultFormatter.Announcement(outcome));
-            SpeakIfAway($"{tool.DisplayName}: {ResultFormatter.Announcement(outcome)}");
+            SetStatus(ResultFormatter.Announcement(outcome, tool));
+            SpeakIfAway($"{tool.DisplayName}: {ResultFormatter.Announcement(outcome, tool)}");
         }
         catch (OperationCanceledException) when (!_shutdown.IsCancellationRequested)
         {
@@ -983,10 +1005,10 @@ public partial class MainWindow : Window
     /// Opens the form for a tool, or brings the one already open to the front. Non-modal (§8), so
     /// several tools can be part-filled at once and the tree stays usable behind them.
     /// </summary>
-    private void OpenForm(ServerConnection connection, ToolInfo tool)
+    private void OpenForm(ServerConnection connection, ToolInfo tool, bool readNow = false, Window? owner = null)
     {
         if (_forms.FirstOrDefault(f => ReferenceEquals(f.Connection, connection) && f.ToolName == tool.Name
-                                        && f.IsPrompt == tool.IsPrompt) is { } existing)
+                                        && f.Kind == tool.Kind) is { } existing)
         {
             WindowManager.Activate(existing);
             SetStatus($"{tool.DisplayName} is already open.");
@@ -994,14 +1016,26 @@ public partial class MainWindow : Window
         }
 
         // A history that is switched off is neither offered nor added to, which MruHistory.None is.
-        var form = new ToolWindow(this, tool, connection, _settings.RememberHistory ? _history : MruHistory.None,
+        var form = new ToolWindow(owner ?? this, tool, connection, _settings.RememberHistory ? _history : MruHistory.None,
             _windows, _settings.ShowOptionalFields, SpeakIfAway);
 
         form.Describer = _features;
+        // Owned by the window whose link was followed, so closing it puts the caret back there
+        // rather than in the main window: found by ear, where it lost the reader's place (phase13-notes).
+        form.ReadResource = (c, uri, label) => OpenLinkedResource(c, uri, label, form);
+        if (readNow) form.RunWhenShown();
         _forms.Add(form);
         form.Closed += (_, _) => _forms.Remove(form);
         form.Show();
     }
+
+    /// <summary>
+    /// Reads what a resource link in a result points at, in a window of its own, through the server
+    /// that sent the result (Phase 13). A window rather than the main pane, so the result the link
+    /// was in is still there to go back to.
+    /// </summary>
+    private void OpenLinkedResource(ServerConnection connection, string uri, string label, Window? from = null)
+        => OpenForm(connection, connection.LinkedResource(uri, label), readNow: true, owner: from);
 
     private void UpdateRunAvailability()
     {
@@ -1371,10 +1405,19 @@ public partial class MainWindow : Window
 
         if (node?.Tool is { } tool)
         {
-            menu.Items.Add(Item(tool.ParameterCount > 0 ? "_Open form" : tool.IsPrompt ? "_Get prompt" : "_Run", "Enter",
-                () => _ = RunSelectedToolAsync()));
+            menu.Items.Add(Item(tool.ParameterCount > 0 ? "_Open form" : tool.Kind switch
+            {
+                OperationKind.Prompt => "_Get prompt",
+                OperationKind.Resource => "_Read resource",
+                _ => "_Run",
+            }, "Enter", () => _ = RunSelectedToolAsync()));
             menu.Items.Add(Item("_Details", "F1", ShowDetails));
-            menu.Items.Add(Item($"Copy {tool.Noun} _schema", "", CopyToolSchema));
+
+            // A resource has no schema of its own to copy; its address is what is worth having.
+            if (tool.Kind == OperationKind.Resource)
+                menu.Items.Add(Item("Copy _address", "", () => Copy(tool.ResourceUri, $"Copied the address of {tool.DisplayName}.")));
+            else
+                menu.Items.Add(Item($"Copy {tool.Noun} _schema", "", CopyToolSchema));
         }
         else if (node?.ServerId is not null)
         {
@@ -1603,12 +1646,17 @@ public partial class MainWindow : Window
         var text = new StringBuilder()
             .AppendLine(tool.DisplayName)
             .AppendLine(new string('-', 60))
-            .AppendLine($"Kind:       {(tool.IsPrompt ? "Prompt" : "Tool")}")
-            .AppendLine($"Name:       {tool.Name}")
-            .AppendLine($"{(tool.IsPrompt ? "Arguments: " : "Parameters:")} {tool.ParameterCount} ({tool.RequiredParameterCount} required)");
+            .AppendLine($"Kind:       {char.ToUpperInvariant(tool.Noun[0])}{tool.Noun[1..]}")
+            .AppendLine($"Name:       {tool.Name}");
 
-        // A prompt makes no claims about what it does to the world, because fetching it does nothing.
-        if (!tool.IsPrompt)
+        if (tool.IsResource) text.AppendLine($"Address:    {tool.ResourceUri}");
+        if (tool.MimeType.Length > 0) text.AppendLine($"Type:       {tool.MimeType}");
+
+        text.AppendLine($"{(tool.Kind == OperationKind.Tool ? "Parameters:" : "Arguments: ")} {tool.ParameterCount} ({tool.RequiredParameterCount} required)");
+
+        // A prompt or a resource makes no claims about what it does to the world, because fetching
+        // or reading one does nothing.
+        if (tool.Kind == OperationKind.Tool)
         {
             text.AppendLine($"Read-only:  {Describe(tool.Safety.IsReadOnly)}")
                 .AppendLine($"Destructive:{Describe(tool.Safety.IsDestructive)}")
@@ -1619,7 +1667,7 @@ public partial class MainWindow : Window
             .AppendLine("Description")
             .AppendLine(tool.FullDescription.Length > 0 ? tool.FullDescription : "(the server supplied none)")
             .AppendLine()
-            .AppendLine(tool.IsPrompt ? "Arguments, as the schema humcp built from them" : "Input schema")
+            .AppendLine(tool.Kind == OperationKind.Tool ? "Input schema" : "Arguments, as the schema humcp built from them")
             .AppendLine(Pretty(tool.InputSchema));
 
         TextWindow.Show(this, $"Details: {tool.DisplayName}", text.ToString(), _windows);

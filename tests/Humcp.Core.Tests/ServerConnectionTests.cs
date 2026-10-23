@@ -60,7 +60,7 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
     [Fact]
     public void Lists_every_published_tool()
     {
-        Assert.Equal(31, Connection.Tools.Count);
+        Assert.Equal(32, Connection.Tools.Count);
     }
 
     [Fact]
@@ -318,10 +318,10 @@ public class ServerConnectionTests(TestServerFixture fixture) : IClassFixture<Te
         var server = ToolTreeBuilder.BuildServerNode(Connection.Snapshot());
         var tools = server.SelfAndDescendants().Where(n => n.Kind == CatalogueNodeKind.Tool).ToList();
 
-        Assert.Equal(31, tools.Count);
+        Assert.Equal(32, tools.Count);
 
-        // Tools first, then the fixture's prompts (Phase 12).
-        Assert.Equal(2, server.Children.Count);
+        // Tools first, then the fixture's prompts (Phase 12) and resources (Phase 13).
+        Assert.Equal(3, server.Children.Count);
         Assert.Contains(server.Children[0].Children, c => c.Kind == CatalogueNodeKind.Group);
     }
 

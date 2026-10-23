@@ -31,6 +31,9 @@ internal static class Program
         var prompts = new McpServerPrimitiveCollection<McpServerPrompt>();
         foreach (var prompt in TestPrompts.All()) prompts.Add(prompt);
 
+        var resources = new McpServerResourceCollection();
+        foreach (var resource in TestResources.All()) resources.Add(resource);
+
         var options = new McpServerOptions
         {
             ServerInfo = new Implementation
@@ -47,9 +50,13 @@ internal static class Program
                 // Phase 12: prompts, and completion for their arguments.
                 Prompts = new PromptsCapability(),
                 Completions = new CompletionsCapability(),
+
+                // Phase 13: resources, three of them and a template.
+                Resources = new ResourcesCapability(),
             },
             ToolCollection = tools,
             PromptCollection = prompts,
+            ResourceCollection = resources,
             Handlers = new McpServerHandlers { CompleteHandler = TestPrompts.CompleteAsync },
             ServerInstructions =
                 "A fixture server for humcp's own tests. Nothing here touches anything outside this process.",
@@ -122,6 +129,7 @@ internal static class Program
                 configured.Capabilities = options.Capabilities;
                 configured.ToolCollection = options.ToolCollection;
                 configured.PromptCollection = options.PromptCollection;
+                configured.ResourceCollection = options.ResourceCollection;
                 configured.Handlers = options.Handlers;
                 configured.ServerInstructions = options.ServerInstructions;
             })

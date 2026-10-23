@@ -35,6 +35,9 @@ public sealed record ServerSnapshot(
 
     /// <summary>The server's prompts (Phase 12), each an operation of kind <see cref="OperationKind.Prompt"/>.</summary>
     public IReadOnlyList<ToolInfo> Prompts { get; init; } = [];
+
+    /// <summary>The server's resources and resource templates (Phase 13), fixed addresses first.</summary>
+    public IReadOnlyList<ToolInfo> Resources { get; init; } = [];
 }
 
 /// <summary>
@@ -74,6 +77,7 @@ public sealed class ServerConnection : IAsyncDisposable
     private McpClient? _client;
     private IReadOnlyList<ToolInfo> _tools = [];
     private IReadOnlyList<ToolInfo> _prompts = [];
+    private IReadOnlyList<ToolInfo> _resources = [];
 
     /// <summary>The held-open <c>subscriptions/listen</c> request, cancelled on disconnect.</summary>
     private CancellationTokenSource? _listening;
@@ -130,6 +134,9 @@ public sealed class ServerConnection : IAsyncDisposable
     /// <summary>The server's prompts, empty for one that publishes none (Phase 12).</summary>
     public IReadOnlyList<ToolInfo> Prompts => _prompts;
 
+    /// <summary>The server's resources and resource templates, empty for one that publishes none (Phase 13).</summary>
+    public IReadOnlyList<ToolInfo> Resources => _resources;
+
     /// <summary>
     /// Whether the server said it answers <c>completion/complete</c>, which is what puts a drop-down
     /// behind a prompt's arguments. Asking a server that never claimed it is an error for nothing.
@@ -142,6 +149,7 @@ public sealed class ServerConnection : IAsyncDisposable
         Id = Descriptor.Id,
         Enabled = Descriptor.Enabled,
         Prompts = _prompts,
+        Resources = _resources,
     };
 
     /// <summary>
@@ -157,6 +165,7 @@ public sealed class ServerConnection : IAsyncDisposable
         Descriptor = descriptor;
         _tools = [];
         _prompts = [];
+        _resources = [];
         SupportsCompletion = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
@@ -172,6 +181,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
         _tools = [];
         _prompts = [];
+        _resources = [];
         SupportsCompletion = false;
         FailureReason = null;
         NegotiatedProtocolVersion = null;
@@ -197,6 +207,7 @@ public sealed class ServerConnection : IAsyncDisposable
         NegotiatedProtocolVersion = null;
         _tools = [];
         _prompts = [];
+        _resources = [];
         SupportsCompletion = false;
         _lastServerLine = null;
 
@@ -218,6 +229,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
             _tools = await ListToolsAsync(_client, cancellationToken).ConfigureAwait(false);
             _prompts = await ListPromptsAsync(_client, cancellationToken).ConfigureAwait(false);
+            _resources = await ListResourcesAsync(_client, cancellationToken).ConfigureAwait(false);
             SupportsCompletion = _client.ServerCapabilities?.Completions is not null;
             Listen(_client);
             Watch(_client);
@@ -231,6 +243,7 @@ public sealed class ServerConnection : IAsyncDisposable
             await DisconnectAsync().ConfigureAwait(false);
             _tools = [];
             _prompts = [];
+            _resources = [];
             State = ServerConnectionState.NotConnected;
             throw;
         }
@@ -243,6 +256,7 @@ public sealed class ServerConnection : IAsyncDisposable
             FailureReason = Describe(ex);
             _tools = [];
             _prompts = [];
+            _resources = [];
             State = ServerConnectionState.Failed;
         }
     }
@@ -320,6 +334,7 @@ public sealed class ServerConnection : IAsyncDisposable
             FailureReason = Stopped(details);
             _tools = [];
             _prompts = [];
+            _resources = [];
             NegotiatedProtocolVersion = null;
             State = ServerConnectionState.Failed;
 
@@ -447,6 +462,7 @@ public sealed class ServerConnection : IAsyncDisposable
 
         // The same window runs both, and the difference is the request (Phase 12).
         if (tool.IsPrompt) return await GetPromptAsync(tool, arguments, elicit, cancellationToken).ConfigureAwait(false);
+        if (tool.IsResource) return await ReadAsync(tool, arguments, elicit, cancellationToken).ConfigureAwait(false);
 
         // Set before the await, so that it flows into whatever thread the SDK resolves an input
         // request on and no further: two windows calling one server each get their own.
@@ -630,8 +646,15 @@ public sealed class ServerConnection : IAsyncDisposable
                     return ValueTask.CompletedTask;
                 }),
 
-                // Prompts change the same way, and one re-listing covers both (Phase 12).
+                // Prompts and resources change the same way, and one re-listing covers all three
+                // (Phases 12 and 13).
                 new(NotificationMethods.PromptListChangedNotification, (_, _) =>
+                {
+                    _ = RelistAsync();
+                    return ValueTask.CompletedTask;
+                }),
+
+                new(NotificationMethods.ResourceListChangedNotification, (_, _) =>
                 {
                     _ = RelistAsync();
                     return ValueTask.CompletedTask;
@@ -795,11 +818,21 @@ public sealed class ServerConnection : IAsyncDisposable
         ArgumentNullException.ThrowIfNull(prompt);
         ArgumentNullException.ThrowIfNull(argument);
 
-        if (!prompt.IsPrompt || !SupportsCompletion || _client is not { } client) return [];
+        if (!SupportsCompletion || _client is not { } client) return [];
+
+        // ref/prompt and ref/resource are the only two there are; a tool cannot be completed.
+        Reference? reference = prompt.Kind switch
+        {
+            OperationKind.Prompt => new PromptReference { Name = prompt.Name },
+            OperationKind.ResourceTemplate => new ResourceTemplateReference { Uri = prompt.ResourceUri },
+            _ => null,
+        };
+
+        if (reference is null) return [];
 
         var request = new CompleteRequestParams
         {
-            Ref = new PromptReference { Name = prompt.Name },
+            Ref = reference,
             Argument = new Argument { Name = argument, Value = value ?? "" },
             Context = others is { Count: > 0 }
                 ? new CompleteContext { Arguments = others.ToDictionary(p => p.Key, p => p.Value) }
@@ -827,6 +860,152 @@ public sealed class ServerConnection : IAsyncDisposable
         }
     }
 
+    // ------------------------------------------------------------------ resources (Phase 13)
+
+    /// <summary>
+    /// Every resource and resource template the server publishes, fixed addresses first. Each list
+    /// is asked for on its own and fails on its own: a server whose templates cannot be listed keeps
+    /// its resources, and either failing keeps its tools.
+    /// </summary>
+    private async Task<IReadOnlyList<ToolInfo>> ListResourcesAsync(McpClient client, CancellationToken cancellationToken)
+    {
+        if (client.ServerCapabilities?.Resources is null) return [];
+
+        var listed = new List<ToolInfo>();
+
+        try
+        {
+            var resources = await client.ListResourcesAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            listed.AddRange(resources.Select(r =>
+                ResourceForm.Resource(r.Uri, r.Name, r.Title, r.Description, r.MimeType)));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            RecordDiagnostic("The server's resources could not be listed, so none are shown: " + ex.Message);
+        }
+
+        try
+        {
+            var templates = await client.ListResourceTemplatesAsync(cancellationToken: cancellationToken).ConfigureAwait(false);
+            listed.AddRange(templates.Select(t =>
+                ResourceForm.Template(t.UriTemplate, t.Name, t.Title, t.Description, t.MimeType)));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            // Many servers that publish resources have no templates and answer this with "method
+            // not found", which is worth a line in the diagnostics and nothing more.
+            RecordDiagnostic("The server's resource templates could not be listed: " + ex.Message);
+        }
+
+        if (listed.Count <= MaxTools) return listed;
+
+        RecordDiagnostic($"The server published {listed.Count} resources; humcp shows the first {MaxTools}.");
+        return [.. listed.Take(MaxTools)];
+    }
+
+    /// <summary>
+    /// Reads a resource the server listed, or one a template makes from a form's answers. Shaped as
+    /// a call's outcome, one part per piece of content, so the result view shows it unaware.
+    /// </summary>
+    private async Task<ToolCallOutcome> ReadAsync(
+        ToolInfo resource, JsonObject? arguments, ElicitationPrompter? elicit, CancellationToken cancellationToken)
+    {
+        if (_client is null || State != ServerConnectionState.Connected)
+            return ToolCallOutcome.Failure($"Not connected to {Descriptor.DisplayName}.");
+
+        _prompter.Value = elicit;
+
+        try
+        {
+            // The SDK expands the template (RFC 6570); humcp only had to know the variables' names.
+            var result = resource.Kind == OperationKind.ResourceTemplate
+                ? await _client.ReadResourceAsync(resource.ResourceUri, PromptArguments(arguments),
+                    cancellationToken: cancellationToken).ConfigureAwait(false)
+                : await _client.ReadResourceAsync(resource.ResourceUri, cancellationToken: cancellationToken)
+                    .ConfigureAwait(false);
+
+            return MapRead(result);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (UnsupportedInputRequestException ex)
+        {
+            return ToolCallOutcome.Failure(
+                $"{resource.DisplayName} asked humcp for {ex.What}, which it does not do, so it was not read.");
+        }
+        catch (Exception ex)
+        {
+            return ToolCallOutcome.Failure($"{resource.DisplayName} could not be read. {Describe(ex)}");
+        }
+        finally
+        {
+            _prompter.Value = null;
+        }
+    }
+
+    /// <summary>
+    /// A linked address as an operation, so it opens in the same window a listed one does: the
+    /// listed resource where there is one, and otherwise the address alone. A <c>resource_link</c> in
+    /// a tool's result need not point at anything the server listed.
+    /// </summary>
+    /// <param name="label">
+    /// What the link called it, for a resource the server never listed. Without it the window is
+    /// titled with the address, which is the server's identifier rather than a name (phase13-notes).
+    /// </param>
+    public ToolInfo LinkedResource(string uri, string? label = null)
+        => _resources.FirstOrDefault(r => r.Kind == OperationKind.Resource && r.ResourceUri == uri)
+           ?? ResourceForm.Resource(uri, null, label, null, null);
+
+    private static ToolCallOutcome MapRead(ReadResourceResult result)
+    {
+        var blocks = new List<ResultBlock>();
+
+        foreach (var contents in result.Contents ?? [])
+        {
+            blocks.Add(contents switch
+            {
+                TextResourceContents text => new ResourceTextResultBlock(
+                    TextSanitizer.Clean(text.Uri, TextSanitizer.NameLength),
+                    Mime(text.MimeType),
+                    TextSanitizer.CleanMultiline(text.Text, TextSanitizer.ResultLength))
+                {
+                    IsEmbedded = false,
+                },
+
+                // A blob that is a picture or a sound is shown as one — with a preview and a
+                // description where it is a picture — and anything else is a file to save.
+                BlobResourceContents blob => new MediaResultBlock(
+                    KindOf(blob.MimeType),
+                    Mime(blob.MimeType),
+                    blob.DecodedData,
+                    TextSanitizer.Clean(blob.Uri, TextSanitizer.NameLength)),
+
+                _ => new UnknownResultBlock("resource", "(the server sent a resource with no contents)"),
+            });
+        }
+
+        if (blocks.Count == 0) blocks.Add(new TextResultBlock("The server sent this resource with nothing in it."));
+
+        return new ToolCallOutcome(IsError: false, Blocks: blocks);
+    }
+
+    private static MediaKind KindOf(string? mimeType) => mimeType switch
+    {
+        { } m when m.StartsWith("image/", StringComparison.OrdinalIgnoreCase) => MediaKind.Image,
+        { } m when m.StartsWith("audio/", StringComparison.OrdinalIgnoreCase) => MediaKind.Audio,
+        _ => MediaKind.File,
+    };
+
     // ------------------------------------------------------------------ the tool list changing
 
     /// <summary>
@@ -844,7 +1023,8 @@ public sealed class ServerConnection : IAsyncDisposable
     {
         var tools = client.ServerCapabilities?.Tools?.ListChanged == true;
         var prompts = client.ServerCapabilities?.Prompts?.ListChanged == true;
-        if (!tools && !prompts) return;
+        var resources = client.ServerCapabilities?.Resources?.ListChanged == true;
+        if (!tools && !prompts && !resources) return;
         if (string.CompareOrdinal(client.NegotiatedProtocolVersion, "2026-07-28") < 0) return;
 
         var listening = new CancellationTokenSource();
@@ -860,6 +1040,7 @@ public sealed class ServerConnection : IAsyncDisposable
                     {
                         ToolsListChanged = tools ? true : null,
                         PromptsListChanged = prompts ? true : null,
+                        ResourcesListChanged = resources ? true : null,
                     },
                 },
                 McpJsonUtilities.DefaultOptions),
@@ -904,8 +1085,10 @@ public sealed class ServerConnection : IAsyncDisposable
 
                 _tools = await ListToolsAsync(client, CancellationToken.None).ConfigureAwait(false);
                 _prompts = await ListPromptsAsync(client, CancellationToken.None).ConfigureAwait(false);
+                _resources = await ListResourcesAsync(client, CancellationToken.None).ConfigureAwait(false);
 
-                RecordDiagnostic($"The server said its list changed. It now publishes {_tools.Count} tools and {_prompts.Count} prompts.");
+                RecordDiagnostic($"The server said its list changed. It now publishes {_tools.Count} tools, " +
+                                 $"{_prompts.Count} prompts and {_resources.Count} resources.");
                 RaiseChanged();
             }
         }

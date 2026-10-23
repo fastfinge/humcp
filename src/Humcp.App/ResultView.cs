@@ -57,6 +57,7 @@ public sealed class ResultView : ContentControl
         Bind(ResultCommands.Open, OnOpen);
         Bind(ResultCommands.Follow, OnFollow);
         Bind(ResultCommands.Copy, OnCopy);
+        Bind(ResultCommands.Read, OnRead);
         Bind(ResultCommands.Expand, OnExpand);
         Bind(ResultCommands.Describe, (_, e) =>
         {
@@ -108,6 +109,13 @@ public sealed class ResultView : ContentControl
     /// </summary>
     public Action<string>? Announce { get; set; }
 
+    /// <summary>
+    /// Reads a resource link's address through the server that sent the result (Phase 13). Null
+    /// where there is no server to ask, and then a link has no Read resource button.
+    /// </summary>
+    /// <remarks>Given the address and what the link called it.</remarks>
+    public Action<string, string>? ReadResource { get; set; }
+
     /// <summary>What is on screen now, for the details window.</summary>
     public ToolCallOutcome? Outcome => _outcome;
 
@@ -119,6 +127,9 @@ public sealed class ResultView : ContentControl
         _outcome = outcome;
         _tool = tool;
         var sections = ResultSections.Build(tool, outcome);
+
+        foreach (var link in sections.OfType<LinkSection>())
+            link.CanRead = ReadResource is not null && link.Block.Action != LinkAction.Browse && link.Uri.Length > 0;
 
         // The offer of a summary, at the end, for a result long enough to want one (Phase 11).
         if (Describer is { } features && ResultSummary.IsWorthSummarising(outcome))
@@ -347,6 +358,14 @@ public sealed class ResultView : ContentControl
         if (e.Parameter is not LinkSection link) return;
 
         Say(Launcher.Follow(link.Uri));
+    }
+
+    private void OnRead(object sender, ExecutedRoutedEventArgs e)
+    {
+        if (e.Parameter is not LinkSection { CanRead: true } link || ReadResource is not { } read) return;
+
+        // Nothing said here: the window that opens announces itself, and says what it is reading.
+        read(link.Uri, link.Block.Label);
     }
 
     private void OnCopy(object sender, ExecutedRoutedEventArgs e)

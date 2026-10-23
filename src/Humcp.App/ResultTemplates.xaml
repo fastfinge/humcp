@@ -180,6 +180,13 @@
             <TextBlock Style="{StaticResource PartNote}" Text="{Binding Explanation}" />
 
             <StackPanel Orientation="Horizontal">
+                <!-- Phase 13: what the link points at, asked of the server that sent it. First,
+                     because for any address that is not a web page it is the useful thing to do. -->
+                <Button Style="{StaticResource PartButton}" Content="Read resource"
+                        Command="{x:Static local:ResultCommands.Read}" CommandParameter="{Binding}"
+                        Visibility="{Binding CanRead, Converter={StaticResource EmptyToCollapsed}}"
+                        AutomationProperties.Name="Read resource"
+                        AutomationProperties.HelpText="Asks the server for what this link points at, and shows it in a window of its own." />
                 <Button Style="{StaticResource PartButton}" Content="{Binding ActionName}"
                         Command="{x:Static local:ResultCommands.Follow}" CommandParameter="{Binding}"
                         Visibility="{Binding CanOpen, Converter={StaticResource EmptyToCollapsed}}"

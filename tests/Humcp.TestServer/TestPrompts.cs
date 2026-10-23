@@ -143,6 +143,10 @@ internal static class TestPrompts
             };
         }
 
+        // Phase 13: the note template's one variable.
+        if (parameters?.Ref is ResourceTemplateReference { Uri: TestResources.NoteTemplate } && parameters.Argument.Name == "name")
+            values = [.. TestResources.NoteNames];
+
         var typed = parameters?.Argument.Value ?? "";
         var matching = values.Where(v => v.StartsWith(typed, StringComparison.OrdinalIgnoreCase)).ToList();
 

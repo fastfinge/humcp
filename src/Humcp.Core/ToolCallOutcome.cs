@@ -101,8 +101,13 @@ public sealed record LinkResultBlock(
 /// <summary>An embedded resource that came as text — the common case for files and documents.</summary>
 public sealed record ResourceTextResultBlock(string Uri, string MimeType, string Text) : ResultBlock
 {
-    public override string Heading =>
-        Uri.Length > 0 ? $"Embedded resource, {Uri}" : "Embedded resource";
+    /// <summary>
+    /// True for a resource a tool or prompt sent inside its answer; false for one humcp read
+    /// (Phase 13), which is not embedded in anything.
+    /// </summary>
+    public bool IsEmbedded { get; init; } = true;
+
+    public override string Heading => (IsEmbedded ? "Embedded resource" : "Resource") + (Uri.Length > 0 ? $", {Uri}" : "");
 }
 
 /// <summary>

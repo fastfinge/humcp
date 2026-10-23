@@ -60,6 +60,12 @@ public static class AccessKeys
     public static readonly IReadOnlyList<char> PromptCommands = ['p', 'w', 'g', 'c', 'o'];
 
     /// <summary>
+    /// The same list for a resource's window (Phase 13): the Re<b>s</b>ource and <b>W</b>indow menus,
+    /// and <b>R</b>ead resource, <b>C</b>lose and show <b>o</b>ptional.
+    /// </summary>
+    public static readonly IReadOnlyList<char> ResourceCommands = ['s', 'w', 'r', 'c', 'o'];
+
+    /// <summary>
     /// One index per label, in the same order, or null where nothing was left to give it.
     /// </summary>
     public static IReadOnlyList<int?> Assign(IReadOnlyList<string> labels, IEnumerable<char>? reserved = null)

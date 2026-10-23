@@ -264,6 +264,12 @@ public sealed class TextFieldState : FieldState
     /// </summary>
     public bool HasServerSuggestions { get; set; }
 
+    /// <summary>
+    /// True when the drop-down holds the server's resource addresses as well as history — a tool's
+    /// parameter that wants an address (Phase 13). Set before the form is shown, for the same reason.
+    /// </summary>
+    public bool OffersResources { get; set; }
+
     /// <summary>The JSON skeleton a Tier 3 editor started with, so an untouched one can be recognised.</summary>
     public string Seed => _initial;
 

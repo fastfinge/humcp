@@ -27,6 +27,8 @@
                                Hint="Press Alt plus Down Arrow to open the calendar." />
     <local:AppendHintConverter x:Key="HistoryHint"
                                Hint="Press Alt plus Down Arrow for values you have used here before." />
+    <local:AppendHintConverter x:Key="ResourcesHint"
+                               Hint="Press Alt plus Down Arrow for this server's resources, and values you have used here before." />
     <local:AppendHintConverter x:Key="SuggestionsHint"
                                Hint="The server suggests values as you type. Press Alt plus Down Arrow to see them." />
     <local:AppendHintConverter x:Key="MultilineHint"
@@ -133,6 +135,28 @@
                       Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
                       AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
                       AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource HistoryHint}}" />
+            <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
+        </StackPanel>
+    </DataTemplate>
+
+    <!-- A tool's parameter that wants an address (Phase 13): the same drop-down, holding the
+         server's resource addresses after this user's history (§4, pitfall 3's second half). -->
+    <DataTemplate x:Key="Field.Resources">
+        <StackPanel Style="{StaticResource FieldRow}">
+            <Label x:Name="FieldLabel" Style="{StaticResource FieldLabel}" Target="{Binding ElementName=Input}">
+                <Label.Content>
+                    <MultiBinding Converter="{StaticResource AccessKey}">
+                        <Binding Path="Label" />
+                        <Binding Path="AccessKeyIndex" />
+                    </MultiBinding>
+                </Label.Content>
+            </Label>
+            <ComboBox x:Name="Input" Style="{StaticResource FieldInput}"
+                      IsEditable="True" IsTextSearchEnabled="False"
+                      ItemsSource="{Binding History}"
+                      Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                      AutomationProperties.LabeledBy="{Binding ElementName=FieldLabel}"
+                      AutomationProperties.HelpText="{Binding HelpText, Converter={StaticResource ResourcesHint}}" />
             <TextBlock Style="{StaticResource ProblemText}" Text="{Binding Status, StringFormat='Problem: {0}'}" />
         </StackPanel>
     </DataTemplate>

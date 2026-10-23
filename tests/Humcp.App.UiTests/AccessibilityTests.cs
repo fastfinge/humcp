@@ -62,7 +62,7 @@ public class AccessibilityTests(AppFixture fixture, ITestOutputHelper output)
 
         // §8: status is part of the accessible name, so it is heard on arrow-through.
         Assert.StartsWith("humcp test server, connected,", server.Name);
-        Assert.Contains("31 tools", server.Name);
+        Assert.Contains("32 tools", server.Name);
         Assert.Contains("protocol ", server.Name);
     }
 

@@ -99,8 +99,13 @@ public class ResultTests(AppFixture fixture, ITestOutputHelper output)
         Assert.Single(names, n => n == "Show in folder");
         Assert.Equal(3, names.Count(n => n == "Copy link"));
 
+        // Phase 13: what is not a web address can be read through the server that sent it, which
+        // never involves the shell — so the file and the custom scheme have Read resource, and the
+        // web page, which the browser opens, does not.
+        Assert.Equal(2, names.Count(n => n == "Read resource"));
+
         var inert = Focusables().Single(e => UiaTree.Safe(() => e.Name) == "Resource link, A scheme humcp does not follow");
-        Assert.Contains("copied but not opened", UiaTree.Safe(() => inert.HelpText) ?? "");
+        Assert.Contains("will not hand this address to Windows", UiaTree.Safe(() => inert.HelpText) ?? "");
     }
 
     // ------------------------------------------------------------------ structured content

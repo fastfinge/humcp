@@ -45,6 +45,7 @@ internal static class TestTools
         yield return JsonAsText();
         yield return Mixed();
         yield return Links();
+        yield return LinkTo();
         yield return Deep();
         yield return Nothing();
         yield return ListChangeTools.Toggle();
@@ -54,7 +55,7 @@ internal static class TestTools
     }
 
     /// <summary>How many tools <see cref="All"/> publishes. Asserted by the tests, spoken by the tree.</summary>
-    public const int Count = 24 + MrtrTools.Count;
+    public const int Count = 25 + MrtrTools.Count;
 
     // ------------------------------------------------------------------ info_
 
@@ -664,6 +665,34 @@ internal static class TestTools
             Title = "Three resource links",
             Description = "One web address, one file and one custom scheme, so the client has to " +
                           "decide what it is prepared to hand to the shell.",
+            ReadOnly = true,
+            Idempotent = true,
+        });
+
+    /// <summary>
+    /// A tool that takes a resource's address and answers with a link to it (Phase 13): a parameter
+    /// a client can offer the server's resources for (§4, pitfall 3), and a link it can read back
+    /// through the server.
+    /// </summary>
+    private static McpServerTool LinkTo() => McpServerTool.Create(
+        ([Description("The address of one of this server's resources.")] string resource_uri) => new CallToolResult
+        {
+            Content =
+            [
+                new TextContentBlock { Text = $"Here is a link to {resource_uri}." },
+                new ResourceLinkBlock
+                {
+                    Uri = resource_uri,
+                    Name = "linked",
+                    Title = "The resource you chose",
+                },
+            ],
+        },
+        new McpServerToolCreateOptions
+        {
+            Name = "result_link_to",
+            Title = "Link to a resource",
+            Description = "Answers with a link to the resource whose address it is given.",
             ReadOnly = true,
             Idempotent = true,
         });

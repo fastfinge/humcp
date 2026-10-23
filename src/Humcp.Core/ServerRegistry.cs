@@ -185,12 +185,13 @@ public static class ServerAnnouncements
         var failed = enabled.Where(s => s.State == ServerConnectionState.Failed).ToList();
         var tools = connected.Sum(s => s.Tools.Count);
         var prompts = connected.Sum(s => s.Prompts.Count);
+        var resources = connected.Sum(s => s.Resources.Count);
 
-        // Prompts only when there are some, as on a server's own node. Found by ear: the one-server
-        // sentence said them and this one did not (phase12-notes).
-        var contents = prompts > 0
-            ? $"{Count(tools, "tool", "tools")}, {Count(prompts, "prompt", "prompts")}"
-            : Count(tools, "tool", "tools");
+        // Prompts and resources only when there are some, as on a server's own node. Found by ear:
+        // the one-server sentence said prompts and this one did not (phase12-notes).
+        var contents = Count(tools, "tool", "tools");
+        if (prompts > 0) contents += $", {Count(prompts, "prompt", "prompts")}";
+        if (resources > 0) contents += $", {Count(resources, "resource", "resources")}";
 
         var opening = connected.Count == enabled.Count
             ? $"Connected to {enabled.Count} servers, {contents}."
@@ -209,8 +210,7 @@ public static class ServerAnnouncements
         return server.State switch
         {
             ServerConnectionState.Connected =>
-                $"Connected to {Name(server)}. {Count(server.Tools.Count, "tool", "tools")}" +
-                (server.Prompts.Count > 0 ? $", {Count(server.Prompts.Count, "prompt", "prompts")}" : "") +
+                $"Connected to {Name(server)}. {ToolTreeBuilder.Contents(server)}" +
                 (string.IsNullOrWhiteSpace(server.NegotiatedProtocolVersion)
                     ? "."
                     : $", protocol {TextSanitizer.Clean(server.NegotiatedProtocolVersion, 40)}."),

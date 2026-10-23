@@ -95,17 +95,20 @@ internal static class ResultFormatter
     /// finished", so this is the live region's job — and it is the whole of what a user hears
     /// before deciding whether to go and read the result (§7's core rule).
     /// </summary>
-    public static string Announcement(ToolCallOutcome outcome)
+    /// <param name="operation">
+    /// What produced it, so the sentence names it: a resource is read, not called, and "Tool call
+    /// complete" said of one was found by ear (phase13-notes).
+    /// </param>
+    public static string Announcement(ToolCallOutcome outcome, ToolInfo? operation = null)
     {
         ArgumentNullException.ThrowIfNull(outcome);
 
         if (outcome.IsError)
         {
             var first = outcome.CombinedText.Split('\n', 2)[0].Trim();
+            var failed = operation is { IsResource: true } ? "The resource could not be read." : "Tool returned an error.";
 
-            return first.Length > 0
-                ? $"Tool returned an error. {TextSanitizer.Clean(first, 200)}"
-                : "Tool returned an error.";
+            return first.Length > 0 ? $"{failed} {TextSanitizer.Clean(first, 200)}" : failed;
         }
 
         // A prompt's messages (Phase 12): how many, and who says each, because which side of the
@@ -120,7 +123,7 @@ internal static class ResultFormatter
 
         var parts = outcome.Blocks.Select(Describe).Where(p => p.Length > 0).ToList();
 
-        var sb = new StringBuilder("Tool call complete. ");
+        var sb = new StringBuilder(operation is { IsResource: true } ? "Resource read. " : "Tool call complete. ");
 
         sb.Append(parts.Count == 0 ? "No content" : Capitalise(string.Join(", ", parts)));
         sb.Append('.');
@@ -160,6 +163,10 @@ internal static class ResultFormatter
         TextResultBlock text => $"{Count(Lines(text.Text), "line", "lines")} of text",
         MediaResultBlock media => media.Phrase,
         LinkResultBlock link => link.Label.Length > 0 ? $"a link to {link.Label}" : "a resource link",
+        // Read rather than embedded, it is simply text, or JSON shown as what it is.
+        ResourceTextResultBlock { IsEmbedded: false } resource when JsonText.TryRead(resource.Text, out var title, out var value) =>
+            ResultBuilder.Build(null, value, title.Length > 0 ? title : "Result").AccessibleName,
+        ResourceTextResultBlock { IsEmbedded: false } resource => $"{Count(Lines(resource.Text), "line", "lines")} of text",
         ResourceTextResultBlock resource => $"an embedded resource, {Count(Lines(resource.Text), "line", "lines")}",
         UnknownResultBlock unknown => $"a part of type {unknown.Kind}",
         _ => "",

@@ -97,10 +97,16 @@ public partial class ToolWindow : Window
         _history = history;
         _windows = windows;
         _speakIfAway = speakIfAway ?? (_ => { });
-        _state = FormState.Create(tool.Form, tool.IsPrompt ? AccessKeys.PromptCommands : AccessKeys.WindowCommands);
+        _state = FormState.Create(tool.Form, tool.Kind switch
+        {
+            OperationKind.Prompt => AccessKeys.PromptCommands,
+            OperationKind.Resource or OperationKind.ResourceTemplate => AccessKeys.ResourceCommands,
+            _ => AccessKeys.WindowCommands,
+        });
         _state.ShowOptional = showOptional;
 
         ApplyHistory();
+        OfferResources();
         OfferSuggestions();
 
         Owner = owner;
@@ -116,11 +122,24 @@ public partial class ToolWindow : Window
         FormResults.Owner = this;
         FormResults.Windows = windows;
         FormResults.Announce = SetStatus;
-        if (tool.IsPrompt)
-            FormResults.ShowMessage("Result", "This prompt has not been fetched yet.",
-                "The prompt's messages appear here when it is fetched.");
-        else
-            FormResults.ShowMessage("Result", "This tool has not been run yet.");
+        FormResults.ReadResource = (uri, label) => ReadResource?.Invoke(_connection, uri, label);
+
+        switch (tool.Kind)
+        {
+            case OperationKind.Prompt:
+                FormResults.ShowMessage("Result", "This prompt has not been fetched yet.",
+                    "The prompt's messages appear here when it is fetched.");
+                break;
+
+            case OperationKind.Resource or OperationKind.ResourceTemplate:
+                FormResults.ShowMessage("Result", "This resource has not been read yet.",
+                    "What the resource holds appears here when it is read.");
+                break;
+
+            default:
+                FormResults.ShowMessage("Result", "This tool has not been run yet.");
+                break;
+        }
 
         if (tool.Summary.Length > 0)
         {
@@ -200,34 +219,58 @@ public partial class ToolWindow : Window
     /// <summary>The tool this window is a form for. Used by the window manager to avoid opening two.</summary>
     public string ToolName => _tool.Name;
 
-    /// <summary>Whether this window is a prompt's (Phase 12): a prompt and a tool can share a name.</summary>
-    public bool IsPrompt => _tool.IsPrompt;
-
-    /// <summary>"parameters", or "arguments" for a prompt — the protocol's word, and every other client's.</summary>
-    private string Words => _tool.IsPrompt ? "arguments" : "parameters";
-
-    private string Word => _tool.IsPrompt ? "argument" : "parameter";
-
-    /// <summary>"Running", or "Getting" for a prompt, which runs nothing.</summary>
-    private string Doing => _tool.IsPrompt ? "Getting" : "Running";
+    /// <summary>What this window is a form for: a tool, a prompt and a resource can share a name.</summary>
+    public OperationKind Kind => _tool.Kind;
 
     /// <summary>
-    /// The handful of words that differ for a prompt (Phase 12). Everything else in this window is
-    /// the same for both, because a prompt is arguments in and content out, as a tool is.
+    /// Reads a resource a result linked to, through the server that sent the link (Phase 13). Set by
+    /// the main window, which owns the windows a read opens.
+    /// </summary>
+    public Action<ServerConnection, string, string>? ReadResource { get; set; }
+
+    /// <summary>"parameters", or "arguments" for a prompt or a template — the protocol's word.</summary>
+    private string Words => _tool.ArgumentWord + "s";
+
+    private string Word => _tool.ArgumentWord;
+
+    /// <summary>"Running", "Getting" for a prompt, "Reading" for a resource.</summary>
+    private string Doing => _tool.Doing;
+
+    /// <summary>
+    /// The handful of words that differ for a prompt (Phase 12) or a resource (Phase 13). Everything
+    /// else in this window is the same for all three, because each is arguments in and content out.
+    /// The access keys here are the ones <see cref="AccessKeys"/> reserves for the kind (§7.21).
     /// </summary>
     private void ApplyKind()
     {
-        if (!_tool.IsPrompt) return;
+        var (menu, run, help) = _tool.Kind switch
+        {
+            OperationKind.Prompt => ("_Prompt", "_Get prompt",
+                "Fetches the prompt's messages with what is on this form. Control plus Enter does the same."),
+            OperationKind.Resource or OperationKind.ResourceTemplate => ("Re_source", "_Read resource",
+                "Reads the resource this form describes. Control plus Enter does the same."),
+            _ => ((string?)null, (string?)null, (string?)null),
+        };
 
-        OperationMenu.Header = "_Prompt";
-        RunMenuItem.Header = "_Get prompt";
+        if (menu is null) return;
+
+        OperationMenu.Header = menu;
+        RunMenuItem.Header = run;
         OptionalMenuItem.Header = "Show _optional arguments";
         OptionalToggle.Content = "Show _optional arguments";
         AutomationProperties.SetName(OptionalToggle, "Show optional arguments");
         ParametersHeading.Text = "Arguments";
-        FormRunButton.Content = "_Get prompt";
-        AutomationProperties.SetHelpText(FormRunButton,
-            "Fetches the prompt's messages with what is on this form. Control plus Enter does the same.");
+        FormRunButton.Content = run;
+        AutomationProperties.SetHelpText(FormRunButton, help);
+    }
+
+    /// <summary>
+    /// Reads at once, for a window opened on a resource rather than on a form — a link followed from
+    /// a result, where there is nothing to fill in and the user has already asked.
+    /// </summary>
+    public void RunWhenShown()
+    {
+        Loaded += (_, _) => _ = RunAsync();
     }
 
     /// <summary>Alt text for the images this form's calls return (Phase 10), shared with the main window.</summary>
@@ -323,7 +366,9 @@ public partial class ToolWindow : Window
     {
         if (_callInFlight)
         {
-            SetStatus(_tool.IsPrompt ? "The prompt is already being fetched." : "A tool call is already running.");
+            SetStatus(_tool.Kind == OperationKind.Tool
+                ? "A tool call is already running."
+                : $"{_tool.Doing} {_tool.DisplayName} has already started.");
             return;
         }
 
@@ -402,16 +447,16 @@ public partial class ToolWindow : Window
             throttle.Finish();
 
             ShowResult(outcome, started);
-            SetStatus(ResultFormatter.Announcement(outcome));
-            _speakIfAway($"{_tool.DisplayName}: {ResultFormatter.Announcement(outcome)}");
+            SetStatus(ResultFormatter.Announcement(outcome, _tool));
+            _speakIfAway($"{_tool.DisplayName}: {ResultFormatter.Announcement(outcome, _tool)}");
 
             if (!outcome.IsError) Remember();
         }
         catch (OperationCanceledException) when (!_closing.IsCancellationRequested)
         {
             throttle.Finish();
-            SetStatus(_tool.IsPrompt
-                ? $"Stopped fetching {_tool.DisplayName}."
+            SetStatus(_tool.Kind != OperationKind.Tool
+                ? $"Stopped {_tool.Doing.ToLowerInvariant()} {_tool.DisplayName}."
                 : $"Stopped {_tool.DisplayName}. The server was told; anything it had already done stays done.");
         }
         catch (OperationCanceledException)
@@ -544,11 +589,42 @@ public partial class ToolWindow : Window
     }
 
     /// <summary>
+    /// Offers the server's resource addresses on a tool's parameters that want one (§4, pitfall 3's
+    /// second half, Phase 13), after what this user typed there before. Fixed once, as the window is
+    /// built, like history: the list a field shows does not change under the user's hands.
+    /// </summary>
+    private void OfferResources()
+    {
+        if (_tool.Kind != OperationKind.Tool) return;
+
+        var addresses = _connection.Resources
+            .Where(r => r.Kind == OperationKind.Resource)
+            .Select(r => r.ResourceUri)
+            .Take(ServerConnection.MaxCompletions)
+            .ToList();
+
+        if (addresses.Count == 0) return;
+
+        foreach (var field in _state.AllFields().OfType<TextFieldState>())
+        {
+            if (!ResourceForm.WantsResourceUri(field.Field)) continue;
+
+            field.History = [.. field.History.Concat(addresses).Distinct(StringComparer.Ordinal)];
+            field.OffersResources = true;
+        }
+    }
+
+    /// <summary>
     /// What history is filed under. A prompt's name is prefixed, because a server can publish a tool
     /// and a prompt with the same name and their fields are not the same fields. A colon cannot
     /// appear in a tool's name, so the two can never meet.
     /// </summary>
-    private string HistoryKey => _tool.IsPrompt ? "prompt:" + _tool.Name : _tool.Name;
+    private string HistoryKey => _tool.Kind switch
+    {
+        OperationKind.Prompt => "prompt:" + _tool.Name,
+        OperationKind.ResourceTemplate => "template:" + _tool.Name,
+        _ => _tool.Name,
+    };
 
     private void Remember()
     {
@@ -585,7 +661,9 @@ public partial class ToolWindow : Window
     /// </remarks>
     private void OfferSuggestions()
     {
-        if (!_tool.IsPrompt || !_connection.SupportsCompletion) return;
+        // Prompts (ref/prompt) and templates (ref/resource) are the two things MCP can complete.
+        if (_tool.Kind is not (OperationKind.Prompt or OperationKind.ResourceTemplate) || !_connection.SupportsCompletion)
+            return;
 
         // A prompt's arguments are flat strings, so its top-level fields are all of them.
         foreach (var field in _state.Fields.OfType<TextFieldState>())
@@ -690,8 +768,10 @@ public partial class ToolWindow : Window
 
         if (_tool.Safety.ShortDescription is { } safety) parts.Add(safety);
 
-        parts.Add(Count(_state.Fields.Count, Word, Words) +
-                  $", {_state.RequiredCount} required");
+        // A window on a single resource has nothing to fill in, and "0 arguments, 0 required" is
+        // three words for nothing.
+        if (_state.Fields.Count > 0)
+            parts.Add(Count(_state.Fields.Count, Word, Words) + $", {_state.RequiredCount} required");
 
         if (_state.HiddenCount > 0)
             parts.Add($"{_state.HiddenCount} optional and hidden. Control plus O shows them");
@@ -713,7 +793,7 @@ public partial class ToolWindow : Window
             ? $"{Heading2} — {_state.VisibleFields.Count} of {_state.Fields.Count}"
             : Heading2;
 
-    private string Heading2 => _tool.IsPrompt ? "Arguments" : "Parameters";
+    private string Heading2 => _tool.Kind == OperationKind.Tool ? "Parameters" : "Arguments";
 
     private void ShowProblems(FormSubmission submission)
     {
@@ -855,12 +935,13 @@ public partial class ToolWindow : Window
         .AppendLine(_tool.DisplayName)
         .AppendLine(new string('-', 60))
         .AppendLine($"Name:       {_tool.Name}")
-        .AppendLine($"{(_tool.IsPrompt ? "Arguments: " : "Parameters:")} {_tool.ParameterCount} ({_tool.RequiredParameterCount} required)")
+        .Append(_tool.IsResource ? $"Address:    {_tool.ResourceUri}{Environment.NewLine}" : "")
+        .AppendLine($"{(_tool.Kind == OperationKind.Tool ? "Parameters:" : "Arguments: ")} {_tool.ParameterCount} ({_tool.RequiredParameterCount} required)")
         .AppendLine()
         .AppendLine("Description")
         .AppendLine(_tool.FullDescription.Length > 0 ? _tool.FullDescription : "(the server supplied none)")
         .AppendLine()
-        .AppendLine(_tool.IsPrompt ? "Arguments, as the schema humcp built from them" : "Input schema")
+        .AppendLine(_tool.Kind == OperationKind.Tool ? "Input schema" : "Arguments, as the schema humcp built from them")
         .AppendLine(FieldDetails.Pretty(_tool.InputSchema))
         .ToString();
 }

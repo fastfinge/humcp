@@ -4,8 +4,9 @@ using Humcp.Schema;
 namespace Humcp.Core;
 
 /// <summary>
-/// What running an operation does: call a tool, or fetch a prompt's messages (Phase 12). The two
-/// share a form, a window and a result view, and differ in the request and in a handful of words.
+/// What running an operation does: call a tool, fetch a prompt's messages (Phase 12), or read a
+/// resource (Phase 13). All of them share a form, a window and a result view, and differ in the
+/// request and in a handful of words.
 /// </summary>
 public enum OperationKind
 {
@@ -16,6 +17,15 @@ public enum OperationKind
     /// for them), and fetching one changes nothing, so there is no safety to state.
     /// </summary>
     Prompt,
+
+    /// <summary>A resource at a fixed address: no arguments, read as it stands.</summary>
+    Resource,
+
+    /// <summary>
+    /// A resource template (RFC 6570): its variables are the form, and the address is made from
+    /// what is typed into them. Built by <see cref="ResourceForm"/>.
+    /// </summary>
+    ResourceTemplate,
 }
 
 /// <summary>
@@ -43,11 +53,48 @@ public sealed record ToolInfo(
 
     public bool IsPrompt => Kind == OperationKind.Prompt;
 
-    /// <summary>What it is called in a sentence: "tool" or "prompt".</summary>
-    public string Noun => IsPrompt ? "prompt" : "tool";
+    /// <summary>A resource or a resource template: read, never run.</summary>
+    public bool IsResource => Kind is OperationKind.Resource or OperationKind.ResourceTemplate;
 
-    /// <summary>The words of the run command, which for a prompt fetches rather than runs anything.</summary>
-    public string RunVerb => IsPrompt ? "Get prompt" : "Run tool";
+    /// <summary>
+    /// A resource's address, or a template's RFC 6570 pattern. Empty for anything else. Not
+    /// sanitised for speech: it is sent back to the server exactly as the server sent it.
+    /// </summary>
+    public string ResourceUri { get; init; } = "";
+
+    /// <summary>What the resource says it is, where it said. Sanitised.</summary>
+    public string MimeType { get; init; } = "";
+
+    /// <summary>What it is called in a sentence: "tool", "prompt", "resource".</summary>
+    public string Noun => Kind switch
+    {
+        OperationKind.Prompt => "prompt",
+        OperationKind.Resource => "resource",
+        OperationKind.ResourceTemplate => "resource template",
+        _ => "tool",
+    };
+
+    /// <summary>The words of the run command: a prompt is fetched and a resource read, not run.</summary>
+    public string RunVerb => Kind switch
+    {
+        OperationKind.Prompt => "Get prompt",
+        OperationKind.Resource or OperationKind.ResourceTemplate => "Read resource",
+        _ => "Run tool",
+    };
+
+    /// <summary>"Running", "Getting" or "Reading", for the status line while it happens.</summary>
+    public string Doing => Kind switch
+    {
+        OperationKind.Prompt => "Getting",
+        OperationKind.Resource or OperationKind.ResourceTemplate => "Reading",
+        _ => "Running",
+    };
+
+    /// <summary>
+    /// What one input is called: a tool's "parameter", and the protocol's "argument" for a prompt's
+    /// and for a template's variables, which nobody outside RFC 6570 calls variables.
+    /// </summary>
+    public string ArgumentWord => Kind == OperationKind.Tool ? "parameter" : "argument";
 
     /// <summary>The schema exactly as the server sent it, for Copy Schema and for validation.</summary>
     public JsonElement InputSchema => Form.Schema;
@@ -89,7 +136,12 @@ public sealed record ToolInfo(
         if (Safety.ShortDescription is { } safety) parts.Add(safety);
 
         // A prompt's are "arguments" in the protocol and in every client that shows them.
-        var word = IsPrompt ? "argument" : "parameter";
+        var word = ArgumentWord;
+
+        // What a resource is matters more than how it is read; a template says that it is one,
+        // because its form is an address being built rather than a request being made.
+        if (Kind == OperationKind.Resource && MimeType.Length > 0) parts.Add(MimeType);
+        if (Kind == OperationKind.ResourceTemplate) parts.Add("template");
 
         if (RequiredParameterCount > 0)
             parts.Add($"{RequiredParameterCount} required {word}{(RequiredParameterCount == 1 ? "" : "s")}");

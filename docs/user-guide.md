@@ -61,7 +61,7 @@ Press Control plus Enter to save. humcp adds the server, puts the caret on it in
 
 The main window has two panes. F6 moves between them, and Shift plus F6 goes back.
 
-- Servers and tools, on the left, is a tree. Each server is a top-level item, and its name tells you whether it is connected, how many tools it has, and the protocol version it speaks — or, if it could not start, why not. Under each server is its list of tools, and, for a server that publishes any, its list of prompts. A server with many tools that share a naming pattern has them grouped, for example all the issue tools together.
+- Servers and tools, on the left, is a tree. Each server is a top-level item, and its name tells you whether it is connected, how many tools it has, and the protocol version it speaks — or, if it could not start, why not. Under each server is its list of tools, and, for a server that publishes any, its prompts and its resources. A server with many tools that share a naming pattern has them grouped, for example all the issue tools together.
 - Result, on the right, shows what the last tool you ran from the tree sent back.
 
 Arrow keys move through the tree. Right arrow opens a group and Left arrow closes it. Typing a letter jumps to the next item starting with it.
@@ -98,6 +98,14 @@ Some servers also publish prompts: ready-made requests to give to an AI assistan
 Where the server can suggest values for a prompt's arguments, each argument is a drop-down. Its suggestions follow what you type, and what you filled into the other arguments, and Alt plus Down arrow opens them; values you typed before are listed under the server's suggestions.
 
 What comes back is a short conversation: one or more messages, each named with who says it — "User message 1 of 2", "Assistant message 2 of 2". Control plus A and Control plus C in a message copy it, ready to paste into whichever AI assistant you use.
+
+### Resources
+
+Some servers also publish resources: files, notes, records or pictures they can hand over to read. They are under Resources in the tree, after the server's prompts, each named with what kind of thing it is — "Read me, text/plain". Enter reads one, and what it holds appears in the Result pane, the way a tool's result does.
+
+A resource template is a resource whose address you fill in, such as a file by its path or an issue by its number. Its tree item says "template"; Enter opens a form for the parts of the address, and the server may suggest values for them as you type, just as it can for a prompt's arguments. Control plus Enter, or the Read resource button, reads it.
+
+When a tool's result links to a resource, the link has a Read resource button: humcp asks the same server for it and shows it in a window of its own, so the result you were reading stays where it was. And where a tool asks for a resource's address, its field offers the server's resources in its drop-down, after the values you typed there before.
 
 ## 5. Reading a result
 
@@ -168,7 +176,7 @@ Help, Keyboard shortcuts shows this list inside humcp.
 ### The tree
 
 - Control plus F: find a tool, on every server. Enter in the search box asks the local model.
-- Enter: run the tool or fetch the prompt, or open its form.
+- Enter: run the tool, fetch the prompt or read the resource, or open its form.
 - A letter: the next item starting with it.
 - Control plus N: add a server.
 - Alt plus Enter: settings of the selected server.
@@ -180,9 +188,9 @@ Help, Keyboard shortcuts shows this list inside humcp.
 
 ### A form
 
-- Control plus Enter: run the tool, or fetch the prompt.
+- Control plus Enter: run the tool, fetch the prompt, or read the resource.
 - Control plus O: show or hide the optional parameters.
-- Alt plus Down arrow, on a field with a drop-down: values typed there before, or a prompt argument's suggestions from the server.
+- Alt plus Down arrow, on a field with a drop-down: values typed there before, the server's suggestions for a prompt's or a template's argument, or the server's resources for a field that wants an address.
 - Escape: stop the running tool; with nothing running, close the window.
 
 ### A list of entries in a form

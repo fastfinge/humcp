@@ -187,6 +187,13 @@ internal sealed class LinkSection(string heading, LinkResultBlock block) : Resul
 
     public string ActionName => LinkPolicy.ActionName(Block.Uri);
 
+    /// <summary>
+    /// Whether the server that sent the link can be asked for what it points at (Phase 13). Set by
+    /// the view, which knows whether it has a server to ask; never for a web address, which the
+    /// browser opens and no MCP server is the authority on.
+    /// </summary>
+    public bool CanRead { get; set; }
+
     /// <summary>What following it would do, or why nothing will (§7.18).</summary>
     public string Explanation
     {
@@ -198,7 +205,14 @@ internal sealed class LinkSection(string heading, LinkResultBlock block) : Resul
             if (Block.MimeType.Length > 0) parts.Add(Block.MimeType);
             if (Block.Size is { } size) parts.Add(MediaTypes.DescribeSize(size));
 
-            parts.Add(LinkPolicy.Describe(Block.Uri));
+            // Reading goes to the server, never to the shell, so it is offered whatever the scheme;
+            // the shell's rule is said only where it is the whole of what can be done.
+            if (CanRead)
+                parts.Add(Block.CanOpen
+                    ? $"Read resource asks the server for it. {LinkPolicy.Describe(Block.Uri)}"
+                    : "Read resource asks the server for it, in a window of its own. humcp will not hand this address to Windows.");
+            else
+                parts.Add(LinkPolicy.Describe(Block.Uri));
 
             return Sentences(parts);
         }

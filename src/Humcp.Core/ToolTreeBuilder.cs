@@ -40,9 +40,10 @@ public static class ToolTreeBuilder
 
         var children = new List<CatalogueNode>();
 
-        // §8: category nodes appear only when non-empty. Resources arrive in Phase 13.
+        // §8: category nodes appear only when non-empty.
         if (server.Tools.Count > 0) children.Add(BuildCategory("Tools", server.Id, server.Tools));
         if (server.Prompts.Count > 0) children.Add(BuildCategory("Prompts", server.Id, server.Prompts));
+        if (server.Resources.Count > 0) children.Add(BuildResources(server.Id, server.Resources));
 
         return new CatalogueNode(CatalogueNodeKind.Server, DescribeServer(server), children, serverId: server.Id);
     }
@@ -72,19 +73,26 @@ public static class ToolTreeBuilder
     }
 
     /// <summary>
-    /// "12 tools", "12 tools, 3 prompts", "no tools". Prompts are mentioned only when there are
-    /// some: most servers have none, and "no prompts" on every node would be said on every arrow.
+    /// "12 tools", "12 tools, 3 prompts, 40 resources", "no tools". Prompts and resources are
+    /// mentioned only when there are some: most servers have neither, and "no prompts" on every node
+    /// would be said on every arrow.
     /// </summary>
-    private static string Contents(ServerSnapshot server)
+    public static string Contents(ServerSnapshot server)
     {
-        var tools = server.Tools.Count == 0
-            ? "no tools"
-            : $"{server.Tools.Count} tool{(server.Tools.Count == 1 ? "" : "s")}";
+        ArgumentNullException.ThrowIfNull(server);
 
-        return server.Prompts.Count == 0
-            ? tools
-            : $"{tools}, {server.Prompts.Count} prompt{(server.Prompts.Count == 1 ? "" : "s")}";
+        var parts = new List<string>
+        {
+            server.Tools.Count == 0 ? "no tools" : Count(server.Tools.Count, "tool"),
+        };
+
+        if (server.Prompts.Count > 0) parts.Add(Count(server.Prompts.Count, "prompt"));
+        if (server.Resources.Count > 0) parts.Add(Count(server.Resources.Count, "resource"));
+
+        return string.Join(", ", parts);
     }
+
+    private static string Count(int count, string noun) => $"{count} {noun}{(count == 1 ? "" : "s")}";
 
     private static string ProtocolSuffix(ServerSnapshot server)
         => string.IsNullOrWhiteSpace(server.NegotiatedProtocolVersion)
@@ -143,6 +151,26 @@ public static class ToolTreeBuilder
     }
 
     private static string ToolSortKey(ToolInfo tool) => tool.DisplayName;
+
+    /// <summary>
+    /// The Resources category (Phase 13): the fixed addresses by name, then the templates by name,
+    /// and never grouped. A resource's identity is its address, and the prefix heuristic would
+    /// group <c>file:///a</c> and <c>file:///b</c> under "File" — which every resource on a file
+    /// server would share, so it would be one more press for nothing.
+    /// </summary>
+    private static CatalogueNode BuildResources(string serverId, IReadOnlyList<ToolInfo> resources)
+    {
+        var children = resources
+            .OrderBy(r => r.Kind == OperationKind.ResourceTemplate)
+            .ThenBy(ToolSortKey, StringComparer.CurrentCultureIgnoreCase)
+            .Select(r => new CatalogueNode(CatalogueNodeKind.Resource, r.AccessibleName, tool: r,
+                helpText: r.Summary.Length > 0 ? r.Summary : TextSanitizer.Clean(r.ResourceUri, TextSanitizer.HelpLength),
+                serverId: serverId))
+            .ToList();
+
+        return new CatalogueNode(CatalogueNodeKind.Category, $"Resources, {Count(resources.Count, "item")}", children,
+            serverId: serverId);
+    }
 
     /// <summary>What tool search searches: every tool of every connected server.</summary>
     public static IEnumerable<ToolSearchEntry> SearchEntries(IEnumerable<ServerSnapshot> servers)

@@ -39,6 +39,9 @@ public static class ResultCommands
     /// </remarks>
     public static readonly RoutedUICommand Copy = new("", nameof(Copy), typeof(ResultCommands));
 
+    /// <summary>Reads what a resource link points at, through the server that sent it (Phase 13).</summary>
+    public static readonly RoutedUICommand Read = new("", nameof(Read), typeof(ResultCommands));
+
     /// <summary>
     /// Opens whatever the caret is on in a window of its own: a long string as text, a table as a
     /// grid, a nested value as a tree. Parameter: the tree, or the node.

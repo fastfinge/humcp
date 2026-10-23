@@ -47,6 +47,10 @@ public sealed class FieldTemplateSelector : DataTemplateSelector
         // says where its values come from — which is not only this user's past.
         TextFieldState { HasServerSuggestions: true } => "Suggestions",
 
+        // A tool's parameter that wants an address offers the server's resources (Phase 13), and
+        // says so: "values you have used before" would not be true of them.
+        TextFieldState { OffersResources: true } => "Resources",
+
         TextFieldState { HasHistory: true } => "History",
 
         TextFieldState text => text.Field.Kind switch
